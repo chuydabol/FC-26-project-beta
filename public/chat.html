@@ -1,0 +1,32 @@
+<!doctype html><meta charset="utf-8">
+<title>Chat</title>
+<style>body{font:14px Arial;margin:0;background:#000;color:#fff}header{padding:12px;background:#111}
+main{padding:12px;max-width:800px;margin:auto}#log{height:60vh;overflow:auto;border:1px solid #333;padding:8px;background:#0b0b0b}
+input,button{padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#fff}
+button{cursor:pointer}</style>
+<header><h3 id="title">Chat</h3></header>
+<main>
+  <div id="log"></div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <input id="msg" placeholder="Type a message…" style="flex:1">
+    <button id="send">Send</button>
+  </div>
+</main>
+<script>
+const params = new URLSearchParams(location.search);
+const room = params.get('room') || 'lobby';
+document.getElementById('title').textContent = `Chat — ${room}`;
+const KEY = `chat:${room}`;
+const log = document.getElementById('log');
+const msg = document.getElementById('msg');
+
+function load(){ (JSON.parse(localStorage.getItem(KEY)||'[]')).forEach(add); }
+function add({t, text}){ const p=document.createElement('div'); p.textContent=`[${new Date(t).toLocaleTimeString()}] ${text}`; log.appendChild(p); log.scrollTop=log.scrollHeight; }
+function save(text){ const arr=JSON.parse(localStorage.getItem(KEY)||'[]'); arr.push({t:Date.now(), text}); localStorage.setItem(KEY, JSON.stringify(arr)); }
+
+document.getElementById('send').onclick = ()=>{
+  const text = msg.value.trim(); if(!text) return;
+  save(text); add({t:Date.now(), text}); msg.value='';
+};
+load();
+</script>
