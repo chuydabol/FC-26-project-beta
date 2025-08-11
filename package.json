@@ -1,0 +1,17 @@
+{
+  "name": "proclub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo 'no build step'"
+  },
+  "engines": { "node": ">=18.17" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.17.3",
+    "bcryptjs": "^2.4.3",
+    "uuid": "^9.0.1"
+  }
+}
