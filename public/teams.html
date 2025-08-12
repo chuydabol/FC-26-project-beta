@@ -3,703 +3,963 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Pro Clubs League — Squads, Fixtures & Market</title>
+<title>Pro Club — League Hub</title>
 <style>
-:root{
-  --bg:#0a0a0a; --panel:#111; --card:#141414; --muted:#8a8a8a; --text:#fafafa;
-  --accent:#e00; --accent2:#f55;
-  --ok:#2ecc71; --warn:#f1c40f; --bad:#e74c3c; --link:#4aa3ff;
-}
+:root { --accent:#e00; --muted:#bb4444; --card-h:400px; }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;background:linear-gradient(90deg,#900,#c00)}
-h1{margin:0;font-size:18px;letter-spacing:.2px}
-main{max-width:1200px;margin:0 auto;padding:16px}
+body{background:#000;color:#fff;font-family:Arial,sans-serif;margin:0;min-height:100vh}
+header{background:linear-gradient(90deg,#a00000,#d50000);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px;letter-spacing:.2px}
+.navbar{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.navbar button{background:#330000;color:#fff;border:1px solid #551111;border-radius:10px;padding:8px 10px;cursor:pointer}
+.navbar button[aria-pressed="true"]{background:#550000;border-color:#aa1111}
+main{padding:20px;max-width:1200px;margin:0 auto;background:#000}
+h2{margin:0 0 8px}
+
 .muted{color:var(--muted)}
-.btn{background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 12px;font-weight:600;cursor:pointer}
-.btn.alt{background:#333}
-.btn.ghost{background:transparent;border:1px solid #333;color:#ccc}
-.btn.small{padding:6px 8px;font-size:12px;border-radius:6px}
-.btn.ok{background:var(--ok)}
-.btn.bad{background:var(--bad)}
-.btn.warn{background:var(--warn);color:#000}
-input,select,textarea{background:#0f0f0f;border:1px solid #2a2a2a;color:#fff;border-radius:8px;padding:8px}
-input[type="datetime-local"]{color-scheme:dark}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.card{background:var(--card);border:1px solid #222;border-radius:12px;padding:12px}
-.grid{display:grid;gap:12px}
-.grid.teams{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}
-.team-card{padding:0;overflow:hidden;cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
-.team-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(255,0,0,.2)}
-.team-top{background:#1b0000;height:108px;display:flex;align-items:center;justify-content:center}
-.team-top img{max-width:90%;max-height:90%}
-.team-meta{padding:10px;display:flex;align-items:center;justify-content:space-between}
-.badge{background:var(--accent);color:#fff;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:700}
-.tabbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-section{display:none}
-section.active{display:block}
-.kv{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center}
-hr{border:0;border-top:1px solid #222;margin:12px 0}
-.table{width:100%;border-collapse:collapse}
-.table th,.table td{border-bottom:1px solid #1f1f1f;padding:8px;text-align:left}
-.label{font-size:12px;color:#bbb}
-.slot-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-.slot{background:#0f0f0f;border:1px solid #222;border-radius:10px;padding:10px}
-.unresolved{background:#2b1a1a;border:1px solid #552222;border-radius:8px;padding:8px}
-code.inline{background:#111;border:1px solid #222;padding:2px 6px;border-radius:6px}
-a.link{color:var(--link);text-decoration:none}
-.empty{padding:16px;border:1px dashed #333;border-radius:10px;text-align:center;color:#aaa}
-footer{margin:24px 0;color:#777;font-size:12px;text-align:center}
+.center{text-align:center}
+
+/* Cards / grids */
+.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-top:18px}
+.team-card{background:#110000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.3);overflow:hidden;cursor:pointer;transition:.14s;display:flex;flex-direction:column;align-items:center;padding:14px;color:#fff}
+.team-card:hover{transform:translateY(-6px);box-shadow:0 12px 28px rgba(255,0,0,.5)}
+.team-logo{width:100%;height:120px;object-fit:cover;border-radius:8px;background:#330000;display:block}
+.team-meta{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
+.team-meta .name{font-weight:700;font-size:16px}
+.trophy-badge{background:#e00;color:#fff;font-weight:700;padding:6px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(255,0,0,.6)}
+
+#teams-view{display:block}
+#detail-view{display:none;color:#fff}
+#detail-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;color:#fff}
+#backBtn{background:#330000;color:#fff;border:1px solid #551111;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+#detail-title{font-size:20px;font-weight:700}
+.squad-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:14px}
+
+/* Generic card */
+.m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
+
+/* Fixtures */
+.fx-list{display:flex;flex-direction:column;gap:10px}
+.fx{background:#110000;border:1px solid #300000;border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.fx .meta{font-size:12px;color:var(--muted)}
+.fx .vs{font-weight:700}
+.fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
+.fx .chip{background:#220000;border:1px solid #440000;border-radius:999px;padding:4px 8px;font-size:12px}
+
+/* Inputs */
+input,select,textarea{background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:8px}
+label{font-size:12px;color:var(--muted)}
+hr{border:none;border-top:1px solid #220000;margin:14px 0}
+
+/* Squad Slots UI */
+.slot-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.slot{background:#0d0000;border:1px solid #3a0000;border-radius:10px;padding:10px}
+
+@media(max-width:720px){
+  .card{height:320px}
+  .team-logo{height:100px}
+  .fx{grid-template-columns:1fr;gap:6px}
+  .fx .act{justify-content:flex-start}
+}
 </style>
 </head>
 <body>
 <header>
-  <div class="row">
-    <h1>Pro Clubs League</h1>
-    <span class="badge" id="envBadge">LIVE</span>
-  </div>
-  <div class="row">
-    <div id="whoami" class="muted">signed out</div>
-    <button class="btn small ghost" id="btnAdmin">Admin</button>
-    <button class="btn small ghost" id="btnSignOut" style="display:none">Sign out</button>
+  <h1>Pro Club — League Hub</h1>
+  <div class="navbar">
+    <button id="navTeams"    aria-pressed="true">Teams</button>
+    <button id="navMarket"   aria-pressed="false">Market</button>
+    <button id="navFixturesPublic" aria-pressed="false">Fixtures</button>
+    <button id="navFixturesSched"  aria-pressed="false" style="display:none">Fixtures Scheduling</button>
+    <button id="navRankings" aria-pressed="false" style="display:none">Rankings</button>
+    <button id="btnSetRole">Set Role</button>
+    <button id="btnAdminLogin">Admin sign in</button>
+    <button id="btnAdminLogout" style="display:none">Admin sign out</button>
   </div>
 </header>
 
 <main>
-  <nav class="tabbar">
-    <button class="btn small alt" data-tab="teams">Teams</button>
-    <button class="btn small alt" data-tab="market">Transfer Market</button>
-    <button class="btn small alt" data-tab="fixtures">Fixtures</button>
-    <button class="btn small alt" data-tab="scheduling">Fixtures Scheduling</button>
-    <button class="btn small alt" data-tab="rankings">Rankings & Wallet</button>
-  </nav>
-
-  <!-- TEAMS -->
-  <section id="tab-teams" class="active">
-    <div class="row" style="justify-content:space-between">
+  <!-- TEAMS OVERVIEW -->
+  <section id="teams-view" aria-live="polite">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
       <h2 style="margin:0">Teams</h2>
-      <div class="muted">Click a team to manage/view</div>
+      <div class="muted">Total teams: <span id="teams-count">0</span></div>
     </div>
-    <div class="grid teams" id="teamsGrid"></div>
+    <div class="teams-grid" id="teamsGrid" role="list"></div>
+  </section>
 
-    <div id="teamDetail" class="card" style="margin-top:14px;display:none">
-      <div class="row" style="justify-content:space-between">
-        <h3 id="teamTitle" style="margin:0">Team</h3>
-        <button class="btn small alt" id="btnCloseTeam">Close</button>
+  <!-- TEAM DETAIL -->
+  <section id="detail-view" aria-live="polite">
+    <div id="detail-header">
+      <button id="backBtn">← Back</button>
+      <div>
+        <div id="detail-title">Team name</div>
+        <div class="muted" id="detail-sub">squad & trophies</div>
       </div>
-      <div class="label" id="teamIdLbl"></div>
+      <div style="margin-left:auto">
+        <span class="trophy-badge" id="detail-trophies">0 🏆</span>
+      </div>
+    </div>
 
-      <hr/>
-      <h4>Squad Slots (no jersey numbers)</h4>
-      <div class="row">
-        <button class="btn small" id="btnBootstrapSlots" title="Create S01…S15 (admin)">Bootstrap 15 slots</button>
-        <div class="muted" id="slotsHelp">Managers can assign usernames to vacant slots.</div>
-      </div>
-      <div id="slotsList" class="slot-list" style="margin-top:10px"></div>
-
-      <hr/>
-      <h4>Manager Code (admin)</h4>
-      <div class="row">
-        <button class="btn small warn" id="btnRotateCode">Rotate code</button>
-        <button class="btn small alt" id="btnResetSeat">Reset seat</button>
-        <div class="label">Last code (only shown on rotate): <code class="inline" id="lastCode">(hidden)</code></div>
+    <div id="teamPanels" class="grid-panels" style="display:grid;grid-template-columns:1fr;gap:12px">
+      <div class="m-card">
+        <strong>Club Wallet</strong>
+        <div id="walletBody" class="muted" style="margin-top:6px">Loading…</div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <button id="btnCollect" style="display:none">Collect daily payout</button>
+          <small class="muted" id="walletHint"></small>
+        </div>
       </div>
 
-      <hr/>
-      <h4>Claim Manager (use code)</h4>
-      <div class="row">
-        <input id="claimName" placeholder="Your name" />
-        <input id="claimCode" placeholder="8-char code" />
-        <button class="btn small" id="btnClaim">Claim</button>
+      <div class="m-card">
+        <strong>Next UPCL Match</strong>
+        <div id="nextMatchBody" class="muted" style="margin-top:6px">No scheduled match yet.</div>
       </div>
+
+      <div id="teamResultsPanel" class="m-card">
+        <strong>Recent Results</strong>
+        <div id="teamResultsBody" class="muted" style="margin-top:6px">No finals yet.</div>
+      </div>
+
+      <!-- NEW: Squad Slots -->
+      <div class="m-card" id="squadSlotsPanel">
+        <strong>Squad Slots</strong>
+        <div class="muted">Assign EA usernames to S01…S15. Assigned players show their <code>playerId</code> for JSON uploads.</div>
+        <div class="row" style="margin-top:6px">
+          <button id="btnSlotsBootstrap" style="display:none">Bootstrap 15 slots (admin)</button>
+        </div>
+        <div id="slotsList" class="slot-list" style="margin-top:8px"></div>
+      </div>
+    </div>
+
+    <div id="squadContainer" class="squad-grid" style="margin-top:12px"></div>
+    <div id="detail-footer" style="margin-top:18px" class="muted center">
+      <small>Data pulled from EA when available; manual for custom clubs.</small>
     </div>
   </section>
 
   <!-- MARKET -->
-  <section id="tab-market">
-    <h2>Transfer Market — Free Agents</h2>
-    <div class="card">
-      <h4>My Listing</h4>
-      <div class="row">
-        <input id="faPositions" placeholder="positions e.g. ST, CAM"/>
-        <input id="faFoot" placeholder="foot (L/R)"/>
-        <input id="faRegion" placeholder="region/timezone"/>
-        <input id="faDiscord" placeholder="discord"/>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <input id="faAvailability" style="flex:1" placeholder="availability e.g. M-F 7-10PM"/>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <textarea id="faBio" rows="2" style="width:100%" placeholder="short bio"></textarea>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <input id="faLookingFor" style="flex:1" placeholder="looking for e.g. competitive, casual"/>
-        <button class="btn small" id="btnSaveFA">Save/Update</button>
-        <button class="btn small alt" id="btnDelFA">Remove</button>
-      </div>
-    </div>
+  <section id="market-view" style="display:none">
+    <h2>Transfer Market</h2>
 
-    <div class="card" style="margin-top:12px">
-      <h4>All Free Agents</h4>
-      <table class="table" id="faTable">
-        <thead><tr><th>Name</th><th>Pos</th><th>Foot</th><th>Region</th><th>Availability</th><th>Discord</th><th>Notes</th></tr></thead>
-        <tbody></tbody>
-      </table>
+    <div class="m-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <strong>Free Agents</strong>
+        <div>
+          <button id="btnListFA">List me</button>
+          <button id="btnUnlistFA">Unlist</button>
+        </div>
+      </div>
+      <div id="faList" style="margin-top:8px" class="muted">Loading…</div>
     </div>
   </section>
 
   <!-- FIXTURES (PUBLIC) -->
-  <section id="tab-fixtures">
-    <div class="row" style="justify-content:space-between">
-      <h2 style="margin:0">Fixtures</h2>
-      <div class="row">
-        <label class="label">Cup:</label>
-        <select id="cupPublic">
-          <option value="UPCL">UPCL</option>
-        </select>
-        <button class="btn small alt" id="btnReloadPublic">Reload</button>
-      </div>
-    </div>
-    <div id="fixturesPublicList" class="grid"></div>
+  <section id="fixtures-public" style="display:none">
+    <h2>Fixtures</h2>
+    <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
-  <!-- FIXTURES SCHEDULING (Managers/Admin) -->
-  <section id="tab-scheduling">
-    <div class="row" style="justify-content:space-between">
-      <h2 style="margin:0">Fixtures Scheduling</h2>
-      <div class="row">
-        <label class="label">Cup:</label>
-        <select id="cupSched">
-          <option value="UPCL" selected>UPCL</option>
-        </select>
-        <button class="btn small alt" id="btnReloadSched">Reload</button>
+  <!-- FIXTURES SCHEDULING (MANAGERS/Admins) -->
+  <section id="fixtures-sched" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <h2>Fixtures Scheduling</h2>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
+        <button data-fxf="final" aria-pressed="false">Final</button>
+        <button data-fxf="all" aria-pressed="false">All</button>
+        <button data-fxf="mine" aria-pressed="false">My club</button>
+        <button id="btnCreateFx" style="display:none">Create fixture</button>
       </div>
     </div>
-
-    <div id="adminCreate" class="card" style="display:none">
-      <h4>Admin — Create Fixture</h4>
-      <div class="row">
-        <input id="fxHome" placeholder="home clubId"/>
-        <input id="fxAway" placeholder="away clubId"/>
-        <input id="fxRound" placeholder="round (e.g. Group A, QF)"/>
-        <button class="btn small" id="btnCreateFx">Create</button>
-      </div>
-    </div>
-
-    <div id="schedList" class="grid" style="margin-top:12px"></div>
+    <div id="fixturesList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
-  <!-- RANKINGS & WALLET -->
-  <section id="tab-rankings">
-    <h2>Rankings & Wallet</h2>
-    <div class="card">
-      <h4>My Club Wallet</h4>
-      <div class="row">
-        <input id="walletClubId" placeholder="clubId (your team)" />
-        <button class="btn small alt" id="btnWalletLoad">Load</button>
-        <button class="btn small" id="btnWalletCollect">Collect payout</button>
-      </div>
-      <div id="walletInfo" class="kv" style="margin-top:10px;display:none">
-        <div>Balance</div><div id="walletBal">0</div>
-        <div>Per Day</div><div id="walletPer">0</div>
-        <div>Accrued</div><div id="walletAccrued">0</div>
-        <div>Days</div><div id="walletDays">0</div>
+  <!-- RANKINGS (ADMIN ONLY) -->
+  <section id="rankings-view" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <h2>Rankings & Payouts</h2>
+      <div id="adminControls" style="display:none;gap:8px">
+        <button id="btnSaveRankings">Save</button>
+        <button id="btnRecalc">Recalc tiers</button>
+        <button id="btnCupDry">Cup bonuses (dry run)</button>
+        <button id="btnCupPay">Cup bonuses (pay)</button>
       </div>
     </div>
-
-    <div class="card" style="margin-top:12px">
-      <h4>League Rankings</h4>
-      <table class="table" id="rankTable">
-        <thead><tr><th>Club</th><th>Pos</th><th>Cup</th><th>Points</th><th>Tier</th></tr></thead>
-        <tbody></tbody>
-      </table>
-      <div class="label" style="margin-top:6px">Payouts (per day): elite/mid/bottom are server-configured.</div>
+    <div class="m-card" style="margin-top:10px">
+      <div class="muted" style="margin-bottom:8px">Only admins can view/edit this section.</div>
+      <div id="rankingsTable">Loading…</div>
     </div>
   </section>
-
-  <footer>© United Pro Clubs League</footer>
 </main>
 
 <script>
-/* =======================
-   CONFIG / STATE
-======================= */
-const API_BASE = ''; // same-origin
-let isAdmin = false;
-let me = null;
+// =======================
+//   CONFIG / CONSTANTS
+// =======================
+const API_BASE = '';
+const TEAM_TITLES = {
+  '3638105': [
+    { count: 1, name: 'United Pro Clubs League Title' },
+    { count: 1, name: 'Leagues Cup' }
+  ]
+};
 
+// Teams (incl. manual clubs)
 const teams = [
-  { id:'2491998', name:'Royal Republic', logo:'/assets/logos/royal-republic-logo.png' },
-  { id:'1527486', name:'Gungan FC' },
-  { id:'1969494', name:'Club Frijol' },
-  { id:'AFCWARR', name:'AFC Warriors' },       // manual club (string id)
-  { id:'JIDS', name:'Jids Trivela' },
-  { id:'RAZOR', name:'Razorblack FC' },
-  { id:'2086022', name:'Brehemen' },
-  { id:'2462194', name:'Costa Chica FC' },
-  { id:'4869810', name:'Afc Tekki' },
-  { id:'55408', name:'Elite VT' },
-  { id:'35642', name:'EBK FC' }
+  { id: '2491998', name: 'Royal Republic', logo: '/assets/logos/royal-republic-logo.png' },
+  { id: '1527486', name: 'Gungan FC' },
+  { id: '1969494', name: 'Club Frijol' },
+  { id: '2086022', name: 'Brehemen' },
+  { id: '2462194', name: 'Costa Chica FC' },
+  { id: '5098824', name: 'Sporting de la ma' },
+  { id: '4869810', name: 'Afc Tekki' },
+  { id: '576007', name: 'Ethabella FC' },
+  { id: '4933507', name: 'Loss Toyz' },
+  { id: '4824736', name: 'GoldenGoals FC' },
+  { id: '481847', name: 'Rooney tunes' },
+  { id: '3050467', name: 'invincible afc' },
+  { id: '4154835', name: 'khalch Fc' },
+  { id: '3638105', name: 'Real mvc' },
+  { id: '55408', name: 'Elite VT' },
+  { id: '4819681', name: 'EVERYTHING DEAD' },
+  { id: '35642', name: 'EBK FC' },
+  // Manual clubs
+  { id: 'afc-warriors',  name: 'AFC Warriors',  logo: '/assets/logos/afc-warriors.png' },
+  { id: 'jids-trivela',  name: 'Jids Trivela',  logo: '/assets/logos/jids-trivela.png' },
+  { id: 'razorblack-fc', name: 'Razorblack FC', logo: '/assets/logos/razorblack-fc.png' }
 ];
 
-/* =======================
-   UTILS
-======================= */
-const $ = sel => document.querySelector(sel);
-const el = (tag, props={}) => Object.assign(document.createElement(tag), props);
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])) }
-function fmtWhen(ms){ if(!ms) return 'TBD'; try{ return new Date(ms).toLocaleString(); }catch{ return 'TBD'; } }
-async function jget(p){ const r=await fetch(API_BASE+p); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
-async function jpost(p,body){ const r=await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
-async function jput(p,body){ const r=await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
-async function jdel(p){ const r=await fetch(API_BASE+p,{method:'DELETE'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
-function toast(msg, ok=true){ const t=el('div',{textContent:msg,style:`position:fixed;right:12px;bottom:12px;background:${ok?'#1d3b1f':'#3b1d1d'};color:#fff;padding:8px 10px;border-radius:8px;z-index:9999;`}); document.body.appendChild(t); setTimeout(()=>t.remove(),2600); }
-function toMsFromLocal(dt){ if(!dt) return 0; const d = new Date(dt); return d.getTime(); }
+// helpers
+const byId = id => teams.find(t=>String(t.id)===String(id));
+function teamLogoUrl(team){ return team.logo || `https://via.placeholder.com/800x400.png?text=${encodeURIComponent(team.name)}`; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
+function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
 
-/* =======================
-   AUTH / WHOAMI
-======================= */
-async function refreshAuth(){
-  try{
-    const a = await jget('/api/admin/me'); isAdmin = !!a.admin;
-  }catch{}
-  try{
-    const u = await jget('/api/auth/me'); me = u.user||null;
-  }catch{}
-  $('#whoami').textContent = `${isAdmin?'[ADMIN] ':''}${me?`${me.role}: ${me.name}`:'signed out'}`;
-  $('#btnSignOut').style.display = (isAdmin || me) ? '' : 'none';
-  $('#adminCreate').style.display = isAdmin ? '' : 'none';
-  $('#btnBootstrapSlots').style.display = isAdmin ? '' : 'none';
-  // Show/hide Scheduling tab content based on access (we don't hide tab, just handle 403 on load)
+// state
+let isAdmin = false;
+let meUser  = null;
+let isMgr   = false;
+let rankings = {};
+let payouts  = { elite:0, mid:0, bottom:0 };
+let fixturesPublicCache = [];
+let fixturesSchedCache  = [];
+
+// api
+async function apiGet(p){ const r = await fetch(API_BASE+p); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+
+// nav
+const navTeams    = document.getElementById('navTeams');
+const navMarket   = document.getElementById('navMarket');
+const navFxPublic = document.getElementById('navFixturesPublic');
+const navFxSched  = document.getElementById('navFixturesSched');
+const navRankings = document.getElementById('navRankings');
+
+const teamsViewEl = document.getElementById('teams-view');
+const marketView  = document.getElementById('market-view');
+const fxPublic    = document.getElementById('fixtures-public');
+const fxSched     = document.getElementById('fixtures-sched');
+const rankingsView= document.getElementById('rankings-view');
+
+function setNav(active){
+  if (active==='rankings' && !isAdmin) { alert('Admin only'); active='teams'; }
+  if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
+  const map = {
+    teams:[teamsViewEl, navTeams],
+    market:[marketView, navMarket],
+    fixturesPublic:[fxPublic, navFxPublic],
+    fixturesSched:[fxSched, navFxSched],
+    rankings:[rankingsView, navRankings]
+  };
+  for (const key of Object.keys(map)){
+    const [view,btn] = map[key];
+    const is = key===active;
+    view.style.display = is ? 'block' : 'none';
+    btn.setAttribute('aria-pressed', String(is));
+  }
 }
 
-$('#btnAdmin').addEventListener('click', async ()=>{
-  if(isAdmin){ toast('Already admin'); return; }
-  const pw = prompt('Admin password:'); if(!pw) return;
-  try{ await jpost('/api/admin/login',{password:pw}); toast('Admin signed in'); }catch(e){ toast('Bad password', false); }
-  await refreshAuth(); await loadScheduling(); 
-});
-$('#btnSignOut').addEventListener('click', async ()=>{
-  try{ await jpost('/api/admin/logout',{}); }catch{}
-  try{ await jpost('/api/auth/logout',{}); }catch{}
-  isAdmin=false; me=null; await refreshAuth();
-});
+navTeams.onclick       = ()=> setNav('teams');
+navMarket.onclick      = ()=> setNav('market');
+navFxPublic.onclick    = ()=> setNav('fixturesPublic');
+navFxSched.onclick     = ()=> setNav('fixturesSched');
+navRankings.onclick    = ()=> setNav('rankings');
 
-/* =======================
-   TABS
-======================= */
-const tabs = Array.from(document.querySelectorAll('.tabbar .btn'));
-tabs.forEach(b=>b.addEventListener('click', ()=>{
-  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
-  $('#tab-'+b.dataset.tab).classList.add('active');
-  if(b.dataset.tab==='fixtures') loadPublic();
-  if(b.dataset.tab==='scheduling') loadScheduling();
-  if(b.dataset.tab==='market') loadFreeAgents();
-  if(b.dataset.tab==='rankings') loadRankings();
-}));
+// auth / admin
+const btnAdminLogin = document.getElementById('btnAdminLogin');
+const btnAdminLogout= document.getElementById('btnAdminLogout');
 
-/* =======================
-   TEAMS GRID + DETAIL
-======================= */
-function teamLogoUrl(team){ return team.logo || `https://via.placeholder.com/800x400.png?text=${encodeURIComponent(team.name)}`; }
+btnAdminLogin.onclick = async ()=>{
+  const pw = prompt('Admin password');
+  if (!pw) return;
+  try{
+    await apiPost('/api/admin/login',{ password: pw });
+    await checkAdmin(); await checkMe();
+    alert('Admin signed in');
+  }catch(e){ alert('Login failed: '+e.message); }
+};
+btnAdminLogout.onclick = async ()=>{
+  try{ await apiPost('/api/admin/logout',{}); }catch{}
+  await checkAdmin(); await checkMe();
+  alert('Signed out');
+};
+
+async function checkAdmin(){
+  try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
+  navRankings.style.display = isAdmin ? 'inline-block' : 'none';
+  btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
+
+  const btnCreateFx = document.getElementById('btnCreateFx');
+  if (btnCreateFx) btnCreateFx.style.display = isAdmin ? 'inline-block' : 'none';
+
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+
+  if (isAdmin) { await loadRankings(); renderRankings(); }
+}
+
+async function checkMe(){
+  try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
+  isMgr = !!(meUser && meUser.role==='Manager');
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+}
+
+// =======================
+//   TEAMS LIST / DETAIL
+// =======================
+const teamsGrid = document.getElementById('teamsGrid');
+const teamsCount = document.getElementById('teams-count');
+const detailView = document.getElementById('detail-view');
+const detailTitle = document.getElementById('detail-title');
+const detailSub   = document.getElementById('detail-sub');
+const detailTrophies = document.getElementById('detail-trophies');
+const squadContainer = document.getElementById('squadContainer');
+const backBtn = document.getElementById('backBtn');
 
 function renderTeams(){
-  const g = $('#teamsGrid'); g.innerHTML='';
-  teams.forEach(t=>{
-    const c = el('div',{className:'card team-card'});
-    const top = el('div',{className:'team-top'}); top.append(el('img',{src:teamLogoUrl(t),alt:t.name}));
-    const meta = el('div',{className:'team-meta'});
-    meta.append(el('div',{textContent:t.name}));
-    meta.append(el('span',{className:'badge',textContent:t.id}));
-    c.append(top, meta);
-    c.addEventListener('click', ()=>openTeam(t));
-    g.append(c);
+  teamsGrid.innerHTML='';
+  teamsCount.textContent = teams.length;
+  teams.forEach(team=>{
+    const card = document.createElement('div');
+    card.className='team-card';
+    card.setAttribute('role','listitem');
+    card.innerHTML = `
+      <img class="team-logo" src="${teamLogoUrl(team)}" alt="${escapeHtml(team.name)} logo" />
+      <div class="team-meta">
+        <div class="name">${escapeHtml(team.name)}</div>
+        <div class="trophy-badge">${Array.isArray(TEAM_TITLES[team.id]) ? TEAM_TITLES[team.id].map(t=>`${t.count}x ${t.name}`).join(', ') : ''}</div>
+      </div>
+    `;
+    card.addEventListener('click', ()=> showTeam(team));
+    teamsGrid.appendChild(card);
   });
 }
-renderTeams();
 
-const teamDetail = $('#teamDetail');
-let currentTeam = null;
+async function showTeam(team){
+  window.scrollTo({top:0,behavior:'smooth'});
+  teamsViewEl.style.display='none';
+  detailView.style.display='block';
+  detailTitle.textContent = team.name;
+  detailSub.textContent = 'Loading club info…';
 
-$('#btnCloseTeam').addEventListener('click', ()=>{ teamDetail.style.display='none'; currentTeam=null; });
+  if(Array.isArray(TEAM_TITLES[team.id])){
+    detailTrophies.innerHTML = TEAM_TITLES[team.id].map(t=>`<div>${t.count}x ${t.name}</div>`).join('');
+  } else detailTrophies.textContent = 'No trophies';
 
-async function openTeam(team){
-  currentTeam = team;
-  $('#teamTitle').textContent = team.name;
-  $('#teamIdLbl').textContent = 'clubId: '+team.id;
-  $('#lastCode').textContent = '(hidden)';
-  teamDetail.style.display='';
-  await loadSlots();
+  await renderWallet(team.id);
+  await refreshFixturesPublic();
+  renderNextFor(team.id);
+  renderTeamResults(team.id);
+
+  // NEW: load Squad Slots UI every time you open the team
+  await loadSlotsUI(team.id);
+
+  if(/^\d+$/.test(team.id)){
+    await renderEAPlayers(team.id);
+  }else{
+    renderManualPlayers(team);
+  }
+
+  detailSub.textContent = 'Club overview';
 }
 
-async function loadSlots(){
-  if(!currentTeam) return;
-  const wrap = $('#slotsList'); wrap.innerHTML = '';
+backBtn.addEventListener('click', ()=>{
+  detailView.style.display='none';
+  teamsViewEl.style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+// Wallet
+async function renderWallet(clubId){
+  const body = document.getElementById('walletBody');
+  const hint = document.getElementById('walletHint');
+  const btn = document.getElementById('btnCollect');
   try{
-    const data = await jget(`/api/clubs/${encodeURIComponent(currentTeam.id)}/squad`);
-    const slots = data.slots||[];
-    if(slots.length===0){
-      wrap.append(el('div',{className:'empty',innerHTML:'No slots yet. <b>Admin</b> can click “Bootstrap 15 slots”.'}));
+    const d = await apiGet(`/api/wallets/${encodeURIComponent(clubId)}`);
+    const w = d.wallet||{}, prev = d.preview||{};
+    const per = d.perDay||0;
+    body.innerHTML = `
+      Balance: <strong>${fmtMoney(w.balance||0)}</strong><br>
+      Tier payout: <strong>${fmtMoney(per)}</strong> / day<br>
+      Pending payout: <strong>${fmtMoney(prev.amount||0)}</strong> (${prev.days||0} days)
+    `;
+    const canCollect = meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId);
+    btn.style.display = canCollect ? 'inline-block' : 'none';
+    btn.onclick = async ()=>{
+      try{
+        const r = await apiPost(`/api/wallets/${encodeURIComponent(clubId)}/collect`,{});
+        alert(r.ok ? 'Payout collected!' : (r.message||'No payout'));
+        await renderWallet(clubId);
+      }catch(e){ alert('Collect failed: '+e.message); }
+    };
+    hint.textContent = canCollect ? 'Only the club manager can collect.' : 'Sign in as manager to collect.';
+  }catch(e){
+    body.textContent = 'Wallet unavailable';
+    hint.textContent = '';
+    btn.style.display='none';
+  }
+}
+
+// Players (EA/manual cards below slots for reference)
+async function renderEAPlayers(clubId){
+  squadContainer.innerHTML = '<div class="m-card">Loading players from EA…</div>';
+  try{
+    const data = await apiGet(`/api/teams/${encodeURIComponent(clubId)}/players`);
+    const members = Array.isArray(data.members) ? data.members : [];
+    if (!members.length) {
+      squadContainer.innerHTML = '<div class="m-card muted">No players returned by EA.</div>';
       return;
     }
-    slots.forEach(s=>{
-      const box = el('div',{className:'slot'});
-      box.append(el('div',{className:'label',textContent:s.slotId+' — '+(s.label||'Slot')}));
-      if(s.player){
-        box.append(el('div',{innerHTML:`EA: <b>${escapeHtml(s.player.eaName)}</b><br><span class="label">playerId: ${s.player.id}</span>`}));
-        const row = el('div',{className:'row',style:'margin-top:8px'});
-        const btnUn = el('button',{className:'btn small alt',textContent:'Unassign'});
-        btnUn.addEventListener('click', async ()=>{
-          if(!canManageCurrentClub()) return toast('Only this club manager or admin', false);
-          await jpost(`/api/clubs/${encodeURIComponent(currentTeam.id)}/squad/slots/${s.slotId}/unassign`,{});
-          toast('Unassigned'); loadSlots();
-        });
-        row.append(btnUn);
-        box.append(row);
-      } else {
-        box.append(el('div',{className:'muted',textContent:'Vacant'}));
-        const row = el('div',{className:'row',style:'margin-top:8px'});
-        const inName = el('input',{placeholder:'EA username'});
-        const inAliases = el('input',{placeholder:'aliases (comma-separated)',style:'min-width:220px'});
-        const btnAsg = el('button',{className:'btn small',textContent:'Assign'});
-        btnAsg.addEventListener('click', async ()=>{
-          if(!canManageCurrentClub()) return toast('Only this club manager or admin', false);
-          const eaName = inName.value.trim(); if(!eaName) return toast('Enter EA username', false);
-          await jpost(`/api/clubs/${encodeURIComponent(currentTeam.id)}/squad/slots/${s.slotId}/assign`,{ eaName, aliases: inAliases.value });
-          toast('Assigned'); loadSlots();
-        });
-        row.append(inName,inAliases,btnAsg);
-        box.append(row);
-      }
-      wrap.append(box);
+    squadContainer.innerHTML = '';
+    members.forEach(p=>{
+      const el = document.createElement('div');
+      el.className='m-card';
+      el.innerHTML = `<strong>${escapeHtml(p.name||'Unknown')}</strong>
+        <div class="muted">Pos: ${escapeHtml(p.proPos||p.position||'—')} • Goals: ${p.goals??0} • Assists: ${p.assists??0}</div>`;
+      squadContainer.appendChild(el);
     });
   }catch(e){
-    wrap.append(el('div',{className:'empty',textContent:'Failed to load slots'}));
+    squadContainer.innerHTML = '<div class="m-card muted">EA API unavailable.</div>';
   }
 }
-
-function canManageCurrentClub(){
-  if(isAdmin) return true;
-  if(me && me.role==='Manager' && currentTeam && me.teamId===currentTeam.id) return true;
-  return false;
+function renderManualPlayers(team){
+  squadContainer.innerHTML = `<div class="m-card muted">Manual club — managers can maintain squads via Slots above.</div>`;
 }
 
-$('#btnBootstrapSlots').addEventListener('click', async ()=>{
-  if(!isAdmin) return toast('Admin only', false);
-  if(!currentTeam) return;
-  try{ await jpost(`/api/clubs/${encodeURIComponent(currentTeam.id)}/squad/bootstrap`,{}); toast('Slots created'); loadSlots(); }
-  catch(e){ toast('Failed: '+e.message, false); }
-});
-
-$('#btnRotateCode').addEventListener('click', async ()=>{
-  if(!isAdmin) return toast('Admin only', false);
-  if(!currentTeam) return;
-  try{
-    const r = await jpost(`/api/clubs/${encodeURIComponent(currentTeam.id)}/manager-code/rotate`,{});
-    $('#lastCode').textContent = r.code || '(none)';
-    toast('New code generated (shown once)');
-  }catch(e){ toast('Failed: '+e.message, false); }
-});
-$('#btnResetSeat').addEventListener('click', async ()=>{
-  if(!isAdmin) return toast('Admin only', false);
-  if(!currentTeam) return;
-  try{ await jpost(`/api/clubs/${encodeURIComponent(currentTeam.id)}/manager-code/reset`,{}); toast('Seat reset'); }
-  catch(e){ toast('Failed: '+e.message, false); }
-});
-$('#btnClaim').addEventListener('click', async ()=>{
-  if(!currentTeam) return toast('Pick a team', false);
-  const name = $('#claimName').value.trim();
-  const code = $('#claimCode').value.trim();
-  if(!name || !code) return toast('Name + code required', false);
-  try{
-    const r = await jpost(`/api/clubs/${encodeURIComponent(currentTeam.id)}/claim-manager`,{name,code});
-    toast('Claimed as manager');
-    await refreshAuth();
-  }catch(e){ toast('Failed: '+e.message, false); }
-});
-
-/* =======================
-   TRANSFER MARKET
-======================= */
-async function loadFreeAgents(){
-  try{
-    const data = await jget('/api/free-agents');
-    const tb = $('#faTable tbody'); tb.innerHTML='';
-    (data.agents||[]).forEach(a=>{
-      const tr = el('tr');
-      tr.innerHTML = `<td>${escapeHtml(a.name||'')}</td>
-        <td>${escapeHtml((a.positions||[]).join(', '))}</td>
-        <td>${escapeHtml(a.foot||'')}</td>
-        <td>${escapeHtml(a.region||'')}</td>
-        <td>${escapeHtml(a.availability||'')}</td>
-        <td>${escapeHtml(a.discord||'')}</td>
-        <td>${escapeHtml(a.bio||a.lookingFor||'')}</td>`;
-      tb.append(tr);
-    });
-  }catch(e){
-    toast('Failed to load free agents', false);
-  }
+/* ========= Squad Slots (IDs + EA usernames) ========= */
+function canManageClub(clubId){
+  if (isAdmin) return true;
+  return !!(meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId));
 }
+async function loadSlotsUI(clubId){
+  const wrap = document.getElementById('slotsList');
+  const btnBoot = document.getElementById('btnSlotsBootstrap');
+  if (!wrap || !btnBoot) return;
 
-$('#btnSaveFA').addEventListener('click', async ()=>{
-  const payload = {
-    positions: $('#faPositions').value,
-    foot: $('#faFoot').value,
-    region: $('#faRegion').value,
-    bio: $('#faBio').value,
-    availability: $('#faAvailability').value,
-    discord: $('#faDiscord').value,
-    lookingFor: $('#faLookingFor').value
+  btnBoot.style.display = isAdmin ? 'inline-block' : 'none';
+  btnBoot.onclick = async ()=>{
+    try{
+      await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/bootstrap`,{});
+      alert('Created S01…S15'); loadSlotsUI(clubId);
+    }catch(e){ alert('Bootstrap failed: '+e.message); }
   };
-  try{ await jpost('/api/free-agents/me', payload); toast('Listing saved'); loadFreeAgents(); }
-  catch(e){ toast('Sign in as Player/Manager first', false); }
-});
-$('#btnDelFA').addEventListener('click', async ()=>{
-  try{ await jdel('/api/free-agents/me'); toast('Listing removed'); loadFreeAgents(); }
-  catch(e){ toast('Not listed or not signed in', false); }
-});
 
-/* =======================
-   FIXTURES (PUBLIC)
-======================= */
-async function loadPublic(){
-  const cup = $('#cupPublic').value;
-  const list = $('#fixturesPublicList'); list.innerHTML='';
+  wrap.innerHTML = '<div class="muted">Loading slots…</div>';
   try{
-    const r = await jget(`/api/cup/fixtures/public?cup=${encodeURIComponent(cup)}`);
-    const arr = (r.fixtures||[]).sort((a,b)=>(a.when||0)-(b.when||0));
-    if(arr.length===0){ list.append(el('div',{className:'empty',textContent:'No fixtures yet'})); return; }
-    arr.forEach(f=>{
-      const c = el('div',{className:'card'});
-      c.innerHTML = `
-        <div class="row" style="justify-content:space-between">
-          <div><b>${escapeHtml(f.home)}</b> vs <b>${escapeHtml(f.away)}</b> — <span class="label">${escapeHtml(f.round||'')}</span></div>
-          <div class="label">${fmtWhen(f.when)}</div>
-        </div>
-        <div style="margin-top:6px">Score: <b>${f.score.hs}</b> - <b>${f.score.as}</b></div>
-      `;
-      // scorers under each team
-      const homeSc = (f.details?.home||[]).filter(r=>Number(r.goals)>0).map(r=>`${escapeHtml(r.player||r.playerId||'')}: ${r.goals}`).join(', ');
-      const awaySc = (f.details?.away||[]).filter(r=>Number(r.goals)>0).map(r=>`${escapeHtml(r.player||r.playerId||'')}: ${r.goals}`).join(', ');
-      const scorers = el('div',{className:'label',style:'margin-top:6px'});
-      scorers.textContent = `Scorers — Home: ${homeSc || '—'} | Away: ${awaySc || '—'}`;
-      c.append(scorers);
-      list.append(c);
-    });
-  }catch(e){
-    list.append(el('div',{className:'empty',textContent:'Failed to load fixtures'}));
-  }
-}
-$('#btnReloadPublic').addEventListener('click', loadPublic);
+    const data = await apiGet(`/api/clubs/${encodeURIComponent(clubId)}/squad`);
+    const slots = data.slots || [];
+    if (!slots.length){
+      wrap.innerHTML = '<div class="muted">No slots yet. Admin can click “Bootstrap 15 slots”.</div>';
+      return;
+    }
+    wrap.innerHTML = '';
+    slots.forEach(s=>{
+      const box = document.createElement('div');
+      box.className = 'slot';
+      const head = document.createElement('div');
+      head.innerHTML = `<div class="muted">${s.slotId} — ${escapeHtml(s.label||'Slot')}</div>`;
+      box.appendChild(head);
 
-/* =======================
-   FIXTURES SCHEDULING
-======================= */
-async function loadScheduling(){
-  const cup = $('#cupSched').value;
-  const wrap = $('#schedList'); wrap.innerHTML='';
-  try{
-    const r = await jget(`/api/cup/fixtures/scheduling?cup=${encodeURIComponent(cup)}`);
-    if((r.fixtures||[]).length===0){ wrap.append(el('div',{className:'empty',textContent:'No fixtures set'})); return; }
-    (r.fixtures||[]).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0)).forEach(f=>{
-      wrap.append(renderSchedulingCard(f));
-    });
-  }catch(e){
-    wrap.append(el('div',{className:'empty',textContent:'Managers/Admin only (sign in).'}));
-  }
-}
-$('#btnReloadSched').addEventListener('click', loadScheduling);
+      if (s.player) {
+        const body = document.createElement('div');
+        body.style.marginTop = '6px';
+        body.innerHTML = `
+          <div><b>EA:</b> ${escapeHtml(s.player.eaName)}</div>
+          <div class="muted">playerId: <code>${s.player.id}</code></div>
+        `;
+        box.appendChild(body);
 
-function renderSchedulingCard(f){
-  const c = el('div',{className:'card'});
-  c.append(el('div',{className:'row',style:'justify-content:space-between',innerHTML:
-    `<div><b>${escapeHtml(f.home)}</b> vs <b>${escapeHtml(f.away)}</b> — <span class="label">${escapeHtml(f.round||'')}</span></div>
-     <div class="label">Status: ${escapeHtml(f.status||'pending')} • ${fmtWhen(f.when)}</div>`}));
+        if (canManageClub(clubId)){
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.style.marginTop = '8px';
+          const btnUn = document.createElement('button');
+          btnUn.textContent = 'Unassign';
+          btnUn.onclick = async ()=>{
+            try{
+              await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${s.slotId}/unassign`,{});
+              loadSlotsUI(clubId);
+            }catch(e){ alert('Unassign failed: '+e.message); }
+          };
+          row.appendChild(btnUn);
+          box.appendChild(row);
+        }
 
-  // propose time
-  const row1 = el('div',{className:'row',style:'margin-top:8px'});
-  const dt = el('input',{type:'datetime-local'});
-  const btnProp = el('button',{className:'btn small',textContent:'Propose time'});
-  btnProp.addEventListener('click', async ()=>{
-    try{
-      const at = toMsFromLocal(dt.value);
-      if(!at) return toast('Pick a date/time', false);
-      await jpost(`/api/cup/fixtures/${f.id}/propose`, { at });
-      toast('Proposed'); loadScheduling();
-    }catch(e){ toast('Failed: '+e.message, false); }
-  });
-  row1.append(dt, btnProp);
-  c.append(row1);
+      } else {
+        const note = document.createElement('div');
+        note.className = 'muted';
+        note.textContent = 'Vacant';
+        box.appendChild(note);
 
-  // vote
-  const row2 = el('div',{className:'row'});
-  const sel = el('select');
-  (f.proposals||[]).forEach(p=>{
-    const o = el('option',{value:String(p.at),textContent:fmtWhen(p.at)+' (by '+(p.by||'?')+')'});
-    sel.append(o);
-  });
-  const btnAgree = el('button',{className:'btn small ok',textContent:'Agree'});
-  const btnDecl = el('button',{className:'btn small alt',textContent:'Decline'});
-  btnAgree.addEventListener('click', async ()=>{
-    try{
-      const at = sel.value; if(!at) return toast('Pick a proposal', false);
-      await jpost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true });
-      toast('Voted agree'); loadScheduling();
-    }catch(e){ toast('Failed: '+e.message, false); }
-  });
-  btnDecl.addEventListener('click', async ()=>{
-    try{
-      const at = sel.value; if(!at) return toast('Pick a proposal', false);
-      await jpost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false });
-      toast('Voted decline'); loadScheduling();
-    }catch(e){ toast('Failed: '+e.message, false); }
-  });
-  row2.append(sel, btnAgree, btnDecl);
-  c.append(row2);
-
-  // lineup
-  const row3 = el('div',{className:'row'});
-  const inForm = el('input',{placeholder:'formation (e.g. 4-2-3-1)'});
-  const inLine = el('input',{placeholder:'lineup JSON (optional)' ,style:'flex:1'});
-  const btnLine = el('button',{className:'btn small',textContent:'Set lineup'});
-  btnLine.addEventListener('click', async ()=>{
-    try{
-      let lineup = {};
-      if(inLine.value.trim()){
-        try{ lineup = JSON.parse(inLine.value); }catch{ return toast('Invalid JSON', false); }
+        if (canManageClub(clubId)){
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.style.marginTop = '8px';
+          const inName = document.createElement('input');
+          inName.placeholder = 'EA username';
+          const inAliases = document.createElement('input');
+          inAliases.placeholder = 'aliases (comma-separated)';
+          inAliases.style.minWidth = '180px';
+          const btnAsg = document.createElement('button');
+          btnAsg.textContent = 'Assign';
+          btnAsg.onclick = async ()=>{
+            const eaName = inName.value.trim();
+            if (!eaName) return alert('Enter EA username');
+            try{
+              await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${s.slotId}/assign`,{
+                eaName, aliases: inAliases.value
+              });
+              loadSlotsUI(clubId);
+            }catch(e){ alert('Assign failed: '+e.message); }
+          };
+          row.append(inName, inAliases, btnAsg);
+          box.appendChild(row);
+        }
       }
-      await jput(`/api/cup/fixtures/${f.id}/lineup`, { formation: inForm.value, lineup });
-      toast('Lineup saved'); loadScheduling();
-    }catch(e){ toast('Failed: '+e.message, false); }
-  });
-  row3.append(inForm, inLine, btnLine);
-  c.append(row3);
 
-  // submit result
-  const row4 = el('div',{className:'row'});
-  const inHs = el('input',{placeholder:'home goals',type:'number',style:'width:110px'});
-  const inAs = el('input',{placeholder:'away goals',type:'number',style:'width:110px'});
-  const btnRes = el('button',{className:'btn small',textContent:'Submit Result'});
-  btnRes.addEventListener('click', async ()=>{
-    try{
-      await jpost(`/api/cup/fixtures/${f.id}/report`, { hs:Number(inHs.value||0), as:Number(inAs.value||0) });
-      toast('Result posted'); loadScheduling(); loadPublic();
-    }catch(e){ toast('Failed: '+e.message, false); }
-  });
-  row4.append(inHs, inAs, btnRes);
-  c.append(row4);
-
-  // admin tools: paste / upload JSON
-  if(isAdmin){
-    const row5 = el('div',{className:'row'});
-    const btnPaste = el('button',{className:'btn small warn',textContent:'Admin paste'});
-    const btnJSON  = el('button',{className:'btn small warn',textContent:'Upload JSON'});
-    btnPaste.addEventListener('click', async ()=>{
-      const text = prompt('Paste quick text (names, goals/assists, rating, with commas or new lines):');
-      if(!text) return;
-      try{
-        await jpost(`/api/cup/fixtures/${f.id}/ingest-text`, { text });
-        toast('Parsed & saved'); loadScheduling(); loadPublic();
-      }catch(e){ toast('Failed to parse: '+e.message, false); }
+      wrap.appendChild(box);
     });
-    btnJSON.addEventListener('click', async ()=>{
+  }catch(e){
+    wrap.innerHTML = '<div class="muted">Failed to load squad slots.</div>';
+  }
+}
+
+// =======================
+//   FREE AGENTS (Market)
+// =======================
+async function loadFA(){
+  try{
+    const d = await apiGet('/api/free-agents');
+    const arr = d.agents || [];
+    document.getElementById('faList').innerHTML = arr.length ? arr.map(a=>{
+      const pos = (a.positions||[]).join(', ');
+      return `<div class="m-card" style="margin:8px 0;padding:8px">
+        <strong>${escapeHtml(a.name)}</strong> <span class="muted">(${escapeHtml(a.region||'')})</span><br>
+        <span class="muted">${escapeHtml(pos)}</span>
+        ${a.discord ? `<div>Discord: ${escapeHtml(a.discord)}</div>`:''}
+        ${a.bio ? `<div class="muted">${escapeHtml(a.bio)}</div>`:''}
+      </div>`;
+    }).join('') : 'No free agents listed.';
+  }catch{ document.getElementById('faList').textContent = 'Failed to load.'; }
+}
+
+document.getElementById('btnListFA').onclick = async ()=>{
+  const name = meUser?.name || prompt('Your display name');
+  if (!name) return;
+  const positions = prompt('Positions (comma separated, e.g., ST, CAM, CB)')||'';
+  const region = prompt('Region/Timezone (e.g., EST, EU)')||'';
+  const foot = prompt('Strong foot (L/R)')||'';
+  const availability = prompt('Availability (e.g., Mon-Thu 7-10pm)')||'';
+  const discord = prompt('Discord tag (optional)')||'';
+  const bio = prompt('Short bio (optional)')||'';
+  try{
+    await apiPost('/api/free-agents/me',{ name, positions, region, foot, availability, discord, bio });
+    alert('Listed!');
+    await loadFA();
+  }catch(e){ alert('List failed: '+e.message); }
+};
+document.getElementById('btnUnlistFA').onclick = async ()=>{
+  try{ await fetch('/api/free-agents/me',{ method:'DELETE' }); alert('Unlisted'); await loadFA(); }
+  catch(e){ alert('Unlist failed: '+e.message); }
+};
+
+// =======================
+//   FIXTURES — PUBLIC
+// =======================
+const fixturesPublicList = document.getElementById('fixturesPublicList');
+async function refreshFixturesPublic(){
+  try {
+    const d = await apiGet('/api/cup/fixtures/public?cup=UPCL');
+    fixturesPublicCache = d.fixtures || [];
+  } catch { fixturesPublicCache = []; }
+}
+function renderFixturesPublic(){
+  const list = fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
+  fixturesPublicList.innerHTML = list.length ? list.map(f=>{
+    const hn = byId(f.home)?.name || f.home;
+    const an = byId(f.away)?.name || f.away;
+    const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const homeSc = (f.details?.home||[]).map(p=>`<li>${escapeHtml(p.player)}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
+    const awaySc = (f.details?.away||[]).map(p=>`<li>${escapeHtml(p.player)}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
+    return `
+      <div class="fx">
+        <div>
+          <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
+          <div class="meta">${escapeHtml(f.round||'')} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
+          ${(f.status==='final' && (homeSc||awaySc)) ? `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+              <div><em>${escapeHtml(hn)} scorers</em><ul>${homeSc||'<li class="muted">—</li>'}</ul></div>
+              <div><em>${escapeHtml(an)} scorers</em><ul>${awaySc||'<li class="muted">—</li>'}</ul></div>
+            </div>` : ''
+          }
+        </div>
+      </div>`;
+  }).join('') : `<div class="muted">No fixtures yet.</div>`;
+}
+
+// =======================
+//   FIXTURES — SCHEDULING
+// =======================
+const fixturesList = document.getElementById('fixturesList');
+const btnCreateFx  = document.getElementById('btnCreateFx');
+
+btnCreateFx.onclick = async ()=>{
+  const home = prompt('Home club ID (use exact from Teams list)');
+  const away = prompt('Away club ID');
+  const round= prompt('Round (e.g., Quarterfinal)');
+  if (!home || !away) return;
+  try{
+    const d = await apiPost('/api/cup/fixtures', { home, away, round, cup:'UPCL' });
+    alert('Created fixture'); await refreshFixturesSched(); renderFixturesSched();
+  }catch(e){ alert('Create failed: '+e.message); }
+};
+
+document.querySelectorAll('[data-fxf]').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('[data-fxf]').forEach(b=>b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true');
+    renderFixturesSched();
+  };
+});
+
+async function refreshFixturesSched(){
+  if (!(isMgr || isAdmin)) { fixturesSchedCache=[]; return; }
+  try {
+    const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
+    fixturesSchedCache = d.fixtures || [];
+  } catch { fixturesSchedCache = []; }
+}
+function filterKey(){
+  const active = [...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
+  return active ? active.getAttribute('data-fxf') : 'upcoming';
+}
+function renderFixturesSched(){
+  const key = filterKey();
+  let list = fixturesSchedCache.slice();
+  const now = Date.now();
+
+  if (key==='upcoming'){
+    list = list.filter(f => f.status!=='final' && (!f.when || f.when>=now));
+  } else if (key==='final'){
+    list = list.filter(f => f.status==='final');
+  } else if (key==='mine' && meUser){
+    list = list.filter(f => f.home===meUser.teamId || f.away===meUser.teamId);
+  }
+
+  list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
+  fixturesList.innerHTML = list.length ? list.map(renderFxSchedRow).join('') : `<div class="muted">No fixtures.</div>`;
+
+  // attach handlers per fixture
+  list.forEach(f=>{
+    const root = document.getElementById('fx_'+f.id);
+    if (!root) return;
+
+    const isManagerOf = meUser && meUser.role==='Manager' && [f.home,f.away].includes(meUser.teamId);
+
+    const btnProp = root.querySelector('.act .prop');
+    if (btnProp) btnProp.onclick = async ()=>{
+      if (!isManagerOf) return alert('Managers only');
+      const atStr = prompt('Propose time (e.g., 2025-08-20 20:30)');
+      if (!atStr) return;
+      const at = Date.parse(atStr);
+      if (!at) return alert('Could not parse date');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/propose`, { at }); await refreshFixturesSched(); renderFixturesSched(); }
+      catch(e){ alert('Propose failed: '+e.message); }
+    };
+
+    const btnAgree = root.querySelector('.act .agree');
+    if (btnAgree) btnAgree.onclick = async ()=>{
+      if (!isManagerOf) return alert('Managers only');
+      const at = root.querySelector('select[name="slot"]').value;
+      if (!at) return alert('Pick a proposed slot first');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
+      catch(e){ alert('Vote failed: '+e.message); }
+    };
+
+    const btnDecl = root.querySelector('.act .decl');
+    if (btnDecl) btnDecl.onclick = async ()=>{
+      if (!isManagerOf) return alert('Managers only');
+      const at = root.querySelector('select[name="slot"]').value;
+      if (!at) return alert('Pick a proposed slot first');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixturesSched(); renderFixturesSched(); }
+      catch(e){ alert('Vote failed: '+e.message); }
+    };
+
+    const btnLine = root.querySelector('.act .line');
+    if (btnLine) btnLine.onclick = async ()=>{
+      if (!isManagerOf) return alert('Managers only');
+      const formation = prompt('Formation (e.g., 4-3-3)') || '';
+      const starters = prompt('Comma-separated starters (GK,RB,CB,...) or names list') || '';
+      const lineup = {};
+      starters.split(',').map(s=>s.trim()).filter(Boolean).forEach((name,i)=> lineup['P'+(i+1)] = name);
+      try{ await apiPut(`/api/cup/fixtures/${f.id}/lineup`, { formation, lineup }); await refreshFixturesSched(); renderFixturesSched(); }
+      catch(e){ alert('Lineup failed: '+e.message); }
+    };
+
+    const btnReport = root.querySelector('.act .rep');
+    if (btnReport) btnReport.onclick = async ()=>{
+      if (!isManagerOf) return alert('Managers only');
       const hs = Number(prompt('Home score?')||0);
       const as = Number(prompt('Away score?')||0);
-      const sample = {
-        text: 'optional notes',
-        details: {
-          home: [{ "player":"Players1", "goals":1, "assists":0, "rating":9.1 }],
-          away: [{ "player":"Player1", "goals":2, "assists":0, "rating":8.8 }]
-        }
-      };
-      const blob = prompt('Paste JSON (we prepared a sample):', JSON.stringify(sample, null, 2));
-      if(!blob) return;
-      let data; try{ data = JSON.parse(blob); }catch{ return toast('Invalid JSON', false); }
-      data.hs = hs; data.as = as;
+      const text = prompt('Notes (optional)')||'';
       try{
-        await jpost(`/api/cup/fixtures/${f.id}/report`, data);
-        toast('Result + details saved'); loadScheduling(); loadPublic();
-      }catch(e){ toast('Failed: '+e.message, false); }
-    });
-    row5.append(btnPaste, btnJSON);
-    c.append(row5);
-  }
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, text });
+        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
+        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
+        await refreshFixturesSched(); renderFixturesSched();
+        await refreshFixturesPublic(); renderFixturesPublic();
+      }catch(e){ alert('Report failed: '+e.message); }
+    };
 
-  // unresolved
-  if (Array.isArray(f.unresolved) && f.unresolved.length){
-    const u = el('div',{className:'unresolved',style:'margin-top:8px'});
-    u.innerHTML = `<b>Unresolved names:</b> ${f.unresolved.map(x=>`${escapeHtml(x.side)}: ${escapeHtml(x.name)}`).join(', ')}`;
-    c.append(u);
-  }
-  return c;
+    const btnIngest = root.querySelector('.act .ingest');
+    if (btnIngest) btnIngest.onclick = async ()=>{
+      if (!isAdmin) return alert('Admin only');
+      const text = prompt('Paste quick result (score & player lines)');
+      if (!text) return;
+      try{
+        await apiPost(`/api/cup/fixtures/${f.id}/ingest-text`, { text });
+        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
+        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
+        await refreshFixturesSched(); renderFixturesSched();
+        await refreshFixturesPublic(); renderFixturesPublic();
+      }catch(e){ alert('Ingest failed: '+e.message); }
+    };
+
+    const btnJson = root.querySelector('.act .json');
+    if (btnJson) btnJson.onclick = async ()=>{
+      if (!isAdmin) return alert('Admin only');
+      const hs = Number(prompt('Home score (hs)')||0);
+      const as = Number(prompt('Away score (as)')||0);
+      const template = JSON.stringify({
+        details:{
+          home:[{ player:"Player A", goals:1, assists:0, rating:9.5 }],
+          away:[{ player:"Player B", goals:2, assists:0, rating:8.7 }]
+        }
+      }, null, 2);
+      const raw = prompt('Paste JSON (or edit the template):', template);
+      if (!raw) return;
+      try{
+        const obj = JSON.parse(raw);
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj });
+        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
+        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
+        await refreshFixturesSched(); renderFixturesSched();
+        await refreshFixturesPublic(); renderFixturesPublic();
+      }catch(e){ alert('JSON upload failed: '+e.message); }
+    };
+  });
 }
 
-$('#btnCreateFx').addEventListener('click', async ()=>{
-  const home = $('#fxHome').value.trim();
-  const away = $('#fxAway').value.trim();
-  const round = $('#fxRound').value.trim();
-  if(!home||!away) return toast('Home & Away required', false);
-  try{ await jpost('/api/cup/fixtures', { home, away, round, cup: $('#cupSched').value }); toast('Fixture created'); loadScheduling(); }
-  catch(e){ toast('Failed: '+e.message, false); }
-});
+function renderFxSchedRow(f){
+  const hn = byId(f.home)?.name || f.home;
+  const an = byId(f.away)?.name || f.away;
+  const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+  const props = (f.proposals||[]).map(p=>`<option value="${p.at}">${fmtDate(p.at)}</option>`).join('');
+  const status = f.status || 'pending';
+  const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
+  return `
+  <div class="fx" id="fx_${f.id}">
+    <div>
+      <div class="vs">${escapeHtml(hn)} <span class="muted">vs</span> ${escapeHtml(an)}</div>
+      <div class="meta">Round: ${escapeHtml(f.round||'')} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
+    </div>
+    <div class="center">
+      ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
+    </div>
+    <div class="act">
+      <button class="prop">Propose</button>
+      <button class="agree">Agree</button>
+      <button class="decl">Decline</button>
+      <button class="line">Set Lineup</button>
+      <button class="rep">Submit Result</button>
+      ${adminBtns}
+    </div>
+  </div>`;
+}
 
-/* =======================
-   RANKINGS / WALLET
-======================= */
+// Next & recent for team (from public cache)
+function nextFor(teamId){
+  const now = Date.now();
+  return fixturesPublicCache
+    .filter(f => (f.home===teamId||f.away===teamId) && f.status!=='final' && f.when && f.when>=now)
+    .sort((a,b)=>a.when-b.when)[0];
+}
+function finalsFor(teamId, n=5){
+  return fixturesPublicCache
+    .filter(f => f.status==='final' && (f.home===teamId||f.away===teamId))
+    .sort((a,b)=>(b.when||b.createdAt)-(a.when||a.createdAt))
+    .slice(0,n);
+}
+function renderNextFor(teamId){
+  const el = document.getElementById('nextMatchBody');
+  const f = nextFor(teamId);
+  if (!f){ el.textContent='No scheduled match yet.'; return; }
+  const hn = byId(f.home)?.name || f.home;
+  const an = byId(f.away)?.name || f.away;
+  el.innerHTML = `<div><strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong></div>
+                  <div class="muted">${fmtDate(f.when)}</div>`;
+}
+function renderTeamResults(teamId){
+  const el = document.getElementById('teamResultsBody');
+  const list = finalsFor(teamId);
+  el.innerHTML = list.length ? list.map(f=>{
+    const hn = byId(f.home)?.name || f.home;
+    const an = byId(f.away)?.name || f.away;
+    return `<div>FT ${f.score.hs}-${f.score.as}: <strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong> • ${fmtDate(f.when||f.createdAt)}</div>`;
+  }).join('') : 'No finals yet.';
+}
+
+// =======================
+//   RANKINGS (ADMIN)
+// =======================
 async function loadRankings(){
   try{
-    const r = await jget('/api/rankings');
-    const tb = $('#rankTable tbody'); tb.innerHTML='';
-    Object.entries(r.rankings||{}).forEach(([clubId, row])=>{
-      const tr = el('tr');
-      tr.innerHTML = `<td>${escapeHtml(clubId)}</td>
-        <td>${escapeHtml(row.leaguePos||'')}</td>
-        <td>${escapeHtml(row.cup||'none')}</td>
-        <td>${escapeHtml(row.points||0)}</td>
-        <td>${escapeHtml(row.tier||'mid')}</td>`;
-      tb.append(tr);
+    const d = await apiGet('/api/rankings');
+    rankings = d.rankings || {};
+    payouts = d.payouts || payouts;
+  }catch(e){ rankings={}; }
+}
+
+function renderRankings(){
+  const rows = teams.map(t=>{
+    const r = rankings[t.id] || { leaguePos:'', cup:'none', points:0, tier:'mid' };
+    const cupOpts = ['none','round_of_16','quarterfinal','semifinal','runner_up','winner']
+      .map(v=>`<option value="${v}" ${r.cup===v?'selected':''}>${v.replace(/_/g,' ')}</option>`).join('');
+    return `<tr>
+      <td>${escapeHtml(t.name)}</td>
+      <td><input type="number" min="0" style="width:80px" value="${r.leaguePos||''}" data-k="leaguePos" data-id="${t.id}"></td>
+      <td><select data-k="cup" data-id="${t.id}">${cupOpts}</select></td>
+      <td>${escapeHtml(r.tier||'mid')}</td>
+      <td>${fmtMoney(perDayFor(t.id))}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rankingsTable').innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left">Club</th><th>League pos</th><th>Cup</th><th>Tier</th><th>Payout/day</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  const adminControls = document.getElementById('adminControls');
+  adminControls.style.display = isAdmin ? 'flex' : 'none';
+
+  document.getElementById('btnSaveRankings').onclick = async ()=>{
+    const payload = { rankings: {} };
+    document.querySelectorAll('#rankingsTable [data-id]').forEach(el=>{
+      const id = el.getAttribute('data-id');
+      const k  = el.getAttribute('data-k');
+      payload.rankings[id] = payload.rankings[id] || {};
+      payload.rankings[id][k] = k==='leaguePos' ? Number(el.value||0) : el.value;
     });
-  }catch(e){ /* ignore */ }
+    try{ await apiPost('/api/rankings/bulk', payload); alert('Saved'); await loadRankings(); renderRankings(); }
+    catch(e){ alert('Save failed: '+e.message); }
+  };
+  document.getElementById('btnRecalc').onclick = async ()=>{
+    try{ await apiPost('/api/rankings/recalc',{}); await loadRankings(); renderRankings(); alert('Recalculated'); }
+    catch(e){ alert('Recalc failed: '+e.message); }
+  };
+  document.getElementById('btnCupDry').onclick = async ()=>{
+    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:true }); alert('Would award: '+fmtMoney(r.totalAwarded)); }
+    catch(e){ alert('Dry run failed: '+e.message); }
+  };
+  document.getElementById('btnCupPay').onclick = async ()=>{
+    if (!confirm('Pay cup bonuses now?')) return;
+    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:false }); alert('Awarded: '+fmtMoney(r.totalAwarded)); }
+    catch(e){ alert('Pay failed: '+e.message); }
+  };
+}
+function perDayFor(clubId){
+  const r = rankings[clubId] || { tier:'mid' };
+  const t = r.tier || 'mid';
+  return payouts[t] || 0;
 }
 
-$('#btnWalletLoad').addEventListener('click', loadWallet);
-$('#btnWalletCollect').addEventListener('click', collectWallet);
+// =======================
+//   ROLE CLAIM
+// =======================
+document.getElementById('btnSetRole').onclick = async ()=>{
+  const role = (prompt('Role (Manager or Player)')||'').trim().toLowerCase();
+  if (!role) return;
 
-async function loadWallet(){
-  const id = $('#walletClubId').value.trim(); if(!id) return toast('Enter clubId', false);
-  try{
-    const r = await jget(`/api/wallets/${encodeURIComponent(id)}`);
-    $('#walletInfo').style.display='';
-    $('#walletBal').textContent = (r.wallet.balance||0).toLocaleString();
-    $('#walletPer').textContent = (r.perDay||0).toLocaleString();
-    $('#walletAccrued').textContent = (r.preview.amount||0).toLocaleString();
-    $('#walletDays').textContent = r.preview.days||0;
-  }catch(e){ toast('Failed to load wallet', false); }
-}
-async function collectWallet(){
-  const id = $('#walletClubId').value.trim(); if(!id) return toast('Enter clubId', false);
-  try{
-    const r = await jpost(`/api/wallets/${encodeURIComponent(id)}/collect`,{});
-    if(!r.ok){ toast(r.message||'Nothing to collect', false); return; }
-    toast(`Collected ${r.preview.amount.toLocaleString()}`);
-    loadWallet();
-  }catch(e){ toast('Collect failed (need club manager session)', false); }
-}
-
-/* =======================
-   INIT
-======================= */
-(async function init(){
-  await refreshAuth();
-  // Auto-open team via hash #team=<id>
-  const m = location.hash.match(/team=([^&]+)/);
-  if (m){
-    const team = teams.find(t=>String(t.id)===decodeURIComponent(m[1]));
-    if (team) openTeam(team);
+  if (role === 'manager') {
+    const clubId = prompt('Enter your Club ID exactly as shown in Teams (e.g., 2491998 or afc-warriors)');
+    const name   = prompt('Your display name');
+    const code   = prompt('Manager code (ask admin)');
+    if (!clubId || !name || !code) return;
+    try {
+      await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
+      alert('Manager role claimed');
+      await checkMe(); await refreshFixturesSched(); renderFixturesSched();
+    } catch (e) { alert('Claim failed: ' + e.message); }
+    return;
   }
-  // Eager load some tabs
-  loadPublic(); loadRankings();
-})();
+
+  if (role === 'player') {
+    const name = prompt('Your display name');
+    const clubId = prompt('Optional: Club ID to associate with (or leave blank)');
+    if (!name) return;
+    try {
+      await apiPost('/api/players/claim', { name, teamId: clubId || '' });
+      alert('Player role set');
+      await checkMe();
+    } catch (e) { alert('Player claim failed: ' + e.message); }
+    return;
+  }
+
+  alert('Unsupported role. Use Manager or Player.');
+};
+
+// =======================
+//   INIT
+// =======================
+const teamsView = document.getElementById('teams-view');
+async function init(){
+  renderTeams();
+  await checkAdmin();
+  await checkMe();
+
+  // Default to Teams
+  setNav('teams');
+
+  // Load data sets
+  await refreshFixturesPublic(); renderFixturesPublic();
+  if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
+  await loadFA();
+
+  // hash-open team
+  try{
+    const m = location.hash.match(/team=([^&]+)/);
+    if (m){ const team = byId(decodeURIComponent(m[1])); if (team) setTimeout(()=>showTeam(team), 150); }
+  }catch{}
+}
+init();
+
 </script>
 </body>
 </html>
