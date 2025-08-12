@@ -3,104 +3,78 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Pro Club — Teams, Market, Rankings & UPCL Fixtures</title>
-
+<title>Pro Club — League Hub</title>
 <style>
 :root { --accent:#e00; --muted:#bb4444; --card-h:400px; }
-* { box-sizing: border-box; }
-body { background:#000; color:#fff; font-family: Arial, sans-serif; margin:0; min-height:100vh; }
-header { background:linear-gradient(90deg,#a00000,#d50000); color:#fff; padding:18px; display:flex; align-items:center; gap:14px; }
-header h1 { margin:0; font-size:20px; letter-spacing:.2px; }
-.nav { margin-left:8px; display:flex; gap:8px; flex-wrap:wrap; }
-.nav button { background:#330000; color:#fff; border:1px solid #551111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700; }
-.nav button[aria-pressed="true"] { background:var(--accent); border-color:#ff4444; }
-.userbar { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-.pill { background:#330000; border:1px solid #551111; padding:8px 12px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; }
-.pill .num { font-variant-numeric: tabular-nums; }
-.pill button { all:unset; cursor:pointer; font-weight:700; }
-main { padding:20px; max-width:1200px; margin:0 auto; }
+*{box-sizing:border-box}
+body{background:#000;color:#fff;font-family:Arial,sans-serif;margin:0;min-height:100vh}
+header{background:linear-gradient(90deg,#a00000,#d50000);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px;letter-spacing:.2px}
+.navbar{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.navbar button{background:#330000;color:#fff;border:1px solid #551111;border-radius:10px;padding:8px 10px;cursor:pointer}
+.navbar button[aria-pressed="true"]{background:#550000;border-color:#aa1111}
+main{padding:20px;max-width:1200px;margin:0 auto;background:#000}
+h2{margin:0 0 8px}
 
-/* Teams grid */
-#teams-view { display:block; }
-.teams-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; margin-top:18px; }
-.team-card { background:#110000; border-radius:12px; box-shadow:0 6px 18px rgba(255,0,0,.3); overflow:hidden; cursor:pointer; transition:transform .14s, box-shadow .14s; display:flex; flex-direction:column; align-items:center; padding:14px; }
-.team-card:hover { transform:translateY(-6px); box-shadow:0 12px 28px rgba(255,0,0,.5); }
-.team-logo { width:100%; height:120px; object-fit:cover; border-radius:8px; background:#330000; display:block; }
-.team-meta { width:100%; display:flex; align-items:center; justify-content:space-between; margin-top:10px; gap:8px; }
-.team-meta .name { font-weight:700; font-size:16px; }
-.trophy-badge { background:#e00; color:#fff; font-weight:700; padding:6px 10px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(255,0,0,.6); }
-.trophy-badge:empty { display:none; }
+.muted{color:var(--muted)}
+.center{text-align:center}
 
-/* Team detail */
-#detail-view { display:none; }
-#detail-header { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
-#backBtn { background:#330000; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
-#detail-title { font-size:20px; font-weight:700; }
-.placeholder-card { height:200px; border-radius:10px; background:#220000; border:1px dashed #bb4444; display:flex; align-items:center; justify-content:center; color:#bb4444; }
-.muted { color:var(--muted); }
-.center { text-align:center; }
+/* Cards / grids */
+.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-top:18px}
+.team-card{background:#110000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.3);overflow:hidden;cursor:pointer;transition:.14s;display:flex;flex-direction:column;align-items:center;padding:14px;color:#fff}
+.team-card:hover{transform:translateY(-6px);box-shadow:0 12px 28px rgba(255,0,0,.5)}
+.team-logo{width:100%;height:120px;object-fit:cover;border-radius:8px;background:#330000;display:block}
+.team-meta{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
+.team-meta .name{font-weight:700;font-size:16px}
+.trophy-badge{background:#e00;color:#fff;font-weight:700;padding:6px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(255,0,0,.6)}
 
-/* Cards / sections */
-.m-card, .squad-card { background:#110000; border:1px solid #2a0000; border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(255,0,0,.25); }
-.squad-h { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+#teams-view{display:block}
+#detail-view{display:none;color:#fff}
+#detail-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;color:#fff}
+#backBtn{background:#330000;color:#fff;border:1px solid #551111;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
+#detail-title{font-size:20px;font-weight:700}
+.squad-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:14px}
 
-/* Market */
-#market-view { display:none; }
-.m-form label { display:block; font-weight:700; margin:10px 0 6px; }
-.m-form input, .m-form select, .m-form textarea { width:100%; background:#1a0000; border:1px solid #3a0000; color:#fff; border-radius:8px; padding:10px 12px; outline:none; }
-.m-form textarea { min-height:80px; resize:vertical; }
-.m-form .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.m-form button { margin-top:12px; background:var(--accent); color:#fff; border:1px solid #ff4444; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700; }
-.listings { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
-.listing { background:#120000; border:1px solid #2a0000; border-radius:12px; padding:12px; display:grid; gap:6px; }
-.listing .meta { color:var(--muted); font-size:12px; }
-.listing .actions { display:flex; gap:8px; flex-wrap:wrap; }
-.listing .actions a, .listing .actions button { background:#330000; color:#fff; border:1px solid #551111; padding:8px 12px; border-radius:10px; cursor:pointer; text-decoration:none; }
-
-/* Rankings */
-#rankings-view { display:none; }
-table th, table td { vertical-align: top; }
-
-/* Tactics / Squad */
-.squad-form { display:grid; grid-template-columns:1fr 180px 140px; gap:8px; margin-bottom:10px; }
-.squad-form input { background:#1a0000; border:1px solid #3a0000; color:#fff; border-radius:8px; padding:10px 12px; }
-.squad-form button { background:#e00; border:1px solid #ff4444; color:#fff; border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer; }
-.squad-table { width:100%; border-collapse:collapse; }
-.squad-table th, .squad-table td { border-bottom:1px solid #2a0000; padding:8px 6px; }
-.squad-table th { text-align:left; color:#ccc; }
-.squad-actions button { background:#330000; border:1px solid #551111; color:#fff; border-radius:8px; padding:6px 10px; cursor:pointer; margin-right:6px; }
+/* Generic card */
+.m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
 
 /* Fixtures */
-#fixtures-view { display:none; }
-.fx-card { background:#110000; border:1px solid #2a0000; border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(255,0,0,.25); }
-.fx-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-.fx-pill { background:#1a0000; border:1px solid #3a0000; border-radius:999px; padding:6px 10px; display:inline-flex; gap:6px; align-items:center; }
-.fx-actions button { background:#330000; border:1px solid #551111; color:#fff; border-radius:10px; padding:6px 10px; cursor:pointer; }
-.fx-actions .primary { background:#e00; border-color:#ff4444; }
+.fx-list{display:flex;flex-direction:column;gap:10px}
+.fx{background:#110000;border:1px solid #300000;border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.fx .meta{font-size:12px;color:var(--muted)}
+.fx .vs{font-weight:700}
+.fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
+.fx .chip{background:#220000;border:1px solid #440000;border-radius:999px;padding:4px 8px;font-size:12px}
 
-@media (max-width:1040px){ .m-form .row { grid-template-columns:1fr; } }
-@media (max-width:720px){ .squad-form { grid-template-columns:1fr; } }
+input,select,textarea{background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:8px}
+label{font-size:12px;color:var(--muted)}
+hr{border:none;border-top:1px solid #220000;margin:14px 0}
+
+@media(max-width:720px){
+  .card{height:320px}
+  .team-logo{height:100px}
+  .fx{grid-template-columns:1fr;gap:6px}
+  .fx .act{justify-content:flex-start}
+}
 </style>
 </head>
 <body>
 <header>
-  <h1>Pro Club — Teams, Market, Rankings & UPCL Fixtures</h1>
-  <nav class="nav" aria-label="Views">
-    <button id="navTeams" aria-pressed="true">Teams</button>
-    <button id="navMarket" aria-pressed="false">Transfer Market</button>
-    <button id="navRankings" aria-pressed="false">Rankings</button>
+  <h1>Pro Club — League Hub</h1>
+  <div class="navbar">
+    <button id="navTeams"    aria-pressed="true">Teams</button>
+    <button id="navMarket"   aria-pressed="false">Market</button>
     <button id="navFixtures" aria-pressed="false">UPCL Fixtures</button>
-  </nav>
-  <div class="userbar">
-    <div class="pill" id="walletPill" title="Club balance" style="display:none">🪙 <span class="num" id="walletAmount">0</span></div>
-    <div class="pill"><button id="openRoleBtn" title="Set your name & role">Set Role</button></div>
-    <button id="adminLoginBtn" style="background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Admin sign in</button>
-    <button id="adminLogoutBtn" style="display:none;background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Sign out</button>
+    <button id="navRankings" aria-pressed="false" style="display:none">Rankings</button>
+    <button id="btnSetRole">Set Role</button>
+    <button id="btnAdminLogin">Admin sign in</button>
+    <button id="btnAdminLogout" style="display:none">Admin sign out</button>
   </div>
 </header>
 
 <main>
-  <!-- Teams -->
+  <!-- TEAMS OVERVIEW -->
   <section id="teams-view" aria-live="polite">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <h2 style="margin:0">Teams</h2>
@@ -109,230 +83,102 @@ table th, table td { vertical-align: top; }
     <div class="teams-grid" id="teamsGrid" role="list"></div>
   </section>
 
-  <!-- Team detail -->
+  <!-- TEAM DETAIL -->
   <section id="detail-view" aria-live="polite">
     <div id="detail-header">
       <button id="backBtn">← Back</button>
       <div>
         <div id="detail-title">Team name</div>
-        <div class="muted" id="detail-sub">manual squad</div>
+        <div class="muted" id="detail-sub">squad & trophies</div>
       </div>
-      <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+      <div style="margin-left:auto">
         <span class="trophy-badge" id="detail-trophies">0 🏆</span>
-        <span id="teamWallet" class="pill" style="display:inline-flex">🪙 <span class="num" id="teamWalletAmt">0</span> <button id="collectBtn" style="margin-left:8px">Collect</button></span>
       </div>
     </div>
 
-    <!-- Next match panel -->
-    <div id="teamFxPanel" class="m-card" style="margin-bottom:12px;">
-      <strong>Next UPCL Match</strong>
-      <div id="teamFxBody" class="muted" style="margin-top:6px">No match scheduled.</div>
-    </div>
-
-    <!-- Roles/Tier -->
-    <div id="rolesPanel" class="m-card" style="margin-bottom:12px;">
-      <strong>Roles, Tier & Payout</strong>
-      <div id="rolesInfo" class="muted" style="margin-top:6px"></div>
-      <div style="margin-top:8px"><button id="manageRoleFromTeam" class="fx-actions">Open Role Settings</button></div>
-    </div>
-
-    <!-- Tactics -->
-    <div id="tacticsCard" class="squad-card" style="margin-bottom:12px;">
-      <div class="squad-h">
-        <strong>Tactics & Lineup</strong>
-        <span class="muted" id="tacStatus"></span>
+    <div id="teamPanels" class="grid-panels" style="display:grid;grid-template-columns:1fr;gap:12px">
+      <div class="m-card">
+        <strong>Club Wallet</strong>
+        <div id="walletBody" class="muted" style="margin-top:6px">Loading…</div>
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <button id="btnCollect" style="display:none">Collect daily payout</button>
+          <small class="muted" id="walletHint"></small>
+        </div>
       </div>
-      <div class="squad-form" style="grid-template-columns:200px 1fr 160px;">
-        <select id="tacFormation"></select>
-        <input id="tacNotes" placeholder="Notes (e.g., press high, overlap fullbacks)" />
-        <button id="tacSave">Save</button>
-      </div>
-      <div id="tacGrid"></div>
-      <div class="muted" style="margin-top:8px"><small>Tip: set XI from your squad; bench fills automatically from remaining players.</small></div>
-    </div>
 
-    <!-- Captaincy / Set pieces -->
-    <div id="rolesCard" class="squad-card" style="margin-bottom:12px;">
-      <div class="squad-h"><strong>Captaincy & Set-Pieces</strong></div>
-      <div class="squad-form" style="grid-template-columns:repeat(5,1fr);gap:8px">
-        <div><label>Captain</label><select id="rk-cap"></select></div>
-        <div><label>Vice</label><select id="rk-vice"></select></div>
-        <div><label>Free Kicks</label><select id="rk-fk"></select></div>
-        <div><label>Corners</label><select id="rk-ck"></select></div>
-        <div><label>Penalties</label><select id="rk-pen"></select></div>
+      <div class="m-card">
+        <strong>Next UPCL Match</strong>
+        <div id="nextMatchBody" class="muted" style="margin-top:6px">No scheduled match yet.</div>
+      </div>
+
+      <div id="teamResultsPanel" class="m-card">
+        <strong>Recent Results</strong>
+        <div id="teamResultsBody" class="muted" style="margin-top:6px">No finals yet.</div>
       </div>
     </div>
 
-    <!-- Manual squad -->
-    <div id="squadContainer"></div>
-
+    <div id="squadContainer" class="squad-grid" style="margin-top:12px"></div>
     <div id="detail-footer" style="margin-top:18px" class="muted center">
-      <small>Manual squads (manager-editable). Tactics & fixtures integrate with UPCL matchdays.</small>
+      <small>Data pulled from EA when available; manual for custom clubs.</small>
     </div>
   </section>
 
-  <!-- Transfer Market (unchanged UI from your last build) -->
-  <section id="market-view" aria-live="polite">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <h2 style="margin:0">Transfer Market</h2>
-      <div class="muted">Listings: <span id="m-count">0</span></div>
-    </div>
-
-    <div class="m-card" style="margin-top:14px">
-      <div class="m-form">
-        <div id="m-perm" class="muted" style="margin-bottom:8px"></div>
-        <div class="row">
-          <div>
-            <label>Type</label>
-            <select id="l-type"><option value="sale">For Sale</option><option value="loan">For Loan</option><option value="free">Free Agent</option></select>
-          </div>
-          <div>
-            <label>Player</label>
-            <input id="l-player" placeholder="e.g. ChuyLeal133" />
-          </div>
-        </div>
-        <div class="row" id="priceRow">
-          <div><label>Price (🪙)</label><input id="l-price" type="number" min="0" placeholder="1500000" /></div>
-          <div><label>Weekly wage</label><input id="l-wage" type="number" min="0" placeholder="120000" /></div>
-        </div>
-        <div id="loanRow" style="display:none"><label>Loan terms</label><input id="l-terms" placeholder="2 weeks, recall clause" /></div>
-        <div class="row">
-          <div><label>From club</label><select id="l-club"></select></div>
-          <div><label>Chat link</label><input id="l-link" placeholder="/chat?room=market-Player" /></div>
-        </div>
-        <label>Notes</label><textarea id="l-notes" placeholder="Availability, playstyle, time zone…"></textarea>
-        <button id="m-post">Post listing</button>
-      </div>
-      <div class="m-filter" style="margin:12px 0">
-        <button data-filter="all" aria-pressed="true">All</button>
-        <button data-filter="sale">For Sale</button>
-        <button data-filter="loan">For Loan</button>
-        <button data-filter="free">Free Agents</button>
-        <button data-filter="mine">My Listings</button>
-      </div>
-      <div class="listings" id="m-list"></div>
+  <!-- MARKET (simple placeholder, your routes already exist) -->
+  <section id="market-view" style="display:none">
+    <h2>Transfer Market</h2>
+    <div class="m-card">
+      <p class="muted">Clubs can list transfer/loan offers and free agents here. (UI trimmed)</p>
+      <p class="muted">Chat on a listing opens your Discord or preferred channel.</p>
     </div>
   </section>
 
-  <!-- Rankings -->
-  <section id="rankings-view" aria-live="polite">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <h2 style="margin:0">Rankings → Tiers → Payouts</h2>
-      <div class="muted">Saved on server</div>
-    </div>
-    <div class="m-card" style="margin-top:14px">
-      <p class="muted" style="margin-top:0">Public can view; only Admin can edit/recalculate or pay cup bonuses.</p>
-      <div style="overflow:auto">
-        <table id="rankingsTable" style="width:100%; border-collapse:collapse">
-          <thead>
-            <tr style="text-align:left">
-              <th style="padding:8px 6px;border-bottom:1px solid #2a0000">Club</th>
-              <th style="padding:8px 6px;border-bottom:1px solid #2a0000">League Pos</th>
-              <th style="padding:8px 6px;border-bottom:1px solid #2a0000">Cup</th>
-              <th style="padding:8px 6px;border-bottom:1px solid #2a0000">Points</th>
-              <th style="padding:8px 6px;border-bottom:1px solid #2a0000">Tier</th>
-              <th style="padding:8px 6px;border-bottom:1px solid #2a0000">Payout / day</th>
-            </tr>
-          </thead>
-          <tbody id="rankingsBody"></tbody>
-        </table>
-      </div>
-      <div id="adminControls" style="display:none; gap:8px; margin-top:12px">
-        <button id="recalcBtn" class="primary" style="background:#e00;border:1px solid #ff4444;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Recalculate</button>
-        <button id="saveRankingsBtn" style="background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Save</button>
-        <button id="clearRankingsBtn" style="background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Clear (local view)</button>
-        <button id="cupPreviewBtn" style="background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Preview Cup Bonuses</button>
-        <button id="cupPayBtn" class="primary" style="background:#e00;border:1px solid #ff4444;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Pay Cup Bonuses</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- UPCL Fixtures -->
-  <section id="fixtures-view" aria-live="polite">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <h2 style="margin:0">United Pro Clubs League — Fixtures</h2>
-      <div class="muted"><span id="fx-count">0</span> matches</div>
-    </div>
-
-    <div class="fx-card" style="margin-top:14px">
-      <div id="fx-admin" class="muted" style="margin-bottom:8px"></div>
-      <form id="fx-form" class="m-form" style="display:none">
-        <div class="row">
-          <div><label>Home</label><select id="fx-home"></select></div>
-          <div><label>Away</label><select id="fx-away"></select></div>
-        </div>
-        <div class="row">
-          <div><label>Round</label><input id="fx-round" placeholder="Round of 16 / QF / SF / Final" /></div>
-          <div><label>Date & Time (optional)</label><input id="fx-when" type="datetime-local" /></div>
-        </div>
-        <button type="submit">Create UPCL Fixture</button>
-      </form>
-
-      <div class="m-filter" style="margin:12px 0">
+  <!-- FIXTURES -->
+  <section id="fixtures-view" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <h2>UPCL Fixtures</h2>
+      <div style="display:flex;gap:6px;align-items:center">
         <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
-        <button data-fxf="final">Final</button>
-        <button data-fxf="all">All</button>
-        <button data-fxf="mine">My Club</button>
+        <button data-fxf="final" aria-pressed="false">Final</button>
+        <button data-fxf="all" aria-pressed="false">All</button>
+        <button data-fxf="mine" aria-pressed="false">My club</button>
+        <button id="btnCreateFx" style="display:none">Create fixture</button>
       </div>
+    </div>
+    <div id="fixturesList" class="fx-list" style="margin-top:10px"></div>
+  </section>
 
-      <div id="fx-list" class="listings"></div>
+  <!-- RANKINGS (ADMIN ONLY) -->
+  <section id="rankings-view" style="display:none">
+    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <h2>Rankings & Payouts</h2>
+      <div id="adminControls" style="display:none;gap:8px">
+        <button id="btnSaveRankings">Save</button>
+        <button id="btnRecalc">Recalc tiers</button>
+        <button id="btnCupDry">Cup bonuses (dry run)</button>
+        <button id="btnCupPay">Cup bonuses (pay)</button>
+      </div>
+    </div>
+    <div class="m-card" style="margin-top:10px">
+      <div class="muted" style="margin-bottom:8px">Only admins can view/edit this section.</div>
+      <div id="rankingsTable">Loading…</div>
     </div>
   </section>
 </main>
 
-<!-- ROLES MODAL -->
-<div class="modal" id="roleModal" aria-hidden="true" aria-label="Set your name & role" style="position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.6);padding:20px;">
-  <div class="m-card" style="width:min(720px,96vw)">
-    <h3>Set your name & role</h3>
-    <p class="muted" style="margin:0 0 8px">Managers must enter a manager code (ask the admin). Players can skip the code.</p>
-    <div class="m-form">
-      <div class="row">
-        <div><label>Display name</label><input id="u-name" placeholder="e.g. Captain Leo" /></div>
-        <div><label>Role</label><select id="u-role"><option>Player</option><option>Manager</option></select></div>
-      </div>
-      <div class="row">
-        <div><label>Club (optional for Player, required for Manager)</label><select id="u-team"></select></div>
-        <div><label>Manager code (Managers only)</label><input id="u-code" placeholder="Enter the code you received" /></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <button id="closeRole">Cancel</button>
-        <button id="saveRole" class="primary" style="background:#e00;border:1px solid #ff4444;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
-/* =======================
-   CONFIG / CONSTANTS
-======================= */
-const API_BASE = ''; // same-origin API
-// Optional: set your Discord webhook here to auto-post results
-// window.DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/....";
-
-const LISTINGS_KEY = 'market_listings_v1';
-const CURRENT_USER_KEY = 'current_user_v1';
-const SQUADS_KEY = 'club_squads_v1';
-const TACTICS_KEY = 'club_tactics_v1';
-const ROLES_KEY = 'club_roles_v1';
-
-const PAYOUTS = { elite: 1100000, mid: 900000, bottom: 700000 };
-const CUP_POINTS = { winner:60, runner_up:40, semifinal:25, quarterfinal:15, round_of_16:10, none:0 };
-function leaguePoints(pos){ pos=Number(pos||0); if(!pos) return 0; if(pos===1) return 100; if(pos===2) return 80; if(pos<=4) return 60; if(pos<=8) return 40; return 20; }
-
-const FORMATIONS = {
-  '4-3-3':  ['GK','RB','RCB','LCB','LB','RCM','CM','LCM','RW','ST','LW'],
-  '4-2-3-1':['GK','RB','RCB','LCB','LB','CDM','CDM','RAM','CAM','LAM','ST'],
-  '3-5-2':  ['GK','RCB','CB','LCB','RWB','RCM','CM','LCM','LWB','RS','LS'],
-  '4-4-2':  ['GK','RB','RCB','LCB','LB','RM','RCM','LCM','LM','RS','LS'],
-  '5-3-2':  ['GK','RWB','RCB','CB','LCB','LWB','RCM','CM','LCM','RS','LS']
+// =======================
+//   CONFIG / CONSTANTS
+// =======================
+const API_BASE = '';
+const TEAM_TITLES = {
+  '3638105': [
+    { count: 1, name: 'United Pro Clubs League Title' },
+    { count: 1, name: 'Leagues Cup' }
+  ]
 };
 
-/* =======================
-   DATA
-======================= */
+// Add teams (includes your new ones)
 const teams = [
-  { id: 'afc-warriors', name: 'AFC Warriors', logo: '/assets/logos/afc-warriors.png' },
   { id: '2491998', name: 'Royal Republic', logo: '/assets/logos/royal-republic-logo.png' },
   { id: '1527486', name: 'Gungan FC' },
   { id: '1969494', name: 'Club Frijol' },
@@ -349,826 +195,517 @@ const teams = [
   { id: '3638105', name: 'Real mvc' },
   { id: '55408', name: 'Elite VT' },
   { id: '4819681', name: 'EVERYTHING DEAD' },
-  { id: '35642', name: 'EBK FC' }
-  { id: 'Jids trivela', name: 'Jids trivela', logo: '/assets/logos/Jids-trivela.png' },
-   { id: 'Razorblack FC', name: 'Razorblack FC', logo: '/assets/logos/Razorblack-FC.png' }, 
+  { id: '35642', name: 'EBK FC' },
+  // Custom / manual clubs
+  { id: 'afc-warriors',  name: 'AFC Warriors',  logo: '/assets/logos/afc-warriors.png' },
+  { id: 'jids-trivela',  name: 'Jids Trivela',  logo: '/assets/logos/jids-trivela.png' },
+  { id: 'razorblack-fc', name: 'Razorblack FC', logo: '/assets/logos/razorblack-fc.png' }
 ];
 
-const TEAM_TITLES = {
-  '3638105': [
-    { count: 1, name: 'United Pro Clubs League Title' },
-    { count: 1, name: 'Leagues Cup' }
-  ]
+// helpers
+const byId = id => teams.find(t=>String(t.id)===String(id));
+function teamLogoUrl(team){ return team.logo || `https://via.placeholder.com/800x400.png?text=${encodeURIComponent(team.name)}`; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
+function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
+
+// state
+let isAdmin = false;
+let meUser  = null;
+let rankings = {};
+let payouts  = { elite:0, mid:0, bottom:0 };
+let fixturesCache = [];
+
+// api
+async function apiGet(p){ const r = await fetch(API_BASE+p); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+
+// nav
+const navTeams    = document.getElementById('navTeams');
+const navMarket   = document.getElementById('navMarket');
+const navFixtures = document.getElementById('navFixtures');
+const navRankings = document.getElementById('navRankings');
+
+const teamsView    = document.getElementById('teams-view');
+const marketView   = document.getElementById('market-view');
+const fixturesView = document.getElementById('fixtures-view');
+const rankingsView = document.getElementById('rankings-view');
+
+function setNav(active){
+  // guard: Rankings admin-only
+  if (active==='rankings' && !isAdmin) { alert('Admin only'); active='teams'; }
+  const map = {
+    teams:[teamsView, navTeams],
+    market:[marketView, navMarket],
+    fixtures:[fixturesView, navFixtures],
+    rankings:[rankingsView, navRankings]
+  };
+  for (const key of Object.keys(map)){
+    const [view,btn] = map[key];
+    const is = key===active;
+    view.style.display = is ? 'block' : 'none';
+    btn.setAttribute('aria-pressed', String(is));
+  }
+}
+
+navTeams.onclick    = ()=> setNav('teams');
+navMarket.onclick   = ()=> setNav('market');
+navFixtures.onclick = ()=> setNav('fixtures');
+navRankings.onclick = ()=> setNav('rankings');
+
+// auth / admin
+const btnAdminLogin = document.getElementById('btnAdminLogin');
+const btnAdminLogout= document.getElementById('btnAdminLogout');
+
+btnAdminLogin.onclick = async ()=>{
+  const pw = prompt('Admin password');
+  if (!pw) return;
+  try{
+    await apiPost('/api/admin/login',{ password: pw });
+    await checkAdmin();
+    alert('Admin signed in');
+  }catch(e){ alert('Login failed: '+e.message); }
+};
+btnAdminLogout.onclick = async ()=>{
+  try{ await apiPost('/api/admin/logout',{}); }catch{}
+  await checkAdmin();
+  alert('Signed out');
 };
 
-/* =======================
-   ELEMENTS
-======================= */
-const navTeams = document.getElementById('navTeams');
-const navMarket = document.getElementById('navMarket');
-const navRankings = document.getElementById('navRankings');
-const navFixtures = document.getElementById('navFixtures');
+async function checkAdmin(){
+  try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
+  navRankings.style.display = isAdmin ? 'inline-block' : 'none';
+  btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
 
-const teamsView = document.getElementById('teams-view');
-const marketView = document.getElementById('market-view');
-const rankingsView = document.getElementById('rankings-view');
-const fixturesView = document.getElementById('fixtures-view');
-const detailView = document.getElementById('detail-view');
+  // If user somehow is on rankings while losing admin, bump out
+  if (!isAdmin && rankingsView.style.display==='block') setNav('teams');
 
+  // show/hide admin-only controls
+  const btnCreateFx = document.getElementById('btnCreateFx');
+  if (btnCreateFx) btnCreateFx.style.display = isAdmin ? 'inline-block' : 'none';
+
+  // Load rankings only for admin
+  if (isAdmin) { await loadRankings(); renderRankings(); }
+}
+
+// me (session user / manager)
+async function checkMe(){
+  try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
+}
+
+// =======================
+//   TEAMS LIST / DETAIL
+// =======================
 const teamsGrid = document.getElementById('teamsGrid');
 const teamsCount = document.getElementById('teams-count');
+const detailView = document.getElementById('detail-view');
+const teamsViewEl = document.getElementById('teams-view');
 const detailTitle = document.getElementById('detail-title');
-const detailSub = document.getElementById('detail-sub');
+const detailSub   = document.getElementById('detail-sub');
 const detailTrophies = document.getElementById('detail-trophies');
 const squadContainer = document.getElementById('squadContainer');
 const backBtn = document.getElementById('backBtn');
-const rolesInfo = document.getElementById('rolesInfo');
-const manageRoleFromTeam = document.getElementById('manageRoleFromTeam');
-const teamFxBody = document.getElementById('teamFxBody');
-
-// Wallet
-const walletPill = document.getElementById('walletPill');
-const walletAmount = document.getElementById('walletAmount');
-const teamWalletAmt = document.getElementById('teamWalletAmt');
-const collectBtn = document.getElementById('collectBtn');
-
-// Market elems
-const mList = document.getElementById('m-list');
-const mCount = document.getElementById('m-count');
-const mPerm = document.getElementById('m-perm');
-const priceRow = document.getElementById('priceRow');
-const loanRow = document.getElementById('loanRow');
-
-// Modal
-const roleModal = document.getElementById('roleModal');
-const openRoleBtn = document.getElementById('openRoleBtn');
-const closeRole = document.getElementById('closeRole');
-const saveRole = document.getElementById('saveRole');
-const uName = document.getElementById('u-name');
-const uRole = document.getElementById('u-role');
-const uTeam = document.getElementById('u-team');
-const uCode = document.getElementById('u-code');
-
-// Rankings
-const rankingsBody = document.getElementById('rankingsBody');
-const recalcBtn = document.getElementById('recalcBtn');
-const saveRankingsBtn = document.getElementById('saveRankingsBtn');
-const clearRankingsBtn = document.getElementById('clearRankingsBtn');
-const cupPreviewBtn = document.getElementById('cupPreviewBtn');
-const cupPayBtn = document.getElementById('cupPayBtn');
-
-// Admin auth
-const adminLoginBtn = document.getElementById('adminLoginBtn');
-const adminLogoutBtn = document.getElementById('adminLogoutBtn');
-
-// Fixtures elems
-const fxForm = document.getElementById('fx-form');
-const fxAdmin = document.getElementById('fx-admin');
-const fxHome = document.getElementById('fx-home');
-const fxAway = document.getElementById('fx-away');
-const fxRound = document.getElementById('fx-round');
-const fxWhen = document.getElementById('fx-when');
-const fxList = document.getElementById('fx-list');
-const fxCount = document.getElementById('fx-count');
-
-/* =======================
-   STATE
-======================= */
-let listings = [];
-let currentUser = null;
-let isAdmin = false;
-let rankings = {};
-let openTeamId = null;
-let fixturesCache = []; // UPCL fixtures
-let marketFilter = 'all';
-
-/* =======================
-   UTIL
-======================= */
-function escapeHtml(s){ return String(s).replace(/[&<>\"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-function teamLogoUrl(team){ return team.logo || `https://via.placeholder.com/800x400.png?text=${encodeURIComponent(team.name)}`; }
-function byId(id){ return teams.find(t=>t.id===id); }
-function fmtCoins(n){ return Number(n||0).toLocaleString(); }
-function getDailyPayout(clubId){ const tier=(rankings[clubId]?.tier)||'mid'; return PAYOUTS[tier]||PAYOUTS.mid; }
-
-/* =======================
-   STORAGE (local cache pieces)
-======================= */
-function loadListings(){ try{ listings=JSON.parse(localStorage.getItem(LISTINGS_KEY))||[] }catch{ listings=[] } }
-function saveListings(){ try{ localStorage.setItem(LISTINGS_KEY, JSON.stringify(listings)) }catch{} }
-function loadUser(){ try{ currentUser=JSON.parse(localStorage.getItem(CURRENT_USER_KEY))||null }catch{ currentUser=null } }
-function saveUser(){ try{ localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(currentUser)) }catch{} }
-
-// Squads (manual)
-function readAllSquads(){ try { return JSON.parse(localStorage.getItem(SQUADS_KEY)) || {}; } catch { return {}; } }
-function writeAllSquads(o){ try { localStorage.setItem(SQUADS_KEY, JSON.stringify(o)); } catch {} }
-function getSquad(clubId){ const all=readAllSquads(); return Array.isArray(all[clubId])?all[clubId]:[]; }
-function setSquad(clubId, list){ const all=readAllSquads(); all[clubId]=list; writeAllSquads(all); }
-function upsertPlayer(clubId,{id,name,value}){ const list=getSquad(clubId); if(!id) id=crypto.randomUUID(); const ix=list.findIndex(p=>p.id===id||p.name.toLowerCase()===name.trim().toLowerCase()); const player={id,name:name.trim(),value:Math.max(0,Number(value||0))}; if(ix>=0) list[ix]=player; else list.push(player); setSquad(clubId,list); return player; }
-function removePlayer(clubId,id){ const list=getSquad(clubId).filter(p=>p.id!==id); setSquad(clubId,list); }
-
-// Tactics / roles
-function readTacticsAll(){ try { return JSON.parse(localStorage.getItem(TACTICS_KEY)) || {}; } catch { return {}; } }
-function writeTacticsAll(o){ try { localStorage.setItem(TACTICS_KEY, JSON.stringify(o)); } catch {} }
-function getTactics(clubId){ const all=readTacticsAll(); return all[clubId] || { formation:'4-3-3', lineup:{}, notes:'' }; }
-function setTactics(clubId, data){ const all=readTacticsAll(); all[clubId]=data; writeTacticsAll(all); }
-
-function readRolesAll(){ try { return JSON.parse(localStorage.getItem(ROLES_KEY)) || {}; } catch { return {}; } }
-function writeRolesAll(o){ try { localStorage.setItem(ROLES_KEY, JSON.stringify(o)); } catch {} }
-function getRoles(clubId){ const all=readRolesAll(); return all[clubId] || { cap:'', vice:'', fk:'', ck:'', pen:'' }; }
-function setRoles(clubId, data){ const all=readRolesAll(); all[clubId]=data; writeRolesAll(all); }
-
-/* =======================
-   SERVER CALLS
-======================= */
-async function apiGet(path){ const r=await fetch(`${API_BASE}${path}`); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
-async function apiPost(path, body){ const r=await fetch(`${API_BASE}${path}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); const d=await r.json().catch(()=>({})); if(!r.ok||d.error) throw new Error(d.error||'HTTP '+r.status); return d; }
-async function apiPut(path, body){ const r=await fetch(`${API_BASE}${path}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); const d=await r.json().catch(()=>({})); if(!r.ok||d.error) throw new Error(d.error||'HTTP '+r.status); return d; }
-
-async function loadRankings(){
-  try{
-    const data = await apiGet('/api/rankings');
-    rankings = data.rankings || {};
-    if (data.payouts){ PAYOUTS.elite=data.payouts.elite??PAYOUTS.elite; PAYOUTS.mid=data.payouts.mid??PAYOUTS.mid; PAYOUTS.bottom=data.payouts.bottom??PAYOUTS.bottom; }
-  }catch{ rankings = {}; }
-}
-async function loadHeaderWallet(){
-  if (!(currentUser && currentUser.teamId)) return;
-  try{ const data = await apiGet(`/api/wallets/${encodeURIComponent(currentUser.teamId)}`); walletAmount.textContent = fmtCoins(data.wallet?.balance ?? 0); }catch{}
-}
-async function loadTeamWallet(clubId){
-  try{ const data = await apiGet(`/api/wallets/${encodeURIComponent(clubId)}`); teamWalletAmt.textContent = fmtCoins(data.wallet?.balance ?? 0); }catch{}
-}
-
-// Fixtures
-async function fetchFixtures(){
-  try{ const d = await apiGet('/api/cup/fixtures'); fixturesCache = d.fixtures || []; }
-  catch{ fixturesCache = []; }
-}
-
-/* =======================
-   AUTH (Admin + Manager)
-======================= */
-async function checkAdmin(){
-  try { const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; } catch { isAdmin = false; }
-  adminLoginBtn.style.display  = isAdmin ? 'none':'inline-block';
-  adminLogoutBtn.style.display = isAdmin ? 'inline-block':'none';
-  const ctrls = document.getElementById('adminControls'); if (ctrls) ctrls.style.display = isAdmin ? 'flex' : 'none';
-}
-adminLoginBtn.onclick = async ()=>{
-  const pw = prompt('Admin password'); if(!pw) return;
-  try{ await apiPost('/api/admin/login', { password: pw }); await checkAdmin(); renderRankings(); renderFixtures(); }
-  catch(e){ alert('Login failed: ' + e.message); }
-};
-adminLogoutBtn.onclick = async ()=>{ try{ await apiPost('/api/admin/logout'); }catch{} await checkAdmin(); renderRankings(); renderFixtures(); };
-
-async function refreshSessionUser(){
-  try { const d = await apiGet('/api/auth/me'); if (d.user) { currentUser = d.user; saveUser(); } }
-  catch {}
-}
-function updateWalletUI(){ walletPill.style.display = (currentUser && currentUser.teamId) ? 'inline-flex' : 'none'; }
-
-function openRoleModal(prefillTeam){
-  uTeam.innerHTML = '<option value="">— No club —</option>' + teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-  if (currentUser){ uName.value=currentUser.name||''; uRole.value=currentUser.role||'Player'; uTeam.value=prefillTeam||currentUser.teamId||''; }
-  else { uName.value=''; uRole.value='Player'; uTeam.value=prefillTeam||''; }
-  roleModal.style.display='grid'; roleModal.setAttribute('aria-hidden','false');
-}
-function closeRoleModal(){ roleModal.style.display='none'; roleModal.setAttribute('aria-hidden','true'); }
-openRoleBtn.addEventListener('click', ()=> openRoleModal());
-closeRole.addEventListener('click', closeRoleModal);
-
-saveRole.addEventListener('click', async ()=>{
-  const name = (uName.value||'').trim();
-  const role = uRole.value;
-  const teamId = (uTeam.value||'').trim();
-  const code = (uCode.value||'').trim();
-  if (!name) { alert('Please enter a display name.'); return; }
-  if (role === 'Manager' && !teamId) { alert('Managers must be attached to a club.'); return; }
-
-  try{
-    if (role === 'Manager') {
-      if (!code) { alert('Manager code is required.'); return; }
-      const d = await apiPost(`/api/clubs/${encodeURIComponent(teamId)}/claim-manager`, { name, code });
-      currentUser = d.user; // server truth
-    } else {
-      currentUser = { name, role:'Player', teamId: teamId || null }; // local
-    }
-    saveUser();
-    closeRoleModal();
-    updateWalletUI();
-    await loadHeaderWallet();
-    if (openTeamId) showTeam(byId(openTeamId));
-    renderMarket();
-    renderTeams(); // shows next match too
-    renderFixtures();
-  }catch(e){
-    alert('Could not set role: ' + e.message);
-  }
-});
-
-/* =======================
-   NAV
-======================= */
-function setNav(active){
-  const map = { teams:[teamsView,navTeams], market:[marketView,navMarket], rankings:[rankingsView,navRankings], fixtures:[fixturesView,navFixtures] };
-  for (const key of Object.keys(map)){ const [view,btn]=map[key]; const isActive = key===active; view.style.display=isActive?'block':'none'; btn.setAttribute('aria-pressed', String(isActive)); }
-}
-navTeams.addEventListener('click', ()=> setNav('teams'));
-navMarket.addEventListener('click', ()=> setNav('market'));
-navRankings.addEventListener('click', ()=> setNav('rankings'));
-navFixtures.addEventListener('click', ()=> setNav('fixtures'));
-
-/* =======================
-   TEAMS + NEXT MATCH
-======================= */
-function nextFixtureFor(teamId){
-  const upcoming = fixturesCache
-    .filter(f=> (f.home===teamId || f.away===teamId) && f.status!=='final' && f.when)
-    .sort((a,b)=> a.when - b.when);
-  return upcoming[0] || null;
-}
 
 function renderTeams(){
-  teamsGrid.innerHTML=''; teamsCount.textContent = teams.length;
+  teamsGrid.innerHTML='';
+  teamsCount.textContent = teams.length;
   teams.forEach(team=>{
-    const nf = nextFixtureFor(team.id);
-    const opp = nf ? (team.id===nf.home ? nf.away : nf.home) : null;
-    const oppName = opp ? (byId(opp)?.name || 'TBD') : null;
-    const when = nf ? new Date(nf.when).toLocaleString() : null;
-
-    const card=document.createElement('div'); card.className='team-card'; card.setAttribute('role','listitem');
-    const titles = TEAM_TITLES[team.id];
-    const hasTitles = Array.isArray(titles)&&titles.length>0;
+    const card = document.createElement('div');
+    card.className='team-card';
+    card.setAttribute('role','listitem');
     card.innerHTML = `
       <img class="team-logo" src="${teamLogoUrl(team)}" alt="${escapeHtml(team.name)} logo" />
       <div class="team-meta">
-        <div>
-          <div class="name">${escapeHtml(team.name)}</div>
-          ${nf ? `<div class="muted" style="font-size:12px;margin-top:4px">Next: vs ${escapeHtml(oppName)} • ${when}</div>` : ''}
-        </div>
-        ${hasTitles ? `<div class="trophy-badge">${titles.map(t=>`${t.count}x ${escapeHtml(t.name)}`).join(', ')}</div>` : ''}
-      </div>`;
+        <div class="name">${escapeHtml(team.name)}</div>
+        <div class="trophy-badge">${Array.isArray(TEAM_TITLES[team.id]) ? TEAM_TITLES[team.id].map(t=>`${t.count}x ${t.name}`).join(', ') : ''}</div>
+      </div>
+    `;
     card.addEventListener('click', ()=> showTeam(team));
     teamsGrid.appendChild(card);
   });
 }
 
-/* =======================
-   SQUAD (manual)
-======================= */
-function renderManualSquad(team){
-  const isManager = !!(currentUser && currentUser.role==='Manager' && currentUser.teamId===team.id);
-  const squad = getSquad(team.id).slice().sort((a,b)=> (b.value-a.value)||a.name.localeCompare(b.name));
-
-  let html = `<div class="squad-card">
-    <div class="squad-h"><strong>Squad (manual)</strong><span class="muted">${squad.length} players</span></div>`;
-  if (isManager){
-    html += `<div class="squad-form">
-      <input id="sq-name" placeholder="Username (exact)" />
-      <input id="sq-value" type="number" min="0" placeholder="Value (coins)" />
-      <button id="sq-save">Add / Update</button>
-    </div>`;
-  }
-  html += `<table class="squad-table" aria-label="Squad list">
-    <thead><tr><th>#</th><th>Username</th><th>Value (🪙)</th>${isManager?'<th>Actions</th>':''}</tr></thead>
-    <tbody id="squadTableBody">
-      ${squad.map((p,i)=>{
-        const roles = getRoles(team.id);
-        const capMark = (p.name===roles.cap) ? ' (C)' : (p.name===roles.vice ? ' (VC)' : '');
-        return `<tr data-id="${p.id}">
-          <td>${i+1}</td>
-          <td>${escapeHtml(p.name)}${capMark}</td>
-          <td>${fmtCoins(p.value)}</td>
-          ${isManager?`<td class="squad-actions"><button data-edit="${p.id}">Edit</button><button data-del="${p.id}">Remove</button></td>`:''}
-        </tr>`;
-      }).join('')}
-    </tbody></table></div>`;
-  squadContainer.innerHTML = html;
-  detailSub.textContent = `Squad (${squad.length} players — manual)`;
-
-  if (isManager){
-    const nameEl=document.getElementById('sq-name'); const valEl=document.getElementById('sq-value'); const saveEl=document.getElementById('sq-save');
-    let editId=null;
-    saveEl.addEventListener('click', ()=>{
-      const name=(nameEl.value||'').trim(); const value=Number(valEl.value||0);
-      if(!name){ alert('Enter a username.'); return; }
-      upsertPlayer(team.id, { id:editId, name, value });
-      nameEl.value=''; valEl.value=''; editId=null; saveEl.textContent='Add / Update';
-      renderManualSquad(team);
-    });
-    document.getElementById('squadTableBody').addEventListener('click',(e)=>{
-      const btn=e.target.closest('button'); if(!btn) return;
-      const { edit, del } = btn.dataset;
-      if (edit){ const p=getSquad(team.id).find(x=>x.id===edit); if(!p) return; editId=p.id; nameEl.value=p.name; valEl.value=p.value; saveEl.textContent='Save'; nameEl.focus(); }
-      if (del){ if(!confirm('Remove this player?')) return; removePlayer(team.id, del); renderManualSquad(team); }
-    });
-  }
-}
-
-/* =======================
-   TACTICS & ROLES
-======================= */
-function renderTactics(team){
-  const isManager = !!(currentUser && currentUser.role==='Manager' && currentUser.teamId===team.id);
-  const tac = getTactics(team.id);
-  const squad = getSquad(team.id);
-  const used = new Set(Object.values(tac.lineup||{}));
-  const remaining = squad.filter(p=>!used.has(p.name)).sort((a,b)=> (b.value-a.value)||a.name.localeCompare(b.name));
-  const fSel = document.getElementById('tacFormation');
-  fSel.innerHTML = Object.keys(FORMATIONS).map(f=>`<option value="${f}" ${tac.formation===f?'selected':''}>${f}</option>`).join('');
-  const notesEl = document.getElementById('tacNotes'); notesEl.value = tac.notes || '';
-  const saveBtn = document.getElementById('tacSave');
-  const status = document.getElementById('tacStatus');
-  const slots = FORMATIONS[tac.formation] || FORMATIONS['4-3-3'];
-  const tacGrid = document.getElementById('tacGrid');
-  tacGrid.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;">
-      ${slots.map(pos=>{
-        const current = tac.lineup[pos] || '';
-        const optNames = [current, ...remaining.map(p=>p.name)].filter(Boolean);
-        const unique = Array.from(new Set(optNames));
-        return `<div class="m-card" style="padding:10px">
-          <div style="font-weight:700;margin-bottom:6px">${pos}</div>
-          <select data-pos="${pos}" ${isManager?'':'disabled'} style="width:100%;background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:8px">
-            <option value="">— Select —</option>
-            ${unique.map(n=>`<option ${n===current?'selected':''} value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')}
-          </select>
-        </div>`;
-      }).join('')}
-    </div>
-    <div style="margin-top:10px"><strong>Bench (auto):</strong> <span class="muted">${remaining.length?remaining.map(p=>escapeHtml(p.name)).join(', '):'—'}</span></div>
-  `;
-  [fSel, notesEl, saveBtn].forEach(el=> el.disabled = !isManager);
-  status.textContent = isManager ? 'You can edit this lineup.' : 'View only';
-
-  fSel.onchange = ()=>{ const t=getTactics(team.id); t.formation=fSel.value; setTactics(team.id,t); renderTactics(team); };
-  saveBtn.onclick = ()=>{
-    const selects = tacGrid.querySelectorAll('select[data-pos]');
-    const newLineup = {}; const picked = new Set();
-    for (const s of selects){ const pos=s.dataset.pos, name=s.value.trim(); if(!name) continue; if(picked.has(name)) { alert('Duplicate player: '+name); return; } picked.add(name); newLineup[pos]=name; }
-    const t=getTactics(team.id); t.lineup=newLineup; t.notes=notesEl.value.trim(); setTactics(team.id,t); renderTactics(team);
-  };
-}
-function renderRoles(team){
-  const isManager = !!(currentUser && currentUser.role==='Manager' && currentUser.teamId===team.id);
-  const r = getRoles(team.id);
-  const squad = getSquad(team.id);
-  const opts = ['<option value="">—</option>'].concat(squad.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`)).join('');
-  const ids = ['rk-cap','rk-vice','rk-fk','rk-ck','rk-pen'];
-  const map = { 'rk-cap':'cap', 'rk-vice':'vice', 'rk-fk':'fk', 'rk-ck':'ck', 'rk-pen':'pen' };
-  ids.forEach(id=>{
-    const el=document.getElementById(id);
-    el.innerHTML = opts;
-    el.value = r[map[id]] || '';
-    el.disabled = !isManager;
-    el.onchange = ()=>{ const rr=getRoles(team.id); rr[map[id]]=el.value; setRoles(team.id,rr); renderManualSquad(team); };
-  });
-}
-
-/* =======================
-   TEAM DETAIL (incl. next match panel)
-======================= */
 async function showTeam(team){
-  openTeamId=team.id; setNav('teams');
-  teamsView.style.display='none'; detailView.style.display='block';
-  detailTitle.textContent=team.name;
+  window.scrollTo({top:0,behavior:'smooth'});
+  teamsViewEl.style.display='none';
+  detailView.style.display='block';
+  detailTitle.textContent = team.name;
+  detailSub.textContent = 'Loading club info…';
 
-  const titles=TEAM_TITLES[team.id];
-  if (Array.isArray(titles)&&titles.length){
-    detailTrophies.innerHTML=titles.map(t=>`<div>${t.count}x ${escapeHtml(t.name)}</div>`).join('');
-  } else detailTrophies.textContent='No trophies';
+  // trophies
+  if(Array.isArray(TEAM_TITLES[team.id])){
+    detailTrophies.innerHTML = TEAM_TITLES[team.id].map(t=>`<div>${t.count}x ${t.name}</div>`).join('');
+  } else detailTrophies.textContent = 'No trophies';
 
-  // roles UI blurb
-  const isManagerHere = !!(currentUser && currentUser.role==='Manager' && currentUser.teamId===team.id);
-  const tier=(rankings[team.id]?.tier)||'mid';
-  const perDay=getDailyPayout(team.id);
-  rolesInfo.innerHTML = isManagerHere
-    ? `You are a <strong>Manager</strong> of <strong>${escapeHtml(team.name)}</strong>. Tier: <strong>${tier.toUpperCase()}</strong> • Payout: 🪙 <strong>${fmtCoins(perDay)}</strong>/day.`
-    : currentUser
-      ? `Signed in as <strong>${escapeHtml(currentUser.name)}</strong> (${currentUser.role}${currentUser.teamId ? ' • '+escapeHtml(byId(currentUser.teamId)?.name||'') : ''}). This club is <strong>${tier.toUpperCase()}</strong> • 🪙 ${fmtCoins(perDay)}/day.`
-      : 'You have not set a role yet.';
-  manageRoleFromTeam.onclick = ()=> openRoleModal(team.id);
+  // wallet info
+  await renderWallet(team.id);
+  // fixtures: next + recent
+  await refreshFixtures();
+  renderNextFor(team.id);
+  renderTeamResults(team.id);
 
-  // wallet preview
-  await loadTeamWallet(team.id);
+  // player display
+  if(/^\d+$/.test(team.id)){
+    await renderEAPlayers(team.id);
+  }else{
+    renderManualPlayers(team);
+  }
 
-  // render squad/tactics/roles
-  renderManualSquad(team);
-  renderTactics(team);
-  renderRoles(team);
-
-  // Next match panel content
-  const fx = nextFixtureFor(team.id);
-  teamFxBody.innerHTML = fx ? renderOneFixtureRow(fx, team.id, true) : '<span class="muted">No match scheduled.</span>';
+  detailSub.textContent = 'Club overview';
 }
 
-/* =======================
-   MARKET
-======================= */
-document.querySelectorAll('[data-filter]').forEach(b=>{
-  b.addEventListener('click', ()=>{ document.querySelectorAll('[data-filter]').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); marketFilter=b.dataset.filter; renderMarket(); });
-});
-document.getElementById('l-type').addEventListener('change', (e)=>{ const v=e.target.value; priceRow.style.display=(v==='sale'||v==='loan')?'grid':'none'; loanRow.style.display=(v==='loan')?'block':'none'; });
-function canPost(type, clubId){ if(!currentUser) return false; if(type==='free') return true; return currentUser.role==='Manager' && currentUser.teamId && (!clubId || clubId===currentUser.teamId); }
-document.getElementById('m-post').addEventListener('click', (e)=>{
-  const type=document.getElementById('l-type').value;
-  const player=(document.getElementById('l-player').value||'').trim();
-  const position=(document.getElementById('l-pos')?.value||'').trim();
-  const price=Number(document.getElementById('l-price').value||0);
-  const wage=Number(document.getElementById('l-wage').value||0);
-  const terms=(document.getElementById('l-terms').value||'').trim();
-  const clubId=(document.getElementById('l-club').value||'').trim();
-  const link=(document.getElementById('l-link').value||'').trim();
-  const notes=(document.getElementById('l-notes').value||'').trim();
-  if(!currentUser){ alert('Set your role first.'); return; }
-  if(!player){ alert('Enter a player name.'); return; }
-  if(type!=='free' && !canPost(type, clubId)) { alert('Only club managers can post sale/loan listings for their club.'); return; }
-  const listing={ id:crypto.randomUUID(), type, player, position, price, wage, terms, notes, fromClubId: type==='free'?null:(clubId||currentUser.teamId||null), link: link || `/chat?room=market-${encodeURIComponent(player)}`, createdAt: Date.now(), listedBy:{ name:currentUser.name, role:currentUser.role, teamId:currentUser.teamId||null } };
-  listings.push(listing); saveListings(); renderMarket();
-});
-function renderMarket(){
-  const lClub=document.getElementById('l-club');
-  lClub.innerHTML='<option value="">— Select club —</option>'+teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-  if(currentUser&&currentUser.teamId) lClub.value=currentUser.teamId;
-  const hint=[]; if(!currentUser){ hint.push('Set your role to post listings.'); } else { hint.push(`Signed in as ${escapeHtml(currentUser.name)} (${currentUser.role}${currentUser.teamId? ' • '+escapeHtml(byId(currentUser.teamId)?.name||''):''})`); if(currentUser.role==='Manager') hint.push('You can list players for your club.'); if(currentUser.role==='Player') hint.push('You can post yourself as a Free Agent.'); }
-  mPerm.textContent=hint.join(' — ');
-
-  let items=[...listings].sort((a,b)=> b.createdAt-a.createdAt);
-  if(['sale','loan','free'].includes(marketFilter)) items=items.filter(x=>x.type===marketFilter);
-  if(marketFilter==='mine' && currentUser) items=items.filter(x=>x.listedBy?.name===currentUser.name);
-
-  mList.innerHTML=''; if(!items.length){ mList.innerHTML='<div class="placeholder-card" role="listitem">No listings yet</div>'; }
-  else items.forEach(item=>{
-    const div=document.createElement('div'); div.className='listing';
-    const teamName=item.fromClubId?(byId(item.fromClubId)?.name||'Unknown Club'):'Free Agent';
-    const when=new Date(item.createdAt).toLocaleString();
-    div.innerHTML=`
-      <div class="meta">${when} • ${escapeHtml(item.listedBy?.name||'')} (${escapeHtml(item.listedBy?.role||'')})</div>
-      <div><strong>${escapeHtml(item.player)}</strong> ${item.position? '• '+escapeHtml(item.position):''}</div>
-      <div>${item.type==='sale'?`For Sale — 🪙 <strong>${fmtCoins(item.price||0)}</strong>`: item.type==='loan'?`For Loan — ${escapeHtml(item.terms||'terms TBD')}`:'Free Agent'}</div>
-      ${item.wage?`<div>Wage: 🪙 <strong>${fmtCoins(item.wage)}</strong>/wk</div>`:''}
-      <div class="muted">${escapeHtml(teamName)}</div>
-      ${item.notes?`<div>${escapeHtml(item.notes)}</div>`:''}
-      <div class="actions">
-        <a href="${item.link}">Chat</a>
-        ${currentUser && currentUser.role==='Manager' && currentUser.teamId===item.fromClubId ? `<button data-remove-listing="${item.id}">Remove</button>`:''}
-      </div>`;
-    mList.appendChild(div);
-  });
-}
-mList.addEventListener('click',(e)=>{
-  const btn=e.target.closest('button'); if(!btn) return;
-  const id=btn.dataset.removeListing; if(!id) return;
-  const ix=listings.findIndex(x=>x.id===id); if(ix===-1) return;
-  if(!(currentUser&&items[ix]?.listedBy?.name===currentUser.name)){} // just local guard
-  listings.splice(ix,1); saveListings(); renderMarket();
+backBtn.addEventListener('click', ()=>{
+  detailView.style.display='none';
+  teamsViewEl.style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
 });
 
-/* =======================
-   RANKINGS (read-only unless admin)
-======================= */
-function renderRankings(){
-  rankingsBody.innerHTML='';
-  teams.forEach(t=>{
-    const r=rankings[t.id]||{ leaguePos:'', cup:'none', points:0, tier:'mid' };
-    const disabled = isAdmin ? '' : 'disabled';
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td style="padding:6px">${escapeHtml(t.name)}</td>
-      <td style="padding:6px"><input ${disabled} data-club="${t.id}" data-field="leaguePos" type="number" min="1" placeholder="pos" value="${r.leaguePos||''}" style="width:80px;background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px"></td>
-      <td style="padding:6px">
-        <select ${disabled} data-club="${t.id}" data-field="cup" style="background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px">
-          <option value="none" ${r.cup==='none'?'selected':''}>None</option>
-          <option value="round_of_16" ${r.cup==='round_of_16'?'selected':''}>Round of 16</option>
-          <option value="quarterfinal" ${r.cup==='quarterfinal'?'selected':''}>Quarterfinal</option>
-          <option value="semifinal" ${r.cup==='semifinal'?'selected':''}>Semifinal</option>
-          <option value="runner_up" ${r.cup==='runner_up'?'selected':''}>Runner-up</option>
-          <option value="winner" ${r.cup==='winner'?'selected':''}>Winner</option>
-        </select>
-      </td>
-      <td style="padding:6px"><span data-club="${t.id}" data-field="points">${r.points||0}</span></td>
-      <td style="padding:6px">
-        <select ${disabled} data-club="${t.id}" data-field="tier" style="background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px">
-          <option value="elite" ${r.tier==='elite'?'selected':''}>Elite</option>
-          <option value="mid" ${r.tier==='mid'?'selected':''}>Mid</option>
-          <option value="bottom" ${r.tier==='bottom'?'selected':''}>Bottom</option>
-        </select>
-      </td>
-      <td style="padding:6px">🪙 <span data-club="${t.id}" data-field="payout">${fmtCoins(getDailyPayout(t.id))}</span>/day</td>`;
-    rankingsBody.appendChild(tr);
-  });
-  if (isAdmin){
-    rankingsBody.querySelectorAll('input,select').forEach(el=>{
-      el.addEventListener('change', ()=>{
-        const clubId = el.dataset.club;
-        rankings[clubId] = rankings[clubId] || { leaguePos:'', cup:'none', points:0, tier:'mid' };
-        if (el.dataset.field === 'leaguePos') rankings[clubId].leaguePos = Number(el.value||0);
-        if (el.dataset.field === 'cup')       rankings[clubId].cup = el.value;
-        if (el.dataset.field === 'tier')      rankings[clubId].tier = el.value;
-        const pts = leaguePoints(rankings[clubId].leaguePos) + (CUP_POINTS[rankings[clubId].cup]||0);
-        rankings[clubId].points = pts;
-        const ptsEl = rankingsBody.querySelector(`[data-club="${clubId}"][data-field="points"]`); if (ptsEl) ptsEl.textContent = pts;
-        const payoutEl = rankingsBody.querySelector(`[data-club="${clubId}"][data-field="payout"]`); if (payoutEl) payoutEl.textContent = fmtCoins(getDailyPayout(clubId));
-      });
-    });
+// Wallet
+async function renderWallet(clubId){
+  const body = document.getElementById('walletBody');
+  const hint = document.getElementById('walletHint');
+  const btn = document.getElementById('btnCollect');
+  try{
+    const d = await apiGet(`/api/wallets/${encodeURIComponent(clubId)}`);
+    const w = d.wallet||{}, prev = d.preview||{};
+    const per = d.perDay||0;
+    body.innerHTML = `
+      Balance: <strong>${fmtMoney(w.balance||0)}</strong><br>
+      Tier payout: <strong>${fmtMoney(per)}</strong> / day<br>
+      Pending payout: <strong>${fmtMoney(prev.amount||0)}</strong> (${prev.days||0} days)
+    `;
+    // Only the manager of this club can collect
+    const canCollect = meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId);
+    btn.style.display = canCollect ? 'inline-block' : 'none';
+    btn.onclick = async ()=>{
+      try{
+        const r = await apiPost(`/api/wallets/${encodeURIComponent(clubId)}/collect`,{});
+        alert(r.ok ? 'Payout collected!' : (r.message||'No payout'));
+        await renderWallet(clubId);
+      }catch(e){ alert('Collect failed: '+e.message); }
+    };
+    hint.textContent = canCollect ? 'Only the club manager can collect.' : 'Sign in as manager to collect.';
+  }catch(e){
+    body.textContent = 'Wallet unavailable';
+    hint.textContent = '';
+    btn.style.display='none';
   }
 }
-recalcBtn.addEventListener('click', async ()=>{ try{ await apiPost('/api/rankings/recalc'); await loadRankings(); renderRankings(); alert('Recalculated on server.'); }catch(e){ alert('Recalc failed: '+e.message); } });
-saveRankingsBtn.addEventListener('click', async ()=>{ try{ await apiPost('/api/rankings/bulk', { rankings }); await loadRankings(); renderRankings(); alert('Saved.'); }catch(e){ alert('Save failed: '+e.message); } });
-clearRankingsBtn.addEventListener('click', ()=>{ if(!confirm('Clear local view?'))return; rankings={}; renderRankings(); });
-cupPreviewBtn?.addEventListener('click', async ()=>{ try{ const d=await apiPost('/api/bonuses/cup',{dryRun:true}); alert(`Preview total: 🪙 ${fmtCoins(d.totalAwarded)}`); }catch(e){ alert('Preview failed: '+e.message); } });
-cupPayBtn?.addEventListener('click', async ()=>{ if(!confirm('Pay cup bonuses now?'))return; try{ const d=await apiPost('/api/bonuses/cup',{dryRun:false}); alert(`Paid: 🪙 ${fmtCoins(d.totalAwarded)}`); }catch(e){ alert('Payout failed: '+e.message); } });
 
-/* =======================
-   FIXTURES (UPCL)
-======================= */
-function teamOptionHtml(){ return teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join(''); }
-
-function renderFixtures(){
-  // admin form
-  fxAdmin.textContent = isAdmin ? 'Admin: create UPCL fixtures below.' : 'Fixtures are created by admin.';
-  fxForm.style.display = isAdmin ? 'block' : 'none';
-  fxHome.innerHTML = teamOptionHtml(); fxAway.innerHTML = teamOptionHtml();
-
-  // filter and render
-  const now=Date.now(); let list = fixturesCache.slice().sort((a,b)=> (a.when||a.createdAt)-(b.when||b.createdAt));
-  const mode=document.querySelector('[data-fxf][aria-pressed="true"]')?.dataset.fxf||'upcoming';
-  if (mode==='upcoming') list=list.filter(m=> m.status!=='final' && (m.when? m.when>=now : true));
-  if (mode==='final')    list=list.filter(m=> m.status==='final');
-  if (mode==='mine' && currentUser?.teamId) list = list.filter(m=> m.home===currentUser.teamId || m.away===currentUser.teamId);
-
-  fxCount.textContent = list.length;
-  fxList.innerHTML = list.map(f=> renderOneFixtureRow(f, currentUser?.teamId || null, false)).join('') || '<div class="placeholder-card">No fixtures</div>';
+// Players
+async function renderEAPlayers(clubId){
+  squadContainer.innerHTML = '<div class="m-card">Loading players from EA…</div>';
+  try{
+    const data = await apiGet(`/api/teams/${encodeURIComponent(clubId)}/players`);
+    const members = Array.isArray(data.members) ? data.members : [];
+    if (!members.length) {
+      squadContainer.innerHTML = '<div class="m-card muted">No players returned by EA.</div>';
+      return;
+    }
+    squadContainer.innerHTML = '';
+    members.forEach(p=>{
+      const el = document.createElement('div');
+      el.className='m-card';
+      el.innerHTML = `<strong>${escapeHtml(p.name||'Unknown')}</strong>
+        <div class="muted">Pos: ${escapeHtml(p.proPos||p.position||'—')} • Goals: ${p.goals??0} • Assists: ${p.assists??0}</div>`;
+      squadContainer.appendChild(el);
+    });
+  }catch(e){
+    squadContainer.innerHTML = '<div class="m-card muted">EA API unavailable.</div>';
+  }
+}
+function renderManualPlayers(team){
+  squadContainer.innerHTML = `
+    <div class="m-card muted">Manual club — managers can maintain squads (coming soon).</div>
+  `;
 }
 
-function renderOneFixtureRow(f, focusTeamId=null, compact=false){
-  const h = byId(f.home)?.name || 'Home'; const a = byId(f.away)?.name || 'Away';
-  const whenTxt = f.when ? new Date(f.when).toLocaleString() : 'TBD';
-  const round = f.round || 'Round';
-  const isHomeMgr = currentUser?.role==='Manager' && currentUser.teamId===f.home;
-  const isAwayMgr = currentUser?.role==='Manager' && currentUser.teamId===f.away;
-  const canManage = isHomeMgr || isAwayMgr;
-  const myClub = isHomeMgr ? f.home : isAwayMgr ? f.away : null;
-  const oppClub = myClub ? (myClub===f.home?f.away:f.home) : null;
+// =======================
+//   FIXTURES
+// =======================
+const fixturesList = document.getElementById('fixturesList');
+const btnCreateFx  = document.getElementById('btnCreateFx');
 
-  // proposals and votes
-  const slots = (f.proposals||[]).map(s=>{
-    const votes = (f.votes||{})[String(s.at)] || {};
-    const tickH = votes[f.home]===true ? '✅' : '';
-    const tickA = votes[f.away]===true ? '✅' : '';
-    return `<div class="fx-pill">${new Date(s.at).toLocaleString()}
-      ${canManage?`<button data-fxagree="${f.id}" data-at="${s.at}">Agree</button><button data-fxdecl="${f.id}" data-at="${s.at}">Decline</button>`:''}
-      <span>${tickH} ${tickA}</span></div>`;
-  }).join('');
+btnCreateFx.onclick = async ()=>{
+  const home = prompt('Home club ID (use exact from Teams list)');
+  const away = prompt('Away club ID');
+  const round= prompt('Round (e.g., Quarterfinal)');
+  if (!home || !away) return;
+  try{
+    const d = await apiPost('/api/cup/fixtures', { home, away, round, cup:'UPCL' });
+    alert('Created fixture'); await refreshFixtures(); renderFixtures();
+  }catch(e){ alert('Create failed: '+e.message); }
+};
 
-  const proposeRow = canManage ? `
-    <div class="fx-row" style="margin-top:8px">
-      <input type="datetime-local" data-fxnewtime="${f.id}" />
-      <button data-fxpropose="${f.id}">Propose</button>
-    </div>` : '';
+document.querySelectorAll('[data-fxf]').forEach(btn=>{
+  btn.onclick = ()=>{
+    document.querySelectorAll('[data-fxf]').forEach(b=>b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true');
+    renderFixtures();
+  };
+});
 
-  const lineupBtns = canManage ? `
-    <div class="fx-actions">
-      <button data-fxlineup="${f.id}" class="primary">Set Lineup</button>
-      ${f.status==='scheduled' ? `<button data-fxgraphic="${f.id}">Match Graphic</button>` : ''}
-      ${f.status!=='final' ? `<button data-fxreport="${f.id}">Submit Result</button>` : ''}
-    </div>` : '';
+async function refreshFixtures(){
+  try {
+    const d = await apiGet('/api/cup/fixtures?cup=UPCL');
+    fixturesCache = d.fixtures || [];
+  } catch { fixturesCache = []; }
+}
+function filterKey(){
+  const active = [...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
+  return active ? active.getAttribute('data-fxf') : 'upcoming';
+}
+function renderFixtures(){
+  const key = filterKey();
+  let list = fixturesCache.slice();
+  const now = Date.now();
 
-  const head = compact
-    ? `<div class="fx-row"><strong>${escapeHtml(h)}</strong> vs <strong>${escapeHtml(a)}</strong> • ${escapeHtml(round)} • ${whenTxt} • <span class="muted">${f.status}</span></div>`
-    : `<div class="fx-row"><div class="meta">${escapeHtml(round)} • ${f.cup||'UPCL'}</div>
-       <div><strong>${escapeHtml(h)}</strong> vs <strong>${escapeHtml(a)}</strong></div>
-       <div>${whenTxt} • <span class="muted">${f.status}</span></div></div>`;
+  if (key==='upcoming'){
+    list = list.filter(f => f.status!=='final' && (!f.when || f.when>=now));
+  } else if (key==='final'){
+    list = list.filter(f => f.status==='final');
+  } else if (key==='mine' && meUser){
+    list = list.filter(f => f.home===meUser.teamId || f.away===meUser.teamId);
+  }
 
-  const result = f.status==='final' ? `<div><strong>FT:</strong> ${f.score?.hs||0}-${f.score?.as||0} • ${escapeHtml(f.report?.text||'')}</div>` : '';
+  list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
+  fixturesList.innerHTML = list.length ? list.map(renderFxRow).join('') : `<div class="muted">No fixtures.</div>`;
 
-  return `<div class="listing" data-fx="${f.id}">
-    ${head}
-    ${f.status!=='final' ? `<div class="fx-row" style="margin-top:6px">${slots||'<span class="muted">No proposed times yet.</span>'}</div>` : ''}
-    ${proposeRow}
-    ${lineupBtns}
-    ${result}
+  // attach handlers
+  list.forEach(f=>{
+    const root = document.getElementById('fx_'+f.id);
+    if (!root) return;
+
+    const isMgr = meUser && meUser.role==='Manager' && [f.home,f.away].includes(meUser.teamId);
+
+    const btnProp = root.querySelector('.act .prop');
+    if (btnProp) btnProp.onclick = async ()=>{
+      if (!isMgr) return alert('Managers only');
+      const atStr = prompt('Propose time (e.g., 2025-08-20 20:30 local)');
+      if (!atStr) return;
+      const at = Date.parse(atStr);
+      if (!at) return alert('Could not parse date');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/propose`, { at }); await refreshFixtures(); renderFixtures(); }
+      catch(e){ alert('Propose failed: '+e.message); }
+    };
+
+    const btnAgree = root.querySelector('.act .agree');
+    if (btnAgree) btnAgree.onclick = async ()=>{
+      if (!isMgr) return alert('Managers only');
+      const at = root.querySelector('select[name="slot"]').value;
+      if (!at) return alert('Pick a proposed slot first');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixtures(); renderFixtures(); }
+      catch(e){ alert('Vote failed: '+e.message); }
+    };
+
+    const btnDecl = root.querySelector('.act .decl');
+    if (btnDecl) btnDecl.onclick = async ()=>{
+      if (!isMgr) return alert('Managers only');
+      const at = root.querySelector('select[name="slot"]').value;
+      if (!at) return alert('Pick a proposed slot first');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixtures(); renderFixtures(); }
+      catch(e){ alert('Vote failed: '+e.message); }
+    };
+
+    const btnLine = root.querySelector('.act .line');
+    if (btnLine) btnLine.onclick = async ()=>{
+      if (!isMgr) return alert('Managers only');
+      const formation = prompt('Formation (e.g., 4-3-3)') || '';
+      const starters = prompt('Comma-separated starters (GK,RB,CB,...) or names list') || '';
+      const lineup = {};
+      starters.split(',').map(s=>s.trim()).filter(Boolean).forEach((name,i)=> lineup['P'+(i+1)] = name);
+      try{ await apiPut(`/api/cup/fixtures/${f.id}/lineup`, { formation, lineup }); await refreshFixtures(); renderFixtures(); }
+      catch(e){ alert('Lineup failed: '+e.message); }
+    };
+
+    const btnReport = root.querySelector('.act .rep');
+    if (btnReport) btnReport.onclick = async ()=>{
+      if (!isMgr) return alert('Managers only');
+      const hs = Number(prompt('Home score?')||0);
+      const as = Number(prompt('Away score?')||0);
+      const mvpHome = prompt('MVP (home)')||'';
+      const mvpAway = prompt('MVP (away)')||'';
+      const text = prompt('Notes (optional)')||'';
+      try{
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, text, mvpHome, mvpAway });
+        // switch filter to Final so user sees it
+        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
+        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
+        await refreshFixtures(); renderFixtures();
+      }catch(e){ alert('Report failed: '+e.message); }
+    };
+  });
+}
+
+function renderFxRow(f){
+  const hn = byId(f.home)?.name || f.home;
+  const an = byId(f.away)?.name || f.away;
+  const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+  const props = (f.proposals||[]).map(p=>`<option value="${p.at}">${fmtDate(p.at)}</option>`).join('');
+  const status = f.status || 'pending';
+
+  return `
+  <div class="fx" id="fx_${f.id}">
+    <div>
+      <div class="vs">${escapeHtml(hn)} <span class="muted">vs</span> ${escapeHtml(an)}</div>
+      <div class="meta">Round: ${escapeHtml(f.round||'')} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
+    </div>
+    <div class="center">
+      ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
+    </div>
+    <div class="act">
+      <button class="prop">Propose</button>
+      <button class="agree">Agree</button>
+      <button class="decl">Decline</button>
+      <button class="line">Set Lineup</button>
+      <button class="rep">Submit Result</button>
+    </div>
   </div>`;
 }
 
-// Fixtures admin & actions
-fxForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  if (!isAdmin) return alert('Admin only.');
-  const home=fxHome.value, away=fxAway.value; if(!home||!away) return alert('Select both teams.');
-  const round=(fxRound.value||'').trim()||'Round';
-  const whenMs = fxWhen.value ? new Date(fxWhen.value).getTime() : undefined;
-  try{
-    const res = await apiPost('/api/cup/fixtures', { home, away, round, cup:'UPCL' });
-    if (whenMs) await apiPost(`/api/cup/fixtures/${res.fixture.id}/propose`, { at: whenMs });
-    await fetchFixtures(); renderTeams(); renderFixtures();
-  }catch(e){ alert('Create failed: '+e.message); }
-});
-
-document.querySelectorAll('[data-fxf]').forEach(btn=>{
-  btn.addEventListener('click', ()=>{ document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false')); btn.setAttribute('aria-pressed','true'); renderFixtures(); });
-});
-
-// Delegated actions for fixtures list
-fxList.addEventListener('click', async (e)=>{
-  const b = e.target.closest('button'); if(!b) return;
-  const id = b.dataset.fxpropose || b.dataset.fxagree || b.dataset.fxdecl || b.dataset.fxlineup || b.dataset.fxgraphic || b.dataset.fxreport;
-  if (!id) return;
-  try{
-    if (b.dataset.fxpropose){
-      const inp = fxList.querySelector(`input[data-fxnewtime="${id}"]`);
-      const at = new Date(inp.value).getTime(); if (!at) return alert('Pick a valid date/time.');
-      await apiPost(`/api/cup/fixtures/${id}/propose`, { at });
-    }
-    if (b.dataset.fxagree || b.dataset.fxdecl){
-      const at = Number(b.dataset.at);
-      await apiPost(`/api/cup/fixtures/${id}/vote`, { at, agree: !!b.dataset.fxagree });
-    }
-    if (b.dataset.fxlineup){
-      const f = fixturesCache.find(x=>x.id===id);
-      const myClub = currentUser?.teamId;
-      if (!myClub) return alert('Set your role.');
-      const tac = getTactics(myClub);
-      const ok = confirm('Use your current Tactics & XI as your match lineup? (Change them on your Team page first if needed.)');
-      if (ok) await apiPut(`/api/cup/fixtures/${id}/lineup`, { formation: tac.formation, lineup: tac.lineup });
-    }
-    if (b.dataset.fxgraphic){
-      const dataUrl = await generateMatchGraphic(id);
-      if (!dataUrl) return;
-      const a = document.createElement('a'); a.href=dataUrl; a.download=`match-${id}.png`; a.click();
-    }
-    if (b.dataset.fxreport){
-      const hs = Number(prompt('Home score','0')||0);
-      const as = Number(prompt('Away score','0')||0);
-      const mvpHome = prompt('Home MVP username','')||'';
-      const mvpAway = prompt('Away MVP username','')||'';
-      const text = prompt('Short report (links/notes)','')||'';
-      // Optional Discord webhook
-      try{
-        const w = (window.DISCORD_WEBHOOK_URL||'').trim();
-        if (w){
-          await fetch(w, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ content: `**FT** ${hs}-${as}\nHome MVP: ${mvpHome}\nAway MVP: ${mvpAway}\n${text}` }) });
-        }
-      }catch{}
-      await apiPost(`/api/cup/fixtures/${id}/report`, { hs, as, mvpHome, mvpAway, text });
-    }
-  }catch(err){ alert('Action failed: '+err.message); }
-  await fetchFixtures(); renderTeams(); renderFixtures(); if (openTeamId) showTeam(byId(openTeamId));
-});
-
-// Actions inside team panel (use same handlers via event delegation)
-document.getElementById('teamFxPanel').addEventListener('click', async (e)=>{
-  const b = e.target.closest('button'); if(!b) return;
-  const id = b.dataset.fxpropose || b.dataset.fxagree || b.dataset.fxdecl || b.dataset.fxlineup || b.dataset.fxgraphic || b.dataset.fxreport;
-  if (!id) return;
-  // Mirror the same actions as fxList handler
-  e.stopPropagation();
-  // re-dispatch to fxList logic by calling click handler code would be redundant; do inline to keep simple
-  try{
-    if (b.dataset.fxpropose){
-      const inp = document.querySelector(`#teamFxBody input[data-fxnewtime="${id}"]`);
-      const at = new Date(inp.value).getTime(); if (!at) return alert('Pick a valid date/time.');
-      await apiPost(`/api/cup/fixtures/${id}/propose`, { at });
-    }
-    if (b.dataset.fxagree || b.dataset.fxdecl){
-      const at = Number(b.dataset.at);
-      await apiPost(`/api/cup/fixtures/${id}/vote`, { at, agree: !!b.dataset.fxagree });
-    }
-    if (b.dataset.fxlineup){
-      const myClub = currentUser?.teamId; if(!myClub) return alert('Set your role.');
-      const tac = getTactics(myClub);
-      const ok = confirm('Use your current Tactics & XI for this match?'); if (!ok) return;
-      await apiPut(`/api/cup/fixtures/${id}/lineup`, { formation: tac.formation, lineup: tac.lineup });
-    }
-    if (b.dataset.fxgraphic){
-      const dataUrl = await generateMatchGraphic(id);
-      if (!dataUrl) return;
-      const a = document.createElement('a'); a.href=dataUrl; a.download=`match-${id}.png`; a.click();
-    }
-    if (b.dataset.fxreport){
-      const hs = Number(prompt('Home score','0')||0);
-      const as = Number(prompt('Away score','0')||0);
-      const mvpHome = prompt('Home MVP','')||'';
-      const mvpAway = prompt('Away MVP','')||'';
-      const text = prompt('Short report','')||'';
-      try{ const w=(window.DISCORD_WEBHOOK_URL||'').trim(); if(w){ await fetch(w,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:`**FT** ${hs}-${as}\nHome MVP: ${mvpHome}\nAway MVP: ${mvpAway}\n${text}`})}); } }catch{}
-      await apiPost(`/api/cup/fixtures/${id}/report`, { hs, as, mvpHome, mvpAway, text });
-    }
-  }catch(err){ alert('Action failed: '+err.message); }
-  await fetchFixtures(); renderTeams(); if (openTeamId) showTeam(byId(openTeamId));
-});
-
-// Render a single compact row for team panel (reuses same data- attributes)
-function renderOneFixtureRowCompactUI(f){
-  return renderOneFixtureRow(f, currentUser?.teamId||null, true);
+// Next & recent for team
+function nextFor(teamId){
+  const now = Date.now();
+  return fixturesCache
+    .filter(f => (f.home===teamId||f.away===teamId) && f.status!=='final' && f.when && f.when>=now)
+    .sort((a,b)=>a.when-b.when)[0];
+}
+function finalsFor(teamId, n=5){
+  return fixturesCache
+    .filter(f => f.status==='final' && (f.home===teamId||f.away===teamId))
+    .sort((a,b)=>(b.when||b.createdAt)-(a.when||a.createdAt))
+    .slice(0,n);
+}
+function renderNextFor(teamId){
+  const el = document.getElementById('nextMatchBody');
+  const f = nextFor(teamId);
+  if (!f){ el.textContent='No scheduled match yet.'; return; }
+  const hn = byId(f.home)?.name || f.home;
+  const an = byId(f.away)?.name || f.away;
+  el.innerHTML = `<div><strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong></div>
+                  <div class="muted">${fmtDate(f.when)}</div>`;
+}
+function renderTeamResults(teamId){
+  const el = document.getElementById('teamResultsBody');
+  const list = finalsFor(teamId);
+  el.innerHTML = list.length ? list.map(f=>{
+    const hn = byId(f.home)?.name || f.home;
+    const an = byId(f.away)?.name || f.away;
+    return `<div>FT ${f.score.hs}-${f.score.as}: <strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong> • ${fmtDate(f.when||f.createdAt)}</div>`;
+  }).join('') : 'No finals yet.';
 }
 
-/* =======================
-   MATCH GRAPHIC (Canvas → PNG)
-======================= */
-async function generateMatchGraphic(fixtureId){
-  const f = fixturesCache.find(x=>x.id===fixtureId);
-  if (!f){ alert('Fixture not found'); return ''; }
-  const homeTeam = byId(f.home)?.name || 'Home';
-  const awayTeam = byId(f.away)?.name || 'Away';
-  // lineups from fixture; fallback to current tactics
-  const homeT = (f.lineups?.[f.home]?.formation) ? f.lineups[f.home] : getTactics(f.home);
-  const awayT = (f.lineups?.[f.away]?.formation) ? f.lineups[f.away] : getTactics(f.away);
-
-  const canvas = document.createElement('canvas'); canvas.width=800; canvas.height=500;
-  const ctx = canvas.getContext('2d');
-
-  // pitch
-  ctx.fillStyle='#0b3d0b'; ctx.fillRect(0,0,800,500);
-  ctx.strokeStyle='#88cc88'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(400,50); ctx.lineTo(400,450); ctx.stroke();
-  ctx.beginPath(); ctx.arc(400,250,60,0,Math.PI*2); ctx.stroke();
-
-  ctx.fillStyle='#fff'; ctx.font='20px Arial'; ctx.textAlign='left'; ctx.fillText('United Pro Clubs League', 20, 30);
-  ctx.textAlign='center'; ctx.font='18px Arial';
-  if (f.when) ctx.fillText(new Date(f.when).toLocaleString(), 400, 56);
-
-  ctx.font='22px Arial'; ctx.fillText(homeTeam, 200, 60); ctx.fillText(awayTeam, 600, 60);
-
-  drawTeam(ctx, 80,  homeT.formation, homeT.lineup, homeT.formation, 'home');
-  drawTeam(ctx, 520, awayT.formation, awayT.lineup, awayT.formation, 'away');
-
-  return canvas.toDataURL('image/png');
+// =======================
+//   RANKINGS (ADMIN)
+// =======================
+async function loadRankings(){
+  try{
+    const d = await apiGet('/api/rankings');
+    rankings = d.rankings || {};
+    payouts = d.payouts || payouts;
+  }catch(e){ rankings={}; }
 }
-function drawTeam(ctx, xOffset, formation, lineup, label, side){
-  const slots = FORMATIONS[formation] || FORMATIONS['4-3-3'];
-  const rows = { GK:[], DEF:[], MID:[], ATT:[] };
-  slots.forEach(pos=>{
-    const name = lineup?.[pos] || '';
-    const key = pos.includes('GK') ? 'GK'
-      : (pos.includes('CB')||pos.includes('LB')||pos.includes('RB')||pos.includes('WB')) ? 'DEF'
-      : (pos.includes('CM')||pos.includes('CDM')||pos.includes('CAM')) ? 'MID'
-      : 'ATT';
-    rows[key].push(name);
-  });
-  const baseY=100, stepY=90;
-  const order = side==='home'? ['ATT','MID','DEF','GK'] : ['GK','DEF','MID','ATT'];
-  ctx.font='14px Arial'; ctx.textAlign='center';
-  ctx.fillStyle='#ddd'; ctx.fillText(label, xOffset+120, 28);
-  order.forEach((band,i)=>{
-    const y = baseY + i*stepY;
-    const arr = rows[band]; const spread = 240;
-    arr.forEach((n,j)=>{
-      const x = xOffset + (spread/(arr.length+1))*(j+1);
-      ctx.beginPath(); ctx.arc(x, y, 14, 0, Math.PI*2); ctx.fillStyle = '#222'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.fillText(n || '-', x, y+36);
+
+function renderRankings(){
+  const rows = teams.map(t=>{
+    const r = rankings[t.id] || { leaguePos:'', cup:'none', points:0, tier:'mid' };
+    const cupOpts = ['none','round_of_16','quarterfinal','semifinal','runner_up','winner']
+      .map(v=>`<option value="${v}" ${r.cup===v?'selected':''}>${v.replace(/_/g,' ')}</option>`).join('');
+    return `<tr>
+      <td>${escapeHtml(t.name)}</td>
+      <td><input type="number" min="0" style="width:80px" value="${r.leaguePos||''}" data-k="leaguePos" data-id="${t.id}"></td>
+      <td><select data-k="cup" data-id="${t.id}">${cupOpts}</select></td>
+      <td>${escapeHtml(r.tier||'mid')}</td>
+      <td>${fmtMoney(perDayFor(t.id))}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('rankingsTable').innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="text-align:left">Club</th><th>League pos</th><th>Cup</th><th>Tier</th><th>Payout/day</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  const adminControls = document.getElementById('adminControls');
+  adminControls.style.display = isAdmin ? 'flex' : 'none';
+
+  // attach save handlers
+  document.getElementById('btnSaveRankings').onclick = async ()=>{
+    // collect changes
+    const payload = { rankings: {} };
+    document.querySelectorAll('#rankingsTable [data-id]').forEach(el=>{
+      const id = el.getAttribute('data-id');
+      const k  = el.getAttribute('data-k');
+      payload.rankings[id] = payload.rankings[id] || {};
+      payload.rankings[id][k] = k==='leaguePos' ? Number(el.value||0) : el.value;
     });
-  });
+    try{
+      await apiPost('/api/rankings/bulk', payload);
+      alert('Saved');
+      await loadRankings(); renderRankings();
+    }catch(e){ alert('Save failed: '+e.message); }
+  };
+
+  document.getElementById('btnRecalc').onclick = async ()=>{
+    try{ await apiPost('/api/rankings/recalc',{}); await loadRankings(); renderRankings(); alert('Recalculated'); }
+    catch(e){ alert('Recalc failed: '+e.message); }
+  };
+
+  document.getElementById('btnCupDry').onclick = async ()=>{
+    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:true }); alert('Would award: '+fmtMoney(r.totalAwarded)); }
+    catch(e){ alert('Dry run failed: '+e.message); }
+  };
+  document.getElementById('btnCupPay').onclick = async ()=>{
+    if (!confirm('Pay cup bonuses now?')) return;
+    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:false }); alert('Awarded: '+fmtMoney(r.totalAwarded)); }
+    catch(e){ alert('Pay failed: '+e.message); }
+  };
 }
 
-/* =======================
-   BUTTONS
-======================= */
-collectBtn.addEventListener('click', async ()=>{
-  if(!openTeamId) return;
-  if (!(currentUser && currentUser.role==='Manager' && currentUser.teamId===openTeamId)){ alert('Only this club’s manager can collect.'); return; }
+function perDayFor(clubId){
+  const r = rankings[clubId] || { tier:'mid' };
+  const t = r.tier || 'mid';
+  return payouts[t] || 0;
+}
+
+// =======================
+//   ROLE CLAIM (manager)
+// =======================
+document.getElementById('btnSetRole').onclick = async ()=>{
+  const role = prompt('Role (Manager only supported now)');
+  if (!role || role.toLowerCase()!=='manager') return alert('Only Manager is supported via code.');
+  const clubId = prompt('Enter your Club ID exactly as shown in Teams (e.g., 2491998 or afc-warriors)');
+  const name   = prompt('Your display name');
+  const code   = prompt('Manager code (ask admin)');
+  if (!clubId || !name || !code) return;
   try{
-    const data = await apiPost(`/api/wallets/${encodeURIComponent(openTeamId)}/collect`);
-    if (!data.ok) { alert(data.message || 'No payout yet.'); return; }
-    teamWalletAmt.textContent = fmtCoins(data.wallet?.balance ?? 0);
-    if (currentUser?.teamId === openTeamId) walletAmount.textContent = fmtCoins(data.wallet?.balance ?? 0);
-    alert(`Collected ${data.preview.days} day(s) • 🪙 ${fmtCoins(data.preview.amount)} (🪙 ${fmtCoins(data.perDay)}/day)`);
-  } catch (e) { alert('Collect failed: ' + e.message); }
-});
-backBtn.addEventListener('click', ()=>{ detailView.style.display='none'; teamsView.style.display='block'; window.scrollTo({ top:0, behavior:'smooth' }); });
+    const d = await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
+    alert('Claimed manager for '+clubId);
+    await checkMe();
+  }catch(e){ alert('Claim failed: '+e.message); }
+};
 
-/* =======================
-   INIT
-======================= */
-(async function init(){
-  loadListings(); loadUser();
-  await refreshSessionUser();
-  await checkAdmin();
-  updateWalletUI();
-  await loadRankings();
-  await fetchFixtures();
-
-  // Build initial views
+// =======================
+//   INIT
+// =======================
+async function init(){
   renderTeams();
-  renderMarket();
-  renderRankings();
+  await checkMe();
+  await checkAdmin();
+  await refreshFixtures();
   renderFixtures();
-  await loadHeaderWallet();
 
-  // Nav from hash
+  // open hash team
   try{
-    const params = new URLSearchParams(location.hash.replace(/^#/,''));
-    const vh = params.get('view');
-    if (vh === 'market') setNav('market');
-    else if (vh === 'rankings') setNav('rankings');
-    else if (vh === 'fixtures') setNav('fixtures');
-    else setNav('teams');
-
     const m = location.hash.match(/team=([^&]+)/);
     if (m){ const team = byId(decodeURIComponent(m[1])); if (team) setTimeout(()=>showTeam(team), 150); }
   }catch{}
-})();
+}
+init();
+
 </script>
 </body>
 </html>
