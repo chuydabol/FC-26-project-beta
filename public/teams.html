@@ -7,69 +7,46 @@
 
 <style>
   /* Base / layout */
-:root {
-  --accent: #e00;    /* red accent */
-  --muted: #bb4444;  /* muted red-ish */
-  --card-h: 400px;
-}
-
+:root { --accent:#e00; --muted:#bb4444; --card-h:400px; }
 * { box-sizing: border-box; }
-
-body {
-  background: #000;
-  color: #fff;
-  font-family: Arial, sans-serif;
-  margin: 0;
-  min-height: 100vh;
-}
-
-header {
-  background: linear-gradient(90deg, #a00000, #d50000);
-  color: #fff;
-  padding: 18px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-header h1 { margin: 0; font-size: 20px; letter-spacing: 0.2px; }
-
-.nav { margin-left: 8px; display: flex; gap: 8px; }
+body { background:#000; color:#fff; font-family: Arial, sans-serif; margin:0; min-height:100vh; }
+header { background:linear-gradient(90deg,#a00000,#d50000); color:#fff; padding:18px; display:flex; align-items:center; gap:14px; }
+header h1 { margin:0; font-size:20px; letter-spacing:.2px; }
+.nav { margin-left:8px; display:flex; gap:8px; }
 .nav button { background:#330000; color:#fff; border:1px solid #551111; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700; }
-.nav button[aria-pressed="true"] { background: var(--accent); border-color: #ff4444; }
-
-.userbar { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.nav button[aria-pressed="true"] { background:var(--accent); border-color:#ff4444; }
+.userbar { margin-left:auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .pill { background:#330000; border:1px solid #551111; padding:8px 12px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; }
 .pill .num { font-variant-numeric: tabular-nums; }
 .pill button { all:unset; cursor:pointer; font-weight:700; }
 
-main { padding: 20px; max-width: 1200px; margin: 0 auto; box-sizing: border-box; background: #000; }
+main { padding:20px; max-width:1200px; margin:0 auto; background:#000; }
 
 /* Teams grid */
-#teams-view { display: block; }
-.teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; margin-top: 18px; }
-.team-card { background:#110000; border-radius:12px; box-shadow:0 6px 18px rgba(255,0,0,0.3); overflow:hidden; cursor:pointer; transition:transform .14s ease, box-shadow .14s ease; display:flex; flex-direction:column; align-items:center; padding:14px; color:#fff; }
-.team-card:hover { transform: translateY(-6px); box-shadow:0 12px 28px rgba(255,0,0,0.5); }
+#teams-view { display:block; }
+.teams-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px; margin-top:18px; }
+.team-card { background:#110000; border-radius:12px; box-shadow:0 6px 18px rgba(255,0,0,.3); overflow:hidden; cursor:pointer; transition:transform .14s, box-shadow .14s; display:flex; flex-direction:column; align-items:center; padding:14px; color:#fff; }
+.team-card:hover { transform:translateY(-6px); box-shadow:0 12px 28px rgba(255,0,0,.5); }
 .team-logo { width:100%; height:120px; object-fit:cover; border-radius:8px; background:#330000; display:block; }
 .team-meta { width:100%; display:flex; align-items:center; justify-content:space-between; margin-top:10px; gap:8px; }
 .team-meta .name { font-weight:700; font-size:16px; }
-.trophy-badge { background:#e00; color:#fff; font-weight:700; padding:6px 10px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(255,0,0,0.6); }
+.trophy-badge { background:#e00; color:#fff; font-weight:700; padding:6px 10px; border-radius:999px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(255,0,0,.6); }
 .trophy-badge:empty { display:none; }
 
 /* Team detail header */
-#detail-view { display: none; color: #fff; }
+#detail-view { display:none; color:#fff; }
 #detail-header { display:flex; align-items:center; gap:12px; margin-bottom:14px; color:#fff; }
 #backBtn { background:#330000; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
 #detail-title { font-size:20px; font-weight:700; }
 
 /* small utilities & placeholders */
-.muted { color: var(--muted); }
+.muted { color:var(--muted); }
 .center { text-align:center; }
 .placeholder-card { height:200px; border-radius:10px; background:#220000; border:1px dashed #bb4444; display:flex; align-items:center; justify-content:center; color:#bb4444; }
 
 /* MARKET */
 #market-view { display:none; }
-.market-wrap { display:grid; grid-template-columns: 320px 1fr; gap:18px; }
+.market-wrap { display:grid; grid-template-columns:320px 1fr; gap:18px; }
 .m-card { background:#110000; border:1px solid #2a0000; border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(255,0,0,.25); }
 .m-card h3 { margin:0 0 8px; font-size:18px; }
 .m-form label { display:block; font-weight:700; margin:10px 0 6px; }
@@ -80,7 +57,7 @@ main { padding: 20px; max-width: 1200px; margin: 0 auto; box-sizing: border-box;
 .m-filter { display:flex; gap:8px; flex-wrap:wrap; }
 .m-filter button { background:#330000; color:#fff; border:1px solid #551111; padding:6px 10px; border-radius:10px; cursor:pointer; }
 .m-filter button[aria-pressed="true"]{ background:var(--accent); border-color:#ff4444; }
-.listings { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:12px; }
+.listings { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
 .listing { background:#120000; border:1px solid #2a0000; border-radius:12px; padding:12px; display:grid; gap:6px; }
 .listing .meta { color:var(--muted); font-size:12px; }
 .listing .actions { display:flex; gap:8px; }
@@ -91,8 +68,8 @@ main { padding: 20px; max-width: 1200px; margin: 0 auto; box-sizing: border-box;
 table th, table td { vertical-align: top; }
 
 /* Roles & Wallets modal */
-.modal { position:fixed; inset:0; display:none; place-items:center; background: rgba(0,0,0,.6); padding:20px; }
-.modal-inner { background:#120000; border:1px solid #2a0000; border-radius:14px; padding:16px; width:min(720px, 96vw); box-shadow:0 18px 60px rgba(0,0,0,.6); }
+.modal { position:fixed; inset:0; display:none; place-items:center; background:rgba(0,0,0,.6); padding:20px; }
+.modal-inner { background:#120000; border:1px solid #2a0000; border-radius:14px; padding:16px; width:min(720px,96vw); box-shadow:0 18px 60px rgba(0,0,0,.6); }
 .modal h3 { margin:0 0 10px; }
 .modal .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .modal label { display:block; font-weight:700; margin:10px 0 6px; }
@@ -104,18 +81,16 @@ table th, table td { vertical-align: top; }
 /* Manual squad table (new) */
 .squad-card { background:#110000; border:1px solid #2a0000; border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(255,0,0,.25); }
 .squad-h { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
-.squad-form { display:grid; grid-template-columns: 1fr 180px 140px; gap:8px; margin-bottom:10px; }
+.squad-form { display:grid; grid-template-columns:1fr 180px 140px; gap:8px; margin-bottom:10px; }
 .squad-form input { background:#1a0000; border:1px solid #3a0000; color:#fff; border-radius:8px; padding:10px 12px; }
 .squad-form button { background:#e00; border:1px solid #ff4444; color:#fff; border-radius:10px; padding:10px 12px; font-weight:700; cursor:pointer; }
-.squad-table { width:100%; border-collapse: collapse; }
+.squad-table { width:100%; border-collapse:collapse; }
 .squad-table th, .squad-table td { border-bottom:1px solid #2a0000; padding:8px 6px; }
 .squad-table th { text-align:left; color:#ccc; }
 .squad-actions button { background:#330000; border:1px solid #551111; color:#fff; border-radius:8px; padding:6px 10px; cursor:pointer; margin-right:6px; }
 
-@media (max-width: 1040px) { .market-wrap { grid-template-columns: 1fr; } }
-@media (max-width: 720px) {
-  .modal .row { grid-template-columns: 1fr; }
-}
+@media (max-width:1040px){ .market-wrap { grid-template-columns:1fr; } }
+@media (max-width:720px){ .modal .row { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -130,6 +105,8 @@ table th, table td { vertical-align: top; }
   <div class="userbar">
     <div class="pill" id="walletPill" title="Club balance" style="display:none">🪙 <span class="num" id="walletAmount">0</span></div>
     <div class="pill"><button id="openRoleBtn" title="Set your name & role">Set Role</button></div>
+    <button id="adminLoginBtn" style="background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Admin sign in</button>
+    <button id="adminLogoutBtn" style="display:none;background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Sign out</button>
   </div>
 </header>
 
@@ -140,7 +117,6 @@ table th, table td { vertical-align: top; }
       <h2 style="margin:0">Teams</h2>
       <div class="muted">Total teams: <span id="teams-count">0</span></div>
     </div>
-
     <div class="teams-grid" id="teamsGrid" role="list"></div>
   </section>
 
@@ -259,7 +235,7 @@ table th, table td { vertical-align: top; }
 
     <div class="m-card" style="margin-top:14px">
       <p class="muted" style="margin-top:0">
-        Fill league position and cup result. Click <strong>Recalculate</strong> to suggest tiers (you can override), then <strong>Save</strong>.
+        Public can view; only Admin can edit/recalculate or pay cup bonuses.
       </p>
       <div style="overflow:auto">
         <table id="rankingsTable" style="width:100%; border-collapse:collapse">
@@ -276,7 +252,8 @@ table th, table td { vertical-align: top; }
           <tbody id="rankingsBody"></tbody>
         </table>
       </div>
-      <div style="display:flex;gap:8px;margin-top:12px">
+
+      <div id="adminControls" style="display:none; gap:8px; margin-top:12px">
         <button id="recalcBtn" class="primary" style="background:#e00;border:1px solid #ff4444;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Recalculate</button>
         <button id="saveRankingsBtn" style="background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Save</button>
         <button id="clearRankingsBtn" style="background:#330000;border:1px solid #551111;color:#fff;border-radius:10px;padding:8px 12px;cursor:pointer">Clear (local view)</button>
@@ -291,7 +268,7 @@ table th, table td { vertical-align: top; }
 <div class="modal" id="roleModal" aria-hidden="true" aria-label="Set your name & role">
   <div class="modal-inner">
     <h3>Set your name & role</h3>
-    <p class="muted" style="margin:0 0 8px">For now this stores your role locally; rankings & wallets live on the server.</p>
+    <p class="muted" style="margin:0 0 8px">Managers must enter a manager code (ask the admin). Players can skip the code.</p>
     <div class="row">
       <div>
         <label for="u-name">Display name</label>
@@ -311,8 +288,8 @@ table th, table td { vertical-align: top; }
         <select id="u-team"></select>
       </div>
       <div>
-        <label for="u-code">Manager code (optional)</label>
-        <input id="u-code" placeholder="Ask your league admin" />
+        <label for="u-code">Manager code (Managers only)</label>
+        <input id="u-code" placeholder="Enter the code you received" />
       </div>
     </div>
     <div class="actions">
@@ -326,34 +303,20 @@ table th, table td { vertical-align: top; }
 /* =======================
    CONFIG / CONSTANTS
 ======================= */
-const API_BASE = '';        // same origin (this server should also expose /api)
-const ADMIN_TOKEN = '';     // if you set ADMIN_TOKEN on the server, put the same value here to allow admin actions
-
-// Market (local) storage key
+const API_BASE = '';        // same origin (server serves UI + API)
 const LISTINGS_KEY = 'market_listings_v1';
-// Local user role key
-const CURRENT_USER_KEY = 'current_user_v1';
+const CURRENT_USER_KEY = 'current_user_v1'; // local cache for convenience (truth is on server)
+const PAYOUTS = { elite: 1100000, mid: 900000, bottom: 700000 }; // defaults; server may override
 
-// Server-driven payouts; defaults (server /api/rankings may override)
-const PAYOUTS = { elite: 1100000, mid: 900000, bottom: 700000 }; // 1-month economy
-
-// Cup points (client-side preview only; server decides payouts)
+// Cup points (client hint only)
 const CUP_POINTS = { winner:60, runner_up:40, semifinal:25, quarterfinal:15, round_of_16:10, none:0 };
-function leaguePoints(pos){
-  pos = Number(pos||0);
-  if (!pos) return 0;
-  if (pos === 1) return 100;
-  if (pos === 2) return 80;
-  if (pos <= 4) return 60;
-  if (pos <= 8) return 40;
-  return 20;
-}
+function leaguePoints(pos){ pos=Number(pos||0); if(!pos) return 0; if(pos===1) return 100; if(pos===2) return 80; if(pos<=4) return 60; if(pos<=8) return 40; return 20; }
 
 /* =======================
    DATA
 ======================= */
 const teams = [
-  { id: 'afc-warriors', name: 'AFC Warriors', logo: '/assets/logos/afc-warriors.png' }, // new team (string ID)
+  { id: 'afc-warriors', name: 'AFC Warriors', logo: '/assets/logos/afc-warriors.png' },
   { id: '2491998', name: 'Royal Republic', logo: '/assets/logos/royal-republic-logo.png' },
   { id: '1527486', name: 'Gungan FC' },
   { id: '1969494', name: 'Club Frijol' },
@@ -398,7 +361,6 @@ const detailSub = document.getElementById('detail-sub');
 const detailTrophies = document.getElementById('detail-trophies');
 const squadContainer = document.getElementById('squadContainer');
 const backBtn = document.getElementById('backBtn');
-const rolesPanel = document.getElementById('rolesPanel');
 const rolesInfo = document.getElementById('rolesInfo');
 const manageRoleFromTeam = document.getElementById('manageRoleFromTeam');
 
@@ -433,14 +395,19 @@ const clearRankingsBtn = document.getElementById('clearRankingsBtn');
 const cupPreviewBtn = document.getElementById('cupPreviewBtn');
 const cupPayBtn = document.getElementById('cupPayBtn');
 
+// admin auth buttons
+const adminLoginBtn = document.getElementById('adminLoginBtn');
+const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+
 /* =======================
    STATE
 ======================= */
-let listings = [];                      // local-only market listings
-let currentUser = null;                 // { name, role: 'Player'|'Manager', teamId }
+let listings = [];
+let currentUser = null;      // session user if manager; or local player cache
 let marketFilter = 'all';
-let openTeamId = null;                  // currently viewed team
-let rankings = {};                      // server-synced { [clubId]: { leaguePos, cup, points, tier } }
+let openTeamId = null;
+let rankings = {};
+let isAdmin = false;
 
 /* =======================
    UTIL
@@ -449,13 +416,10 @@ function escapeHtml(s){ return String(s).replace(/[&<>\"']/g, c=>({ '&':'&amp;',
 function teamLogoUrl(team){ return team.logo || `https://via.placeholder.com/800x400.png?text=${encodeURIComponent(team.name)}`; }
 function byId(id){ return teams.find(t=>t.id===id); }
 function fmtCoins(n){ return Number(n||0).toLocaleString(); }
-function getDailyPayout(clubId){
-  const tier = (rankings[clubId]?.tier) || 'mid';
-  return PAYOUTS[tier] || PAYOUTS.mid;
-}
+function getDailyPayout(clubId){ const tier=(rankings[clubId]?.tier)||'mid'; return PAYOUTS[tier]||PAYOUTS.mid; }
 
 /* =======================
-   STORAGE (local)
+   STORAGE (local only for cache)
 ======================= */
 function loadListings(){ try { listings = JSON.parse(localStorage.getItem(LISTINGS_KEY)) || []; } catch { listings = []; } }
 function saveListings(){ try { localStorage.setItem(LISTINGS_KEY, JSON.stringify(listings)); } catch {} }
@@ -466,123 +430,65 @@ function saveUser(){ try { localStorage.setItem(CURRENT_USER_KEY, JSON.stringify
 const SQUADS_KEY = 'club_squads_v1';
 function readAllSquads(){ try { return JSON.parse(localStorage.getItem(SQUADS_KEY)) || {}; } catch { return {}; } }
 function writeAllSquads(obj){ try { localStorage.setItem(SQUADS_KEY, JSON.stringify(obj)); } catch {} }
-function getSquad(clubId){ const all = readAllSquads(); return Array.isArray(all[clubId]) ? all[clubId] : []; }
-function setSquad(clubId, list){ const all = readAllSquads(); all[clubId] = list; writeAllSquads(all); }
-function upsertPlayer(clubId, { id, name, value }){
-  const list = getSquad(clubId);
-  if (!id) id = crypto.randomUUID();
-  const ix = list.findIndex(p => p.id === id || p.name.toLowerCase() === name.trim().toLowerCase());
-  const player = { id, name: name.trim(), value: Math.max(0, Number(value||0)) };
-  if (ix >= 0) list[ix] = player; else list.push(player);
-  setSquad(clubId, list);
-  return player;
-}
-function removePlayer(clubId, id){
-  const list = getSquad(clubId).filter(p => p.id !== id);
-  setSquad(clubId, list);
-}
+function getSquad(clubId){ const all=readAllSquads(); return Array.isArray(all[clubId])?all[clubId]:[]; }
+function setSquad(clubId, list){ const all=readAllSquads(); all[clubId]=list; writeAllSquads(all); }
+function upsertPlayer(clubId,{id,name,value}){ const list=getSquad(clubId); if(!id) id=crypto.randomUUID(); const ix=list.findIndex(p=>p.id===id||p.name.toLowerCase()===name.trim().toLowerCase()); const player={id,name:name.trim(),value:Math.max(0,Number(value||0))}; if(ix>=0) list[ix]=player; else list.push(player); setSquad(clubId,list); return player; }
+function removePlayer(clubId,id){ const list=getSquad(clubId).filter(p=>p.id!==id); setSquad(clubId,list); }
 
 /* =======================
    SERVER CALLS
 ======================= */
-async function apiGet(path){
-  const res = await fetch(`${API_BASE}${path}`);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-async function apiPost(path, body, useAdmin=false){
-  const headers = { 'Content-Type': 'application/json' };
-  if (useAdmin && ADMIN_TOKEN) headers['X-Admin-Token'] = ADMIN_TOKEN;
-  const res = await fetch(`${API_BASE}${path}`, { method:'POST', headers, body: JSON.stringify(body||{}) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-async function apiPut(path, body, useAdmin=false){
-  const headers = { 'Content-Type': 'application/json' };
-  if (useAdmin && ADMIN_TOKEN) headers['X-Admin-Token'] = ADMIN_TOKEN;
-  const res = await fetch(`${API_BASE}${path}`, { method:'PUT', headers, body: JSON.stringify(body||{}) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
+async function apiGet(path){ const r=await fetch(`${API_BASE}${path}`); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }
+async function apiPost(path, body){ const r=await fetch(`${API_BASE}${path}`,{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})}); const d=await r.json().catch(()=>({})); if(!r.ok||d.error) throw new Error(d.error||`HTTP ${r.status}`); return d; }
+async function apiPut(path, body){ const r=await fetch(`${API_BASE}${path}`,{method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{})}); const d=await r.json().catch(()=>({})); if(!r.ok||d.error) throw new Error(d.error||`HTTP ${r.status}`); return d; }
 
 async function loadRankings(){
-  try {
+  try{
     const data = await apiGet('/api/rankings');
     rankings = data.rankings || {};
-    if (data.payouts){
-      PAYOUTS.elite = data.payouts.elite ?? PAYOUTS.elite;
-      PAYOUTS.mid = data.payouts.mid ?? PAYOUTS.mid;
-      PAYOUTS.bottom = data.payouts.bottom ?? PAYOUTS.bottom;
-    }
-  } catch (e) {
-    console.warn('Rankings fetch failed; using empty.', e.message);
-    rankings = {};
-  }
-}
-async function saveRankingsToServer(){
-  await apiPost('/api/rankings/bulk', { rankings }, true);
-}
-async function recalcServer(){
-  await apiPost('/api/rankings/recalc', null, true);
+    if (data.payouts){ PAYOUTS.elite=data.payouts.elite??PAYOUTS.elite; PAYOUTS.mid=data.payouts.mid??PAYOUTS.mid; PAYOUTS.bottom=data.payouts.bottom??PAYOUTS.bottom; }
+  }catch(e){ console.warn('Rankings fetch failed; using empty.', e.message); rankings={}; }
 }
 async function loadWalletPreview(clubId){
-  try {
-    const data = await apiGet(`/api/wallets/${encodeURIComponent(clubId)}`);
-    teamWalletAmt.textContent = fmtCoins(data.wallet?.balance ?? 0);
-  } catch {}
+  try{ const data = await apiGet(`/api/wallets/${encodeURIComponent(clubId)}`); teamWalletAmt.textContent = fmtCoins(data.wallet?.balance ?? 0); }catch{}
 }
 async function loadHeaderWallet(){
   if (!(currentUser && currentUser.teamId)) return;
-  try{
-    const data = await apiGet(`/api/wallets/${encodeURIComponent(currentUser.teamId)}`);
-    walletAmount.textContent = fmtCoins(data.wallet?.balance ?? 0);
-  }catch{}
+  try{ const data = await apiGet(`/api/wallets/${encodeURIComponent(currentUser.teamId)}`); walletAmount.textContent = fmtCoins(data.wallet?.balance ?? 0); }catch{}
 }
 
 /* =======================
-   NAV
+   AUTH (Admin + Manager)
 ======================= */
-function setNav(active){
-  const map = { teams: [teamsView, navTeams], market:[marketView,navMarket], rankings:[rankingsView,navRankings] };
-  for (const key of Object.keys(map)){
-    const [view, btn] = map[key];
-    const isActive = key === active;
-    view.style.display = isActive ? 'block' : 'none';
-    btn.setAttribute('aria-pressed', String(isActive));
-  }
+async function checkAdmin(){
+  try { const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; } catch { isAdmin = false; }
+  adminLoginBtn.style.display  = isAdmin ? 'none':'inline-block';
+  adminLogoutBtn.style.display = isAdmin ? 'inline-block':'none';
+  const ctrls = document.getElementById('adminControls');
+  if (ctrls) ctrls.style.display = isAdmin ? 'flex' : 'none';
 }
-navTeams.addEventListener('click', ()=> setNav('teams'));
-navMarket.addEventListener('click', ()=> setNav('market'));
-navRankings.addEventListener('click', ()=> setNav('rankings'));
+adminLoginBtn.onclick = async ()=>{
+  const pw = prompt('Admin password'); if(!pw) return;
+  try{ await apiPost('/api/admin/login', { password: pw }); await checkAdmin(); renderRankings(); }
+  catch(e){ alert('Login failed: ' + e.message); }
+};
+adminLogoutBtn.onclick = async ()=>{ try{ await apiPost('/api/admin/logout'); }catch{} await checkAdmin(); renderRankings(); };
 
-/* =======================
-   ROLES MODAL & WALLET UI
-======================= */
-function updateWalletUI(){
-  if (currentUser && currentUser.teamId){
-    walletPill.style.display = 'inline-flex';
-  } else {
-    walletPill.style.display = 'none';
-  }
+async function refreshSessionUser(){
+  try { const d = await apiGet('/api/auth/me'); if (d.user) { currentUser = d.user; saveUser(); } }
+  catch {}
 }
+
+function updateWalletUI(){ walletPill.style.display = (currentUser && currentUser.teamId) ? 'inline-flex' : 'none'; }
+
 function openRoleModal(prefillTeam){
   uTeam.innerHTML = '<option value="">— No club —</option>' + teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-  if (currentUser){
-    uName.value = currentUser.name || '';
-    uRole.value = currentUser.role || 'Player';
-    uTeam.value = prefillTeam || currentUser.teamId || '';
-  } else {
-    uName.value = '';
-    uRole.value = 'Player';
-    uTeam.value = prefillTeam || '';
-  }
-  roleModal.style.display = 'grid';
-  roleModal.setAttribute('aria-hidden','false');
+  if (currentUser){ uName.value=currentUser.name||''; uRole.value=currentUser.role||'Player'; uTeam.value=prefillTeam||currentUser.teamId||''; }
+  else { uName.value=''; uRole.value='Player'; uTeam.value=prefillTeam||''; }
+  roleModal.style.display='grid'; roleModal.setAttribute('aria-hidden','false');
 }
-function closeRoleModal(){
-  roleModal.style.display = 'none';
-  roleModal.setAttribute('aria-hidden','true');
-}
+function closeRoleModal(){ roleModal.style.display='none'; roleModal.setAttribute('aria-hidden','true'); }
+
 openRoleBtn.addEventListener('click', ()=> openRoleModal());
 closeRole.addEventListener('click', closeRoleModal);
 
@@ -590,41 +496,57 @@ saveRole.addEventListener('click', async ()=>{
   const name = (uName.value||'').trim();
   const role = uRole.value;
   const teamId = (uTeam.value||'').trim();
+  const code = (uCode.value||'').trim();
   if (!name) { alert('Please enter a display name.'); return; }
   if (role === 'Manager' && !teamId) { alert('Managers must be attached to a club.'); return; }
 
-  currentUser = { name, role, teamId: teamId || null };
-  saveUser();
-  closeRoleModal();
-  updateWalletUI();
-  await loadHeaderWallet();
-  renderMarket();
-  renderTeams();
-  if (currentUser?.teamId) syncMarketToSquad();  // update suggestions
-  if (openTeamId) showTeam(byId(openTeamId));
+  try{
+    if (role === 'Manager') {
+      if (!code) { alert('Manager code is required.'); return; }
+      const d = await apiPost(`/api/clubs/${encodeURIComponent(teamId)}/claim-manager`, { name, code });
+      currentUser = d.user; // trust server
+    } else {
+      currentUser = { name, role:'Player', teamId: teamId || null }; // local-only for players
+    }
+    saveUser();
+    closeRoleModal();
+    updateWalletUI();
+    await loadHeaderWallet();
+    renderMarket();
+    renderTeams();
+    if (currentUser?.teamId) syncMarketToSquad();
+    if (openTeamId) showTeam(byId(openTeamId));
+  }catch(e){
+    alert('Could not set role: ' + e.message);
+  }
 });
+
+/* =======================
+   NAV
+======================= */
+function setNav(active){
+  const map = { teams:[teamsView,navTeams], market:[marketView,navMarket], rankings:[rankingsView,navRankings] };
+  for (const key of Object.keys(map)){ const [view,btn]=map[key]; const isActive = key===active; view.style.display=isActive?'block':'none'; btn.setAttribute('aria-pressed', String(isActive)); }
+}
+navTeams.addEventListener('click', ()=> setNav('teams'));
+navMarket.addEventListener('click', ()=> setNav('market'));
+navRankings.addEventListener('click', ()=> setNav('rankings'));
 
 /* =======================
    TEAMS LIST
 ======================= */
 function renderTeams(){
-  teamsGrid.innerHTML = '';
-  teamsCount.textContent = teams.length;
-  teams.forEach(team => {
-    const card = document.createElement('div');
-    card.className = 'team-card';
-    card.setAttribute('role','listitem');
-
+  teamsGrid.innerHTML=''; teamsCount.textContent = teams.length;
+  teams.forEach(team=>{
+    const card=document.createElement('div'); card.className='team-card'; card.setAttribute('role','listitem');
     const titles = TEAM_TITLES[team.id];
-    const hasTitles = Array.isArray(titles) && titles.length > 0;
-
+    const hasTitles = Array.isArray(titles)&&titles.length>0;
     card.innerHTML = `
       <img class="team-logo" src="${teamLogoUrl(team)}" alt="${escapeHtml(team.name)} logo" />
       <div class="team-meta">
         <div class="name">${escapeHtml(team.name)}</div>
-        ${hasTitles ? `<div class="trophy-badge">${titles.map(t => `${t.count}x ${escapeHtml(t.name)}`).join(', ')}</div>` : ''}
-      </div>
-    `;
+        ${hasTitles ? `<div class="trophy-badge">${titles.map(t=>`${t.count}x ${escapeHtml(t.name)}`).join(', ')}</div>` : ''}
+      </div>`;
     card.addEventListener('click', ()=> showTeam(team));
     teamsGrid.appendChild(card);
   });
@@ -634,12 +556,10 @@ function renderTeams(){
    MANUAL SQUAD RENDERER
 ======================= */
 function renderManualSquad(team){
-  const isManager = !!(currentUser && currentUser.role === 'Manager' && currentUser.teamId === team.id);
+  const isManager = !!(currentUser && currentUser.role==='Manager' && currentUser.teamId===team.id);
+  const squad = getSquad(team.id).slice().sort((a,b)=> (b.value-a.value)||a.name.localeCompare(b.name));
 
-  const squad = getSquad(team.id).slice().sort((a,b)=> (b.value - a.value) || a.name.localeCompare(b.name));
-
-  // ensure container is table-style
-  squadContainer.className = '';
+  squadContainer.className='';
   let html = `<div class="squad-card">
     <div class="squad-h">
       <strong>Squad (manual)</strong>
@@ -684,33 +604,25 @@ function renderManualSquad(team){
     let editId = null;
 
     saveEl.addEventListener('click', ()=>{
-      const name = (nameEl.value||'').trim();
-      const value = Number(valEl.value||0);
-      if (!name) { alert('Enter a username.'); return; }
-      upsertPlayer(team.id, { id: editId, name, value });
-      nameEl.value = ''; valEl.value = ''; editId = null; saveEl.textContent = 'Add / Update';
+      const name=(nameEl.value||'').trim(); const value=Number(valEl.value||0);
+      if(!name){ alert('Enter a username.'); return; }
+      upsertPlayer(team.id, { id:editId, name, value });
+      nameEl.value=''; valEl.value=''; editId=null; saveEl.textContent='Add / Update';
       renderManualSquad(team);
-      if (currentUser?.teamId === team.id) syncMarketToSquad();
+      if (currentUser?.teamId===team.id) syncMarketToSquad();
     });
 
-    document.getElementById('squadTableBody').addEventListener('click', (e)=>{
-      const btn = e.target.closest('button');
-      if (!btn) return;
+    document.getElementById('squadTableBody').addEventListener('click',(e)=>{
+      const btn=e.target.closest('button'); if(!btn) return;
       const { edit, del } = btn.dataset;
       if (edit){
-        const p = getSquad(team.id).find(x=>x.id===edit);
-        if (!p) return;
-        editId = p.id;
-        nameEl.value = p.name;
-        valEl.value = p.value;
-        saveEl.textContent = 'Save';
-        nameEl.focus();
+        const p=getSquad(team.id).find(x=>x.id===edit); if(!p) return;
+        editId=p.id; nameEl.value=p.name; valEl.value=p.value; saveEl.textContent='Save'; nameEl.focus();
       }
       if (del){
         if (!confirm('Remove this player from the squad?')) return;
-        removePlayer(team.id, del);
-        renderManualSquad(team);
-        if (currentUser?.teamId === team.id) syncMarketToSquad();
+        removePlayer(team.id, del); renderManualSquad(team);
+        if (currentUser?.teamId===team.id) syncMarketToSquad();
       }
     });
   }
@@ -718,211 +630,156 @@ function renderManualSquad(team){
 
 /* Link squad to market form (autosuggest + prefill price) */
 function syncMarketToSquad(){
-  const playerInput = document.getElementById('l-player');
-  const priceInput  = document.getElementById('l-price');
-  if (!playerInput) return;
-
-  let dl = document.getElementById('playersDatalist');
-  if (!dl) { dl = document.createElement('datalist'); dl.id = 'playersDatalist'; document.body.appendChild(dl); }
+  const playerInput=document.getElementById('l-player'); const priceInput=document.getElementById('l-price');
+  if(!playerInput) return;
+  let dl=document.getElementById('playersDatalist'); if(!dl){ dl=document.createElement('datalist'); dl.id='playersDatalist'; document.body.appendChild(dl); }
   playerInput.setAttribute('list','playersDatalist');
-
   if (currentUser?.teamId){
-    const squad = getSquad(currentUser.teamId);
-    dl.innerHTML = squad.map(p => `<option value="${escapeHtml(p.name)}">${p.value}</option>`).join('');
-  } else {
-    dl.innerHTML = '';
-  }
-
+    const squad=getSquad(currentUser.teamId);
+    dl.innerHTML=squad.map(p=>`<option value="${escapeHtml(p.name)}">${p.value}</option>`).join('');
+  } else { dl.innerHTML=''; }
   playerInput.addEventListener('change', ()=>{
-    if (!priceInput) return;
-    const name = (playerInput.value||'').trim().toLowerCase();
-    const squad = currentUser?.teamId ? getSquad(currentUser.teamId) : [];
-    const m = squad.find(p => p.name.toLowerCase() === name);
-    if (m) priceInput.value = m.value;
-  }, { once: true });
+    if(!priceInput) return;
+    const name=(playerInput.value||'').trim().toLowerCase();
+    const squad=currentUser?.teamId?getSquad(currentUser.teamId):[];
+    const m=squad.find(p=>p.name.toLowerCase()===name);
+    if(m) priceInput.value=m.value;
+  }, { once:true });
 }
 
 /* =======================
-   TEAM DETAIL (manual only)
+   TEAM DETAIL
 ======================= */
 async function showTeam(team){
-  openTeamId = team.id;
-  setNav('teams');
-  teamsView.style.display = 'none';
-  detailView.style.display = 'block';
+  openTeamId=team.id; setNav('teams');
+  teamsView.style.display='none'; detailView.style.display='block';
+  detailTitle.textContent=team.name;
 
-  detailTitle.textContent = team.name;
-
-  const titles = TEAM_TITLES[team.id];
-  if (Array.isArray(titles) && titles.length) {
-    detailTrophies.innerHTML = titles.map(t => `<div>${t.count}x ${escapeHtml(t.name)}</div>`).join('');
-  } else {
-    detailTrophies.textContent = 'No trophies';
-  }
+  const titles=TEAM_TITLES[team.id];
+  if (Array.isArray(titles)&&titles.length){
+    detailTrophies.innerHTML=titles.map(t=>`<div>${t.count}x ${escapeHtml(t.name)}</div>`).join('');
+  } else detailTrophies.textContent='No trophies';
 
   const isManagerHere = !!(currentUser && currentUser.role==='Manager' && currentUser.teamId===team.id);
-  const thisTier = (rankings[team.id]?.tier) || 'mid';
-  const thisPerDay = getDailyPayout(team.id);
+  const tier=(rankings[team.id]?.tier)||'mid';
+  const perDay=getDailyPayout(team.id);
   rolesInfo.innerHTML = isManagerHere
-    ? `You are a <strong>Manager</strong> of <strong>${escapeHtml(team.name)}</strong>. Tier: <strong>${thisTier.toUpperCase()}</strong> • Payout: 🪙 <strong>${fmtCoins(thisPerDay)}</strong>/day. Manage tiers in <em>Rankings</em>.`
+    ? `You are a <strong>Manager</strong> of <strong>${escapeHtml(team.name)}</strong>. Tier: <strong>${tier.toUpperCase()}</strong> • Payout: 🪙 <strong>${fmtCoins(perDay)}</strong>/day. Manage tiers in <em>Rankings</em> (Admin only).`
     : currentUser
-      ? `Signed in as <strong>${escapeHtml(currentUser.name)}</strong> (${currentUser.role}${currentUser.teamId ? ' • '+escapeHtml(byId(currentUser.teamId)?.name||'') : ''}). This club is <strong>${thisTier.toUpperCase()}</strong> • 🪙 ${fmtCoins(thisPerDay)}/day.`
+      ? `Signed in as <strong>${escapeHtml(currentUser.name)}</strong> (${currentUser.role}${currentUser.teamId ? ' • '+escapeHtml(byId(currentUser.teamId)?.name||'') : ''}). This club is <strong>${tier.toUpperCase()}</strong> • 🪙 ${fmtCoins(perDay)}/day.`
       : 'You have not set a role yet.';
   manageRoleFromTeam.onclick = ()=> openRoleModal(team.id);
 
   await loadWalletPreview(team.id);
-
-  // Render manual squad table (no EA/API)
   renderManualSquad(team);
 }
 
 /* =======================
-   MARKET (local)
+   MARKET
 ======================= */
 document.querySelectorAll('.m-filter button').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    document.querySelectorAll('.m-filter button').forEach(x=>x.setAttribute('aria-pressed','false'));
-    b.setAttribute('aria-pressed','true');
-    marketFilter = b.dataset.filter;
-    renderMarket();
-  });
+  b.addEventListener('click', ()=>{ document.querySelectorAll('.m-filter button').forEach(x=>x.setAttribute('aria-pressed','false')); b.setAttribute('aria-pressed','true'); marketFilter=b.dataset.filter; renderMarket(); });
 });
 
 document.getElementById('l-type').addEventListener('change', (e)=>{
-  const v = e.target.value;
-  priceRow.style.display = (v==='sale' || v==='loan') ? 'grid' : 'none';
-  loanRow.style.display = (v==='loan') ? 'block' : 'none';
+  const v=e.target.value; priceRow.style.display=(v==='sale'||v==='loan')?'grid':'none'; loanRow.style.display=(v==='loan')?'block':'none';
 });
 
-function canPost(type, clubId){
-  if (!currentUser) return false;
-  if (type==='free') return true; // any signed-in user can post a free agent
-  return currentUser.role==='Manager' && currentUser.teamId && (!clubId || clubId===currentUser.teamId);
-}
+function canPost(type, clubId){ if(!currentUser) return false; if(type==='free') return true; return currentUser.role==='Manager' && currentUser.teamId && (!clubId || clubId===currentUser.teamId); }
 
 mForm.addEventListener('submit', (e)=>{
   e.preventDefault();
-  const fd = new FormData(mForm);
-  const type = (fd.get('type')||'sale').toString();
-  const player = (fd.get('player')||'').toString().trim();
-  const position = (fd.get('position')||'').toString().trim();
-  const price = Number(fd.get('price')||0);
-  const wage = Number(fd.get('wage')||0);
-  const terms = (fd.get('terms')||'').toString().trim();
-  const clubId = (fd.get('club')||'').toString();
-  const link = (fd.get('link')||'').toString().trim();
-  const notes = (fd.get('notes')||'').toString().trim();
+  const fd=new FormData(mForm);
+  const type=(fd.get('type')||'sale').toString();
+  const player=(fd.get('player')||'').toString().trim();
+  const position=(fd.get('position')||'').toString().trim();
+  const price=Number(fd.get('price')||0);
+  const wage=Number(fd.get('wage')||0);
+  const terms=(fd.get('terms')||'').toString().trim();
+  const clubId=(fd.get('club')||'').toString();
+  const link=(fd.get('link')||'').toString().trim();
+  const notes=(fd.get('notes')||'').toString().trim();
 
-  if (!currentUser){ alert('Set your role first.'); return; }
-  if (!player){ alert('Enter a player name.'); return; }
-  if (type!=='free' && !canPost(type, clubId)) { alert('Only club managers can post sale/loan listings for their club.'); return; }
+  if(!currentUser){ alert('Set your role first.'); return; }
+  if(!player){ alert('Enter a player name.'); return; }
+  if(type!=='free' && !canPost(type, clubId)) { alert('Only club managers can post sale/loan listings for their club.'); return; }
 
-  const listing = {
-    id: crypto.randomUUID(),
-    type, player, position, price, wage, terms, notes,
-    fromClubId: type==='free' ? null : (clubId || currentUser.teamId || null),
-    link: link || `/chat?room=market-${encodeURIComponent(player)}`,
-    createdAt: Date.now(),
-    listedBy: { name: currentUser.name, role: currentUser.role, teamId: currentUser.teamId || null }
-  };
-  listings.push(listing);
-  saveListings();
-  mForm.reset();
-  renderMarket();
+  const listing={ id:crypto.randomUUID(), type, player, position, price, wage, terms, notes,
+    fromClubId: type==='free'?null:(clubId||currentUser.teamId||null),
+    link: link || `/chat?room=market-${encodeURIComponent(player)}`, createdAt: Date.now(),
+    listedBy:{ name:currentUser.name, role:currentUser.role, teamId:currentUser.teamId||null } };
+  listings.push(listing); saveListings(); mForm.reset(); renderMarket();
 });
 
 function renderMarket(){
-  const lClub = document.getElementById('l-club');
-  lClub.innerHTML = '<option value="">— Select club —</option>' + teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-  if (currentUser && currentUser.teamId) lClub.value = currentUser.teamId;
+  const lClub=document.getElementById('l-club');
+  lClub.innerHTML='<option value="">— Select club —</option>'+teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+  if(currentUser&&currentUser.teamId) lClub.value=currentUser.teamId;
 
-  // permissions copy
-  const hint = [];
-  if (!currentUser){
-    hint.push('Set your role to post listings.');
-  } else {
-    hint.push(`Signed in as ${escapeHtml(currentUser.name)} (${currentUser.role}${currentUser.teamId? ' • '+escapeHtml(byId(currentUser.teamId)?.name||'') : ''})`);
-    if (currentUser.role === 'Manager') hint.push('You can list players for your club (sale or loan).');
-    if (currentUser.role === 'Player') hint.push('You can post yourself as a Free Agent.');
-  }
-  mPerm.textContent = hint.join(' — ');
-
-  // refresh player suggestions from squad
+  const hint=[];
+  if(!currentUser){ hint.push('Set your role to post listings.'); }
+  else { hint.push(`Signed in as ${escapeHtml(currentUser.name)} (${currentUser.role}${currentUser.teamId? ' • '+escapeHtml(byId(currentUser.teamId)?.name||''):''})`);
+         if(currentUser.role==='Manager') hint.push('You can list players for your club (sale or loan).');
+         if(currentUser.role==='Player') hint.push('You can post yourself as a Free Agent.'); }
+  mPerm.textContent=hint.join(' — ');
   if (currentUser?.teamId) syncMarketToSquad();
 
-  let items = [...listings].sort((a,b)=> b.createdAt - a.createdAt);
-  if (marketFilter==='sale' || marketFilter==='loan' || marketFilter==='free') items = items.filter(x=>x.type===marketFilter);
-  if (marketFilter==='mine' && currentUser) items = items.filter(x=>x.listedBy?.name===currentUser.name);
+  let items=[...listings].sort((a,b)=> b.createdAt-a.createdAt);
+  if(['sale','loan','free'].includes(marketFilter)) items=items.filter(x=>x.type===marketFilter);
+  if(marketFilter==='mine' && currentUser) items=items.filter(x=>x.listedBy?.name===currentUser.name);
 
-  mList.innerHTML = '';
-  if (!items.length){
-    mList.innerHTML = '<div class="placeholder-card" role="listitem">No listings yet</div>';
-  } else {
-    items.forEach(item=>{
-      const div = document.createElement('div');
-      div.className = 'listing';
-      const teamName = item.fromClubId ? (byId(item.fromClubId)?.name || 'Unknown Club') : 'Free Agent';
-      const when = new Date(item.createdAt).toLocaleString();
-
-      div.innerHTML = `
-        <div class="meta">${when} • ${escapeHtml(item.listedBy?.name||'')} (${escapeHtml(item.listedBy?.role||'')})</div>
-        <div><strong>${escapeHtml(item.player)}</strong> ${item.position? '• '+escapeHtml(item.position):''}</div>
-        <div>${item.type==='sale' ? `For Sale — 🪙 <strong>${fmtCoins(item.price||0)}</strong>` : item.type==='loan' ? `For Loan — ${escapeHtml(item.terms||'terms TBD')}` : 'Free Agent'}</div>
-        ${item.wage ? `<div>Wage: 🪙 <strong>${fmtCoins(item.wage)}</strong>/wk</div>` : ''}
-        <div class="muted">${escapeHtml(teamName)}</div>
-        ${item.notes ? `<div>${escapeHtml(item.notes)}</div>` : ''}
-        <div class="actions">
-          <a href="${item.link}">Chat</a>
-          ${currentUser && currentUser.role==='Manager' && currentUser.teamId===item.fromClubId ? `<button data-complete="${item.id}">Mark Completed</button>` : ''}
-          ${currentUser && item.listedBy?.name===currentUser.name ? `<button data-remove-listing="${item.id}">Remove</button>` : ''}
-        </div>`;
-      mList.appendChild(div);
-    });
-  }
-  mCount.textContent = items.length;
+  mList.innerHTML='';
+  if(!items.length){ mList.innerHTML='<div class="placeholder-card" role="listitem">No listings yet</div>'; }
+  else items.forEach(item=>{
+    const div=document.createElement('div'); div.className='listing';
+    const teamName=item.fromClubId?(byId(item.fromClubId)?.name||'Unknown Club'):'Free Agent';
+    const when=new Date(item.createdAt).toLocaleString();
+    div.innerHTML=`
+      <div class="meta">${when} • ${escapeHtml(item.listedBy?.name||'')} (${escapeHtml(item.listedBy?.role||'')})</div>
+      <div><strong>${escapeHtml(item.player)}</strong> ${item.position? '• '+escapeHtml(item.position):''}</div>
+      <div>${item.type==='sale'?`For Sale — 🪙 <strong>${fmtCoins(item.price||0)}</strong>`: item.type==='loan'?`For Loan — ${escapeHtml(item.terms||'terms TBD')}`:'Free Agent'}</div>
+      ${item.wage?`<div>Wage: 🪙 <strong>${fmtCoins(item.wage)}</strong>/wk</div>`:''}
+      <div class="muted">${escapeHtml(teamName)}</div>
+      ${item.notes?`<div>${escapeHtml(item.notes)}</div>`:''}
+      <div class="actions">
+        <a href="${item.link}">Chat</a>
+        ${currentUser && currentUser.role==='Manager' && currentUser.teamId===item.fromClubId ? `<button data-complete="${item.id}">Mark Completed</button>`:''}
+        ${currentUser && item.listedBy?.name===currentUser.name ? `<button data-remove-listing="${item.id}">Remove</button>`:''}
+      </div>`;
+    mList.appendChild(div);
+  });
+  mCount.textContent=items.length;
 }
 
-mList.addEventListener('click', (e)=>{
-  const btn = e.target.closest('button');
-  if (!btn) return;
-  const id = btn.dataset.complete || btn.dataset.removeListing;
-  if (!id) return;
-  const ix = listings.findIndex(x=>x.id===id);
-  if (ix===-1) return;
-  if (btn.dataset.complete){
-    if (!(currentUser && currentUser.role==='Manager' && currentUser.teamId===listings[ix].fromClubId)){
-      alert('Only the posting club manager can complete this listing.');
-      return;
-    }
-    listings.splice(ix,1);
-    saveListings();
-    renderMarket();
+mList.addEventListener('click',(e)=>{
+  const btn=e.target.closest('button'); if(!btn) return;
+  const id=btn.dataset.complete||btn.dataset.removeListing; if(!id) return;
+  const ix=listings.findIndex(x=>x.id===id); if(ix===-1) return;
+  if(btn.dataset.complete){
+    if(!(currentUser&&currentUser.role==='Manager'&&currentUser.teamId===listings[ix].fromClubId)){ alert('Only the posting club manager can complete this listing.'); return; }
+    listings.splice(ix,1); saveListings(); renderMarket();
   }
-  if (btn.dataset.removeListing){
-    if (!(currentUser && currentUser.name===listings[ix].listedBy?.name)){
-      alert('Only the author can remove this listing.');
-      return;
-    }
-    listings.splice(ix,1);
-    saveListings();
-    renderMarket();
+  if(btn.dataset.removeListing){
+    if(!(currentUser&&currentUser.name===listings[ix].listedBy?.name)){ alert('Only the author can remove this listing.'); return; }
+    listings.splice(ix,1); saveListings(); renderMarket();
   }
 });
 
 /* =======================
-   RANKINGS UI
+   RANKINGS UI (read-only unless admin)
 ======================= */
 function renderRankings(){
-  rankingsBody.innerHTML = '';
+  rankingsBody.innerHTML='';
   teams.forEach(t=>{
-    const r = rankings[t.id] || { leaguePos:'', cup:'none', points:0, tier:'mid' };
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
+    const r=rankings[t.id]||{ leaguePos:'', cup:'none', points:0, tier:'mid' };
+    const disabled = isAdmin ? '' : 'disabled';
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
       <td style="padding:6px">${escapeHtml(t.name)}</td>
-      <td style="padding:6px"><input data-club="${t.id}" data-field="leaguePos" type="number" min="1" placeholder="pos" value="${r.leaguePos||''}"
+      <td style="padding:6px"><input ${disabled} data-club="${t.id}" data-field="leaguePos" type="number" min="1" placeholder="pos" value="${r.leaguePos||''}"
            style="width:80px;background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px"></td>
       <td style="padding:6px">
-        <select data-club="${t.id}" data-field="cup" style="background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px">
+        <select ${disabled} data-club="${t.id}" data-field="cup" style="background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px">
           <option value="none" ${r.cup==='none'?'selected':''}>None</option>
           <option value="round_of_16" ${r.cup==='round_of_16'?'selected':''}>Round of 16</option>
           <option value="quarterfinal" ${r.cup==='quarterfinal'?'selected':''}>Quarterfinal</option>
@@ -933,96 +790,66 @@ function renderRankings(){
       </td>
       <td style="padding:6px"><span data-club="${t.id}" data-field="points">${r.points||0}</span></td>
       <td style="padding:6px">
-        <select data-club="${t.id}" data-field="tier" style="background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px">
+        <select ${disabled} data-club="${t.id}" data-field="tier" style="background:#1a0000;border:1px solid #3a0000;color:#fff;border-radius:8px;padding:6px 8px">
           <option value="elite" ${r.tier==='elite'?'selected':''}>Elite</option>
           <option value="mid" ${r.tier==='mid'?'selected':''}>Mid</option>
           <option value="bottom" ${r.tier==='bottom'?'selected':''}>Bottom</option>
         </select>
       </td>
-      <td style="padding:6px">🪙 <span data-club="${t.id}" data-field="payout">${fmtCoins(getDailyPayout(t.id))}</span>/day</td>
-    `;
+      <td style="padding:6px">🪙 <span data-club="${t.id}" data-field="payout">${fmtCoins(getDailyPayout(t.id))}</span>/day</td>`;
     rankingsBody.appendChild(tr);
   });
 
-  rankingsBody.querySelectorAll('input,select').forEach(el=>{
-    el.addEventListener('change', ()=>{
-      const clubId = el.dataset.club;
-      rankings[clubId] = rankings[clubId] || { leaguePos:'', cup:'none', points:0, tier:'mid' };
-      if (el.dataset.field === 'leaguePos') rankings[clubId].leaguePos = Number(el.value||0);
-      if (el.dataset.field === 'cup')       rankings[clubId].cup = el.value;
-      if (el.dataset.field === 'tier')      rankings[clubId].tier = el.value;
-
-      const pts = leaguePoints(rankings[clubId].leaguePos) + (CUP_POINTS[rankings[clubId].cup]||0);
-      rankings[clubId].points = pts;
-
-      const ptsEl = rankingsBody.querySelector(`[data-club="${clubId}"][data-field="points"]`);
-      if (ptsEl) ptsEl.textContent = pts;
-
-      const payoutEl = rankingsBody.querySelector(`[data-club="${clubId}"][data-field="payout"]`);
-      if (payoutEl) payoutEl.textContent = fmtCoins(getDailyPayout(clubId));
+  if (isAdmin){
+    rankingsBody.querySelectorAll('input,select').forEach(el=>{
+      el.addEventListener('change', ()=>{
+        const clubId = el.dataset.club;
+        rankings[clubId] = rankings[clubId] || { leaguePos:'', cup:'none', points:0, tier:'mid' };
+        if (el.dataset.field === 'leaguePos') rankings[clubId].leaguePos = Number(el.value||0);
+        if (el.dataset.field === 'cup')       rankings[clubId].cup = el.value;
+        if (el.dataset.field === 'tier')      rankings[clubId].tier = el.value;
+        const pts = leaguePoints(rankings[clubId].leaguePos) + (CUP_POINTS[rankings[clubId].cup]||0);
+        rankings[clubId].points = pts;
+        const ptsEl = rankingsBody.querySelector(`[data-club="${clubId}"][data-field="points"]`); if (ptsEl) ptsEl.textContent = pts;
+        const payoutEl = rankingsBody.querySelector(`[data-club="${clubId}"][data-field="payout"]`); if (payoutEl) payoutEl.textContent = fmtCoins(getDailyPayout(clubId));
+      });
     });
-  });
+  }
 }
 
-recalcBtn.addEventListener('click', async ()=>{
-  try {
-    await recalcServer();
-    await loadRankings();
-    renderRankings();
-    alert('Recalculated tiers from points on server.');
-  } catch (e) {
-    alert('Recalc failed: ' + e.message);
-  }
+document.getElementById('recalcBtn').addEventListener('click', async ()=>{
+  try{ await apiPost('/api/rankings/recalc'); await loadRankings(); renderRankings(); alert('Recalculated tiers from points on server.'); }
+  catch(e){ alert('Recalc failed: ' + e.message); }
 });
-
-saveRankingsBtn.addEventListener('click', async ()=>{
-  try {
-    await saveRankingsToServer();
-    await loadRankings();
-    renderRankings();
-    alert('Rankings saved to server.');
-  } catch (e) {
-    alert('Save failed: ' + e.message);
-  }
+document.getElementById('saveRankingsBtn').addEventListener('click', async ()=>{
+  try{ await apiPost('/api/rankings/bulk', { rankings }); await loadRankings(); renderRankings(); alert('Rankings saved to server.'); }
+  catch(e){ alert('Save failed: ' + e.message); }
 });
-
-clearRankingsBtn.addEventListener('click', ()=>{
-  if (!confirm('Clear all ranking values in the table (local view only)?')) return;
-  rankings = {};
-  renderRankings();
+document.getElementById('clearRankingsBtn').addEventListener('click', ()=>{
+  if(!confirm('Clear ranking values (local view only)?')) return; rankings={}; renderRankings();
 });
-
 cupPreviewBtn?.addEventListener('click', async ()=>{
   const season = prompt('Season key (YYYY-MM)? Leave blank for current month:') || undefined;
-  try {
-    const data = await apiPost('/api/bonuses/cup', { season, dryRun: true }, true);
-    alert(`Preview total bonuses: 🪙 ${fmtCoins(data.totalAwarded)}\n(Use "Pay Cup Bonuses" to execute)`);
-  } catch (e) {
-    alert('Preview failed: ' + e.message);
-  }
+  try{ const data = await apiPost('/api/bonuses/cup', { season, dryRun:true }); alert(`Preview total bonuses: 🪙 ${fmtCoins(data.totalAwarded)}\n(Use "Pay Cup Bonuses" to execute)`); }
+  catch(e){ alert('Preview failed: ' + e.message); }
 });
-
 cupPayBtn?.addEventListener('click', async ()=>{
   const season = prompt('Season key (YYYY-MM)? Leave blank for current month:') || undefined;
-  if (!confirm(`Pay cup bonuses${season ? ` for ${season}` : ''}? This records payouts and won’t double-pay.`)) return;
-  try {
-    const data = await apiPost('/api/bonuses/cup', { season, dryRun: false }, true);
-    alert(`Paid bonuses: 🪙 ${fmtCoins(data.totalAwarded)}\nBalances updated.`);
-  } catch (e) {
-    alert('Payout failed: ' + e.message);
-  }
+  if(!confirm(`Pay cup bonuses${season?` for ${season}`:''}? This records payouts and won’t double-pay.`)) return;
+  try{ const data = await apiPost('/api/bonuses/cup', { season, dryRun:false }); alert(`Paid bonuses: 🪙 ${fmtCoins(data.totalAwarded)}\nBalances updated.`); }
+  catch(e){ alert('Payout failed: ' + e.message); }
 });
 
 /* =======================
    BUTTONS
 ======================= */
 collectBtn.addEventListener('click', async ()=>{
-  if (!openTeamId) return;
+  if(!openTeamId) return;
   if (!(currentUser && currentUser.role==='Manager' && currentUser.teamId===openTeamId)){
     alert('Only managers of this club can collect payouts.');
     return;
   }
-  try {
+  try{
     const data = await apiPost(`/api/wallets/${encodeURIComponent(openTeamId)}/collect`);
     if (!data.ok) { alert(data.message || 'No payout available yet.'); return; }
     teamWalletAmt.textContent = fmtCoins(data.wallet?.balance ?? 0);
@@ -1033,11 +860,7 @@ collectBtn.addEventListener('click', async ()=>{
   }
 });
 
-backBtn.addEventListener('click', ()=>{
-  detailView.style.display = 'none';
-  teamsView.style.display = 'block';
-  window.scrollTo({ top:0, behavior:'smooth' });
-});
+backBtn.addEventListener('click', ()=>{ detailView.style.display='none'; teamsView.style.display='block'; window.scrollTo({ top:0, behavior:'smooth' }); });
 
 /* =======================
    INIT
@@ -1045,10 +868,11 @@ backBtn.addEventListener('click', ()=>{
 (async function init(){
   loadListings();
   loadUser();
+  await refreshSessionUser();   // pick up server session if exists (manager)
+  await checkAdmin();           // show/hide admin controls
   updateWalletUI();
 
   await loadRankings();
-
   renderTeams();
   renderMarket();
   renderRankings();
@@ -1065,11 +889,10 @@ backBtn.addEventListener('click', ()=>{
     else if (vh === 'rankings') setNav('rankings');
     else setNav('teams');
 
-    const m = location.hash.match(/team=([^&]+)/); // allow letters/dashes
+    const m = location.hash.match(/team=([^&]+)/);
     if (m){ const team = byId(decodeURIComponent(m[1])); if (team) setTimeout(()=>showTeam(team), 150); }
   }catch(e){}
 })();
 </script>
 </body>
 </html>
-
