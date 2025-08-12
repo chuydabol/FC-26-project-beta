@@ -146,10 +146,10 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
-  <!-- FIXTURES SCHEDULING (MANAGERS) -->
+  <!-- FIXTURES SCHEDULING (MANAGERS/Admins) -->
   <section id="fixtures-sched" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
-      <h2>Fixtures Scheduling (Managers)</h2>
+      <h2>Fixtures Scheduling</h2>
       <div style="display:flex;gap:6px;align-items:center">
         <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
         <button data-fxf="final" aria-pressed="false">Final</button>
@@ -251,9 +251,10 @@ const fxSched     = document.getElementById('fixtures-sched');
 const rankingsView= document.getElementById('rankings-view');
 
 function setNav(active){
-  // guard
+  // guards
   if (active==='rankings' && !isAdmin) { alert('Admin only'); active='teams'; }
-  if (active==='fixturesSched' && !isMgr) { alert('Managers only'); active='fixturesPublic'; }
+  // CHANGED: allow admins OR managers to access scheduling
+  if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
 
   const map = {
     teams:[teamsViewEl, navTeams],
@@ -304,13 +305,17 @@ async function checkAdmin(){
   const btnCreateFx = document.getElementById('btnCreateFx');
   if (btnCreateFx) btnCreateFx.style.display = isAdmin ? 'inline-block' : 'none';
 
+  // NEW: show Scheduling tab to admins too
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+
   if (isAdmin) { await loadRankings(); renderRankings(); }
 }
 
 async function checkMe(){
   try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
   isMgr = !!(meUser && meUser.role==='Manager');
-  navFxSched.style.display = isMgr ? 'inline-block' : 'none';
+  // NEW: show Scheduling tab if manager OR admin
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
 }
 
 // =======================
@@ -532,7 +537,7 @@ document.querySelectorAll('[data-fxf]').forEach(btn=>{
 });
 
 async function refreshFixturesSched(){
-  if (!isMgr && !isAdmin) { fixturesSchedCache=[]; return; }
+  if (!(isMgr || isAdmin)) { fixturesSchedCache=[]; return; }
   try {
     const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
     fixturesSchedCache = d.fixtures || [];
@@ -665,6 +670,7 @@ function renderFxSchedRow(f){
   const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
   const props = (f.proposals||[]).map(p=>`<option value="${p.at}">${fmtDate(p.at)}</option>`).join('');
   const status = f.status || 'pending';
+  // Admin-only extra buttons
   const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
   return `
   <div class="fx" id="fx_${f.id}">
