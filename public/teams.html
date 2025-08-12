@@ -633,6 +633,29 @@ function renderFixturesSched(){
         await refreshFixturesPublic(); renderFixturesPublic();
       }catch(e){ alert('Ingest failed: '+e.message); }
     };
+
+    const btnJson = root.querySelector('.act .json');
+    if (btnJson) btnJson.onclick = async ()=>{
+      if (!isAdmin) return alert('Admin only');
+      const hs = Number(prompt('Home score (hs)')||0);
+      const as = Number(prompt('Away score (as)')||0);
+      const template = JSON.stringify({
+        details:{
+          home:[{ player:"Player A", goals:1, assists:0, rating:9.5 }],
+          away:[{ player:"Player B", goals:2, assists:0, rating:8.7 }]
+        }
+      }, null, 2);
+      const raw = prompt('Paste JSON (or edit the template):', template);
+      if (!raw) return;
+      try{
+        const obj = JSON.parse(raw);
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj });
+        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
+        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
+        await refreshFixturesSched(); renderFixturesSched();
+        await refreshFixturesPublic(); renderFixturesPublic();
+      }catch(e){ alert('JSON upload failed: '+e.message); }
+    };
   });
 }
 
@@ -642,7 +665,7 @@ function renderFxSchedRow(f){
   const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
   const props = (f.proposals||[]).map(p=>`<option value="${p.at}">${fmtDate(p.at)}</option>`).join('');
   const status = f.status || 'pending';
-  const adminBtn = isAdmin ? `<button class="ingest">Admin paste</button>` : '';
+  const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
   return `
   <div class="fx" id="fx_${f.id}">
     <div>
@@ -658,7 +681,7 @@ function renderFxSchedRow(f){
       <button class="decl">Decline</button>
       <button class="line">Set Lineup</button>
       <button class="rep">Submit Result</button>
-      ${adminBtn}
+      ${adminBtns}
     </div>
   </div>`;
 }
@@ -814,7 +837,7 @@ async function init(){
   if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
   await loadFA();
 
-  // open hash team
+  // hash-open team
   try{
     const m = location.hash.match(/team=([^&]+)/);
     if (m){ const team = byId(decodeURIComponent(m[1])); if (team) setTimeout(()=>showTeam(team), 150); }
