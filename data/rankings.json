@@ -1,0 +1,26 @@
+{
+  "55408": {
+    "leaguePos": 4,
+    "cup": "none",
+    "points": 60,
+    "tier": "mid"
+  },
+  "2491998": {
+    "leaguePos": 1,
+    "cup": "winner",
+    "points": 160,
+    "tier": "elite"
+  },
+  "3638105": {
+    "leaguePos": 2,
+    "cup": "none",
+    "points": 80,
+    "tier": "mid"
+  },
+  "4819681": {
+    "leaguePos": 1,
+    "cup": "none",
+    "points": 100,
+    "tier": "mid"
+  }
+}
