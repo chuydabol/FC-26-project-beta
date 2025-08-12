@@ -778,7 +778,10 @@ function renderFxSchedRow(f){
   const hn = byId(f.home)?.name || f.home;
   const an = byId(f.away)?.name || f.away;
   const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-  const props = (f.proposals||[]).map(p=>`<option value="${p.at}">${fmtDate(p.at)}</option>`).join('');
+  const props = (f.proposals||[]).map(p=>{
+  const who = (window.teams && window.teams.find(t=>String(t.id)===String(p.by)))?.name || p.by || 'unknown';
+  return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
+}).join('');
   const status = f.status || 'pending';
   const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
   return `
