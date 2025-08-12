@@ -65,7 +65,8 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
   <div class="navbar">
     <button id="navTeams"    aria-pressed="true">Teams</button>
     <button id="navMarket"   aria-pressed="false">Market</button>
-    <button id="navFixtures" aria-pressed="false">UPCL Fixtures</button>
+    <button id="navFixturesPublic" aria-pressed="false">Fixtures</button>
+    <button id="navFixturesSched"  aria-pressed="false" style="display:none">Fixtures Scheduling</button>
     <button id="navRankings" aria-pressed="false" style="display:none">Rankings</button>
     <button id="btnSetRole">Set Role</button>
     <button id="btnAdminLogin">Admin sign in</button>
@@ -123,19 +124,32 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
     </div>
   </section>
 
-  <!-- MARKET (simple placeholder, your routes already exist) -->
+  <!-- MARKET -->
   <section id="market-view" style="display:none">
     <h2>Transfer Market</h2>
+
     <div class="m-card">
-      <p class="muted">Clubs can list transfer/loan offers and free agents here. (UI trimmed)</p>
-      <p class="muted">Chat on a listing opens your Discord or preferred channel.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <strong>Free Agents</strong>
+        <div>
+          <button id="btnListFA">List me</button>
+          <button id="btnUnlistFA">Unlist</button>
+        </div>
+      </div>
+      <div id="faList" style="margin-top:8px" class="muted">Loading…</div>
     </div>
   </section>
 
-  <!-- FIXTURES -->
-  <section id="fixtures-view" style="display:none">
+  <!-- FIXTURES (PUBLIC) -->
+  <section id="fixtures-public" style="display:none">
+    <h2>Fixtures</h2>
+    <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
+  </section>
+
+  <!-- FIXTURES SCHEDULING (MANAGERS) -->
+  <section id="fixtures-sched" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
-      <h2>UPCL Fixtures</h2>
+      <h2>Fixtures Scheduling (Managers)</h2>
       <div style="display:flex;gap:6px;align-items:center">
         <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
         <button data-fxf="final" aria-pressed="false">Final</button>
@@ -177,7 +191,7 @@ const TEAM_TITLES = {
   ]
 };
 
-// Add teams (includes your new ones)
+// Teams (incl. new ones)
 const teams = [
   { id: '2491998', name: 'Royal Republic', logo: '/assets/logos/royal-republic-logo.png' },
   { id: '1527486', name: 'Gungan FC' },
@@ -196,7 +210,7 @@ const teams = [
   { id: '55408', name: 'Elite VT' },
   { id: '4819681', name: 'EVERYTHING DEAD' },
   { id: '35642', name: 'EBK FC' },
-  // Custom / manual clubs
+  // Manual clubs
   { id: 'afc-warriors',  name: 'AFC Warriors',  logo: '/assets/logos/afc-warriors.png' },
   { id: 'jids-trivela',  name: 'Jids Trivela',  logo: '/assets/logos/jids-trivela.png' },
   { id: 'razorblack-fc', name: 'Razorblack FC', logo: '/assets/logos/razorblack-fc.png' }
@@ -212,9 +226,11 @@ function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return
 // state
 let isAdmin = false;
 let meUser  = null;
+let isMgr   = false;
 let rankings = {};
 let payouts  = { elite:0, mid:0, bottom:0 };
-let fixturesCache = [];
+let fixturesPublicCache = [];
+let fixturesSchedCache  = [];
 
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -224,21 +240,26 @@ async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',h
 // nav
 const navTeams    = document.getElementById('navTeams');
 const navMarket   = document.getElementById('navMarket');
-const navFixtures = document.getElementById('navFixtures');
+const navFxPublic = document.getElementById('navFixturesPublic');
+const navFxSched  = document.getElementById('navFixturesSched');
 const navRankings = document.getElementById('navRankings');
 
-const teamsView    = document.getElementById('teams-view');
-const marketView   = document.getElementById('market-view');
-const fixturesView = document.getElementById('fixtures-view');
-const rankingsView = document.getElementById('rankings-view');
+const teamsViewEl = document.getElementById('teams-view');
+const marketView  = document.getElementById('market-view');
+const fxPublic    = document.getElementById('fixtures-public');
+const fxSched     = document.getElementById('fixtures-sched');
+const rankingsView= document.getElementById('rankings-view');
 
 function setNav(active){
-  // guard: Rankings admin-only
+  // guard
   if (active==='rankings' && !isAdmin) { alert('Admin only'); active='teams'; }
+  if (active==='fixturesSched' && !isMgr) { alert('Managers only'); active='fixturesPublic'; }
+
   const map = {
-    teams:[teamsView, navTeams],
+    teams:[teamsViewEl, navTeams],
     market:[marketView, navMarket],
-    fixtures:[fixturesView, navFixtures],
+    fixturesPublic:[fxPublic, navFxPublic],
+    fixturesSched:[fxSched, navFxSched],
     rankings:[rankingsView, navRankings]
   };
   for (const key of Object.keys(map)){
@@ -249,10 +270,11 @@ function setNav(active){
   }
 }
 
-navTeams.onclick    = ()=> setNav('teams');
-navMarket.onclick   = ()=> setNav('market');
-navFixtures.onclick = ()=> setNav('fixtures');
-navRankings.onclick = ()=> setNav('rankings');
+navTeams.onclick       = ()=> setNav('teams');
+navMarket.onclick      = ()=> setNav('market');
+navFxPublic.onclick    = ()=> setNav('fixturesPublic');
+navFxSched.onclick     = ()=> setNav('fixturesSched');
+navRankings.onclick    = ()=> setNav('rankings');
 
 // auth / admin
 const btnAdminLogin = document.getElementById('btnAdminLogin');
@@ -263,13 +285,13 @@ btnAdminLogin.onclick = async ()=>{
   if (!pw) return;
   try{
     await apiPost('/api/admin/login',{ password: pw });
-    await checkAdmin();
+    await checkAdmin(); await checkMe();
     alert('Admin signed in');
   }catch(e){ alert('Login failed: '+e.message); }
 };
 btnAdminLogout.onclick = async ()=>{
   try{ await apiPost('/api/admin/logout',{}); }catch{}
-  await checkAdmin();
+  await checkAdmin(); await checkMe();
   alert('Signed out');
 };
 
@@ -278,20 +300,17 @@ async function checkAdmin(){
   navRankings.style.display = isAdmin ? 'inline-block' : 'none';
   btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
 
-  // If user somehow is on rankings while losing admin, bump out
-  if (!isAdmin && rankingsView.style.display==='block') setNav('teams');
-
-  // show/hide admin-only controls
+  // admin-only controls
   const btnCreateFx = document.getElementById('btnCreateFx');
   if (btnCreateFx) btnCreateFx.style.display = isAdmin ? 'inline-block' : 'none';
 
-  // Load rankings only for admin
   if (isAdmin) { await loadRankings(); renderRankings(); }
 }
 
-// me (session user / manager)
 async function checkMe(){
   try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
+  isMgr = !!(meUser && meUser.role==='Manager');
+  navFxSched.style.display = isMgr ? 'inline-block' : 'none';
 }
 
 // =======================
@@ -300,7 +319,6 @@ async function checkMe(){
 const teamsGrid = document.getElementById('teamsGrid');
 const teamsCount = document.getElementById('teams-count');
 const detailView = document.getElementById('detail-view');
-const teamsViewEl = document.getElementById('teams-view');
 const detailTitle = document.getElementById('detail-title');
 const detailSub   = document.getElementById('detail-sub');
 const detailTrophies = document.getElementById('detail-trophies');
@@ -333,19 +351,15 @@ async function showTeam(team){
   detailTitle.textContent = team.name;
   detailSub.textContent = 'Loading club info…';
 
-  // trophies
   if(Array.isArray(TEAM_TITLES[team.id])){
     detailTrophies.innerHTML = TEAM_TITLES[team.id].map(t=>`<div>${t.count}x ${t.name}</div>`).join('');
   } else detailTrophies.textContent = 'No trophies';
 
-  // wallet info
   await renderWallet(team.id);
-  // fixtures: next + recent
-  await refreshFixtures();
+  await refreshFixturesPublic();
   renderNextFor(team.id);
   renderTeamResults(team.id);
 
-  // player display
   if(/^\d+$/.test(team.id)){
     await renderEAPlayers(team.id);
   }else{
@@ -375,7 +389,6 @@ async function renderWallet(clubId){
       Tier payout: <strong>${fmtMoney(per)}</strong> / day<br>
       Pending payout: <strong>${fmtMoney(prev.amount||0)}</strong> (${prev.days||0} days)
     `;
-    // Only the manager of this club can collect
     const canCollect = meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId);
     btn.style.display = canCollect ? 'inline-block' : 'none';
     btn.onclick = async ()=>{
@@ -416,13 +429,85 @@ async function renderEAPlayers(clubId){
   }
 }
 function renderManualPlayers(team){
-  squadContainer.innerHTML = `
-    <div class="m-card muted">Manual club — managers can maintain squads (coming soon).</div>
-  `;
+  squadContainer.innerHTML = `<div class="m-card muted">Manual club — managers can maintain squads (coming soon).</div>`;
 }
 
 // =======================
-//   FIXTURES
+//   FREE AGENTS (Market)
+// =======================
+async function loadFA(){
+  try{
+    const d = await apiGet('/api/free-agents');
+    const arr = d.agents || [];
+    document.getElementById('faList').innerHTML = arr.length ? arr.map(a=>{
+      const pos = (a.positions||[]).join(', ');
+      return `<div class="m-card" style="margin:8px 0;padding:8px">
+        <strong>${escapeHtml(a.name)}</strong> <span class="muted">(${escapeHtml(a.region||'')})</span><br>
+        <span class="muted">${escapeHtml(pos)}</span>
+        ${a.discord ? `<div>Discord: ${escapeHtml(a.discord)}</div>`:''}
+        ${a.bio ? `<div class="muted">${escapeHtml(a.bio)}</div>`:''}
+      </div>`;
+    }).join('') : 'No free agents listed.';
+  }catch{ document.getElementById('faList').textContent = 'Failed to load.'; }
+}
+
+document.getElementById('btnListFA').onclick = async ()=>{
+  const name = meUser?.name || prompt('Your display name');
+  if (!name) return;
+  const positions = prompt('Positions (comma separated, e.g., ST, CAM, CB)')||'';
+  const region = prompt('Region/Timezone (e.g., EST, EU)')||'';
+  const foot = prompt('Strong foot (L/R)')||'';
+  const availability = prompt('Availability (e.g., Mon-Thu 7-10pm)')||'';
+  const discord = prompt('Discord tag (optional)')||'';
+  const bio = prompt('Short bio (optional)')||'';
+  try{
+    await apiPost('/api/free-agents/me',{ name, positions, region, foot, availability, discord, bio });
+    alert('Listed!');
+    await loadFA();
+  }catch(e){ alert('List failed: '+e.message); }
+};
+document.getElementById('btnUnlistFA').onclick = async ()=>{
+  try{ await fetch('/api/free-agents/me',{ method:'DELETE' }); alert('Unlisted'); await loadFA(); }
+  catch(e){ alert('Unlist failed: '+e.message); }
+};
+
+// =======================
+//   FIXTURES — PUBLIC
+// =======================
+const fixturesPublicList = document.getElementById('fixturesPublicList');
+async function refreshFixturesPublic(){
+  try {
+    const d = await apiGet('/api/cup/fixtures/public?cup=UPCL');
+    fixturesPublicCache = d.fixtures || [];
+  } catch { fixturesPublicCache = []; }
+}
+function renderFixturesPublic(){
+  const list = fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
+  fixturesPublicList.innerHTML = list.length ? list.map(f=>{
+    const hn = byId(f.home)?.name || f.home;
+    const an = byId(f.away)?.name || f.away;
+    const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const homeSc = (f.details?.home||[]).map(p=>`<li>${escapeHtml(p.player)}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
+    const awaySc = (f.details?.away||[]).map(p=>`<li>${escapeHtml(p.player)}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
+    return `
+      <div class="fx">
+        <div>
+          <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
+          <div class="meta">${escapeHtml(f.round||'')} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
+          ${(f.status==='final' && (homeSc||awaySc)) ? `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
+              <div><em>${escapeHtml(hn)} scorers</em><ul>${homeSc||'<li class="muted">—</li>'}</ul></div>
+              <div><em>${escapeHtml(an)} scorers</em><ul>${awaySc||'<li class="muted">—</li>'}</ul></div>
+            </div>` : ''
+          }
+        </div>
+      </div>`;
+  }).join('') : `<div class="muted">No fixtures yet.</div>`;
+}
+
+// =======================
+//   FIXTURES — SCHEDULING
 // =======================
 const fixturesList = document.getElementById('fixturesList');
 const btnCreateFx  = document.getElementById('btnCreateFx');
@@ -434,7 +519,7 @@ btnCreateFx.onclick = async ()=>{
   if (!home || !away) return;
   try{
     const d = await apiPost('/api/cup/fixtures', { home, away, round, cup:'UPCL' });
-    alert('Created fixture'); await refreshFixtures(); renderFixtures();
+    alert('Created fixture'); await refreshFixturesSched(); renderFixturesSched();
   }catch(e){ alert('Create failed: '+e.message); }
 };
 
@@ -442,23 +527,24 @@ document.querySelectorAll('[data-fxf]').forEach(btn=>{
   btn.onclick = ()=>{
     document.querySelectorAll('[data-fxf]').forEach(b=>b.setAttribute('aria-pressed','false'));
     btn.setAttribute('aria-pressed','true');
-    renderFixtures();
+    renderFixturesSched();
   };
 });
 
-async function refreshFixtures(){
+async function refreshFixturesSched(){
+  if (!isMgr && !isAdmin) { fixturesSchedCache=[]; return; }
   try {
-    const d = await apiGet('/api/cup/fixtures?cup=UPCL');
-    fixturesCache = d.fixtures || [];
-  } catch { fixturesCache = []; }
+    const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
+    fixturesSchedCache = d.fixtures || [];
+  } catch { fixturesSchedCache = []; }
 }
 function filterKey(){
   const active = [...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
   return active ? active.getAttribute('data-fxf') : 'upcoming';
 }
-function renderFixtures(){
+function renderFixturesSched(){
   const key = filterKey();
-  let list = fixturesCache.slice();
+  let list = fixturesSchedCache.slice();
   const now = Date.now();
 
   if (key==='upcoming'){
@@ -470,81 +556,93 @@ function renderFixtures(){
   }
 
   list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
-  fixturesList.innerHTML = list.length ? list.map(renderFxRow).join('') : `<div class="muted">No fixtures.</div>`;
+  fixturesList.innerHTML = list.length ? list.map(renderFxSchedRow).join('') : `<div class="muted">No fixtures.</div>`;
 
-  // attach handlers
+  // attach handlers per fixture
   list.forEach(f=>{
     const root = document.getElementById('fx_'+f.id);
     if (!root) return;
 
-    const isMgr = meUser && meUser.role==='Manager' && [f.home,f.away].includes(meUser.teamId);
+    const isManagerOf = meUser && meUser.role==='Manager' && [f.home,f.away].includes(meUser.teamId);
 
     const btnProp = root.querySelector('.act .prop');
     if (btnProp) btnProp.onclick = async ()=>{
-      if (!isMgr) return alert('Managers only');
-      const atStr = prompt('Propose time (e.g., 2025-08-20 20:30 local)');
+      if (!isManagerOf) return alert('Managers only');
+      const atStr = prompt('Propose time (e.g., 2025-08-20 20:30)');
       if (!atStr) return;
       const at = Date.parse(atStr);
       if (!at) return alert('Could not parse date');
-      try{ await apiPost(`/api/cup/fixtures/${f.id}/propose`, { at }); await refreshFixtures(); renderFixtures(); }
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/propose`, { at }); await refreshFixturesSched(); renderFixturesSched(); }
       catch(e){ alert('Propose failed: '+e.message); }
     };
 
     const btnAgree = root.querySelector('.act .agree');
     if (btnAgree) btnAgree.onclick = async ()=>{
-      if (!isMgr) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
-      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixtures(); renderFixtures(); }
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
       catch(e){ alert('Vote failed: '+e.message); }
     };
 
     const btnDecl = root.querySelector('.act .decl');
     if (btnDecl) btnDecl.onclick = async ()=>{
-      if (!isMgr) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
-      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixtures(); renderFixtures(); }
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixturesSched(); renderFixturesSched(); }
       catch(e){ alert('Vote failed: '+e.message); }
     };
 
     const btnLine = root.querySelector('.act .line');
     if (btnLine) btnLine.onclick = async ()=>{
-      if (!isMgr) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const formation = prompt('Formation (e.g., 4-3-3)') || '';
       const starters = prompt('Comma-separated starters (GK,RB,CB,...) or names list') || '';
       const lineup = {};
       starters.split(',').map(s=>s.trim()).filter(Boolean).forEach((name,i)=> lineup['P'+(i+1)] = name);
-      try{ await apiPut(`/api/cup/fixtures/${f.id}/lineup`, { formation, lineup }); await refreshFixtures(); renderFixtures(); }
+      try{ await apiPut(`/api/cup/fixtures/${f.id}/lineup`, { formation, lineup }); await refreshFixturesSched(); renderFixturesSched(); }
       catch(e){ alert('Lineup failed: '+e.message); }
     };
 
     const btnReport = root.querySelector('.act .rep');
     if (btnReport) btnReport.onclick = async ()=>{
-      if (!isMgr) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const hs = Number(prompt('Home score?')||0);
       const as = Number(prompt('Away score?')||0);
-      const mvpHome = prompt('MVP (home)')||'';
-      const mvpAway = prompt('MVP (away)')||'';
       const text = prompt('Notes (optional)')||'';
       try{
-        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, text, mvpHome, mvpAway });
-        // switch filter to Final so user sees it
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, text });
         document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
         document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
-        await refreshFixtures(); renderFixtures();
+        await refreshFixturesSched(); renderFixturesSched();
+        await refreshFixturesPublic(); renderFixturesPublic();
       }catch(e){ alert('Report failed: '+e.message); }
+    };
+
+    const btnIngest = root.querySelector('.act .ingest');
+    if (btnIngest) btnIngest.onclick = async ()=>{
+      if (!isAdmin) return alert('Admin only');
+      const text = prompt('Paste quick result (score & player lines)');
+      if (!text) return;
+      try{
+        await apiPost(`/api/cup/fixtures/${f.id}/ingest-text`, { text });
+        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
+        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
+        await refreshFixturesSched(); renderFixturesSched();
+        await refreshFixturesPublic(); renderFixturesPublic();
+      }catch(e){ alert('Ingest failed: '+e.message); }
     };
   });
 }
 
-function renderFxRow(f){
+function renderFxSchedRow(f){
   const hn = byId(f.home)?.name || f.home;
   const an = byId(f.away)?.name || f.away;
   const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
   const props = (f.proposals||[]).map(p=>`<option value="${p.at}">${fmtDate(p.at)}</option>`).join('');
   const status = f.status || 'pending';
-
+  const adminBtn = isAdmin ? `<button class="ingest">Admin paste</button>` : '';
   return `
   <div class="fx" id="fx_${f.id}">
     <div>
@@ -560,19 +658,20 @@ function renderFxRow(f){
       <button class="decl">Decline</button>
       <button class="line">Set Lineup</button>
       <button class="rep">Submit Result</button>
+      ${adminBtn}
     </div>
   </div>`;
 }
 
-// Next & recent for team
+// Next & recent for team (from public cache)
 function nextFor(teamId){
   const now = Date.now();
-  return fixturesCache
+  return fixturesPublicCache
     .filter(f => (f.home===teamId||f.away===teamId) && f.status!=='final' && f.when && f.when>=now)
     .sort((a,b)=>a.when-b.when)[0];
 }
 function finalsFor(teamId, n=5){
-  return fixturesCache
+  return fixturesPublicCache
     .filter(f => f.status==='final' && (f.home===teamId||f.away===teamId))
     .sort((a,b)=>(b.when||b.createdAt)-(a.when||a.createdAt))
     .slice(0,n);
@@ -632,9 +731,7 @@ function renderRankings(){
   const adminControls = document.getElementById('adminControls');
   adminControls.style.display = isAdmin ? 'flex' : 'none';
 
-  // attach save handlers
   document.getElementById('btnSaveRankings').onclick = async ()=>{
-    // collect changes
     const payload = { rankings: {} };
     document.querySelectorAll('#rankingsTable [data-id]').forEach(el=>{
       const id = el.getAttribute('data-id');
@@ -642,18 +739,13 @@ function renderRankings(){
       payload.rankings[id] = payload.rankings[id] || {};
       payload.rankings[id][k] = k==='leaguePos' ? Number(el.value||0) : el.value;
     });
-    try{
-      await apiPost('/api/rankings/bulk', payload);
-      alert('Saved');
-      await loadRankings(); renderRankings();
-    }catch(e){ alert('Save failed: '+e.message); }
+    try{ await apiPost('/api/rankings/bulk', payload); alert('Saved'); await loadRankings(); renderRankings(); }
+    catch(e){ alert('Save failed: '+e.message); }
   };
-
   document.getElementById('btnRecalc').onclick = async ()=>{
     try{ await apiPost('/api/rankings/recalc',{}); await loadRankings(); renderRankings(); alert('Recalculated'); }
     catch(e){ alert('Recalc failed: '+e.message); }
   };
-
   document.getElementById('btnCupDry').onclick = async ()=>{
     try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:true }); alert('Would award: '+fmtMoney(r.totalAwarded)); }
     catch(e){ alert('Dry run failed: '+e.message); }
@@ -664,7 +756,6 @@ function renderRankings(){
     catch(e){ alert('Pay failed: '+e.message); }
   };
 }
-
 function perDayFor(clubId){
   const r = rankings[clubId] || { tier:'mid' };
   const t = r.tier || 'mid';
@@ -672,31 +763,56 @@ function perDayFor(clubId){
 }
 
 // =======================
-//   ROLE CLAIM (manager)
+//   ROLE CLAIM
 // =======================
 document.getElementById('btnSetRole').onclick = async ()=>{
-  const role = prompt('Role (Manager only supported now)');
-  if (!role || role.toLowerCase()!=='manager') return alert('Only Manager is supported via code.');
-  const clubId = prompt('Enter your Club ID exactly as shown in Teams (e.g., 2491998 or afc-warriors)');
-  const name   = prompt('Your display name');
-  const code   = prompt('Manager code (ask admin)');
-  if (!clubId || !name || !code) return;
-  try{
-    const d = await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
-    alert('Claimed manager for '+clubId);
-    await checkMe();
-  }catch(e){ alert('Claim failed: '+e.message); }
+  const role = (prompt('Role (Manager or Player)')||'').trim().toLowerCase();
+  if (!role) return;
+
+  if (role === 'manager') {
+    const clubId = prompt('Enter your Club ID exactly as shown in Teams (e.g., 2491998 or afc-warriors)');
+    const name   = prompt('Your display name');
+    const code   = prompt('Manager code (ask admin)');
+    if (!clubId || !name || !code) return;
+    try {
+      await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
+      alert('Manager role claimed');
+      await checkMe(); await refreshFixturesSched(); renderFixturesSched();
+    } catch (e) { alert('Claim failed: ' + e.message); }
+    return;
+  }
+
+  if (role === 'player') {
+    const name = prompt('Your display name');
+    const clubId = prompt('Optional: Club ID to associate with (or leave blank)');
+    if (!name) return;
+    try {
+      await apiPost('/api/players/claim', { name, teamId: clubId || '' });
+      alert('Player role set');
+      await checkMe();
+    } catch (e) { alert('Player claim failed: ' + e.message); }
+    return;
+  }
+
+  alert('Unsupported role. Use Manager or Player.');
 };
 
 // =======================
 //   INIT
 // =======================
+const teamsView = document.getElementById('teams-view');
 async function init(){
   renderTeams();
-  await checkMe();
   await checkAdmin();
-  await refreshFixtures();
-  renderFixtures();
+  await checkMe();
+
+  // Default to Teams
+  setNav('teams');
+
+  // Load data sets
+  await refreshFixturesPublic(); renderFixturesPublic();
+  if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
+  await loadFA();
 
   // open hash team
   try{
