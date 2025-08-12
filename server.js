@@ -1,6 +1,6 @@
 // server.js
-// Pro Club backend with secure roles (sessions + manager codes), rankings, wallets, cup bonuses.
-// Node 18+ (uses native fetch). Works on Render.com.
+// Pro Club backend: simple Admin login (env password + session), secure Manager roles (codes), rankings, wallets, bonuses.
+// Node 18+ (uses native fetch). Ready for Render (uses PORT + optional DATA_DIR).
 
 const express = require('express');
 const path = require('path');
@@ -16,17 +16,20 @@ const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProd = NODE_ENV === 'production';
 
-// Admin token (protects admin-only routes)
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
-
-// Session secret (secure cookies in prod)
+// Sessions
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-session-secret';
 
-// Persistent data dir (use /data on Render with a mounted disk)
+// Simple Admin password (plain, from env)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''; // set this in Render
+
+// Optional: still allow header token for scripts/tools (can be blank)
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+
+// Persistent data dir
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-// Economy (1-month season numbers)
+// Economy (1-month season suggestions; override via env on Render)
 const PAYOUTS = {
   elite: Number(process.env.PAYOUT_ELITE || 1_100_000),
   mid: Number(process.env.PAYOUT_MID || 900_000),
@@ -45,7 +48,7 @@ const CUP_BONUSES = {
   participation: 150_000
 };
 
-// Cup points (for ranking math hints; tiers decided server-side)
+// Cup points (for ranking math hints)
 const CUP_POINTS = { winner:60, runner_up:40, semifinal:25, quarterfinal:15, round_of_16:10, none:0 };
 
 /* =========================
@@ -81,7 +84,7 @@ let clubCodes = readJson(clubCodesFile, {});
    APP & MIDDLEWARE
 ========================= */
 const app = express();
-app.set('trust proxy', 1); // behind Render/any proxy
+app.set('trust proxy', 1); // required on Render/behind proxy
 
 app.use(express.json());
 
@@ -92,40 +95,54 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: 'lax',
-    secure: isProd, // secure cookies over HTTPS in prod
+    secure: isProd,
     maxAge: 1000 * 60 * 60 * 24 * 30 // 30 days
   }
 }));
 
-// Static
+// Static files (serve UI from the same service)
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 
-// Page
+// Landing page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'teams.html'));
 });
 
 /* =========================
-   AUTH / ROLES
+   ADMIN AUTH (simple password + session)
 ========================= */
-function me(req) { return req.session.user || null; }
-
-function requireAuth(req, res, next) {
-  if (!me(req)) return res.status(401).json({ error: 'Not signed in' });
-  next();
+function isAdminSession(req) {
+  return req.session?.admin === true;
 }
 function requireAdmin(req, res, next) {
-  if (!ADMIN_TOKEN) {
-    if (!isProd) {
-      console.warn('[WARN] ADMIN_TOKEN not set; allowing admin route in dev.');
-      return next();
-    }
-    return res.status(403).json({ error: 'ADMIN_TOKEN not configured' });
-  }
-  if (req.get('x-admin-token') === ADMIN_TOKEN) return next();
-  return res.status(403).json({ error: 'Forbidden: invalid X-Admin-Token' });
+  if (isAdminSession(req)) return next();
+  // Optional header token fallback if you set ADMIN_TOKEN
+  if (ADMIN_TOKEN && req.get('x-admin-token') === ADMIN_TOKEN) return next();
+  return res.status(403).json({ error: 'Admin only' });
 }
+
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body || {};
+  if (!ADMIN_PASSWORD) return res.status(500).json({ error: 'ADMIN_PASSWORD not set' });
+  if (!password || password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Bad password' });
+  req.session.admin = true;
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  req.session.admin = false;
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/me', (req, res) => {
+  res.json({ admin: isAdminSession(req) });
+});
+
+/* =========================
+   MANAGER ROLES (codes → session user)
+========================= */
+function me(req) { return req.session.user || null; }
 function requireManagerOfClub(param = 'clubId') {
   return (req, res, next) => {
     const u = me(req);
@@ -141,7 +158,7 @@ function genCode(len = 8) {
   return Array.from({ length: len }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-// Admin: rotate manager code for a club (returns code so admin can share privately)
+// Admin: rotate a club’s manager code (returns the code so you can share it privately)
 app.post('/api/clubs/:clubId/manager-code/rotate', requireAdmin, async (req, res) => {
   const { clubId } = req.params;
   const code = genCode(8);
@@ -151,7 +168,7 @@ app.post('/api/clubs/:clubId/manager-code/rotate', requireAdmin, async (req, res
   res.json({ ok: true, clubId, code });
 });
 
-// Manager claims role using club code (creates session)
+// Claim manager role → creates session user
 app.post('/api/clubs/:clubId/claim-manager', async (req, res) => {
   const { clubId } = req.params;
   const { name, code } = req.body || {};
@@ -163,7 +180,6 @@ app.post('/api/clubs/:clubId/claim-manager', async (req, res) => {
   const ok = await bcrypt.compare(String(code).trim(), rec.hash);
   if (!ok) return res.status(403).json({ error: 'Invalid code' });
 
-  // Single manager per club (rotate to reassign)
   if (rec.claimedBy && users[rec.claimedBy]?.teamId === clubId) {
     return res.status(409).json({ error: 'Club already has a manager. Ask admin to rotate the code.' });
   }
@@ -178,9 +194,9 @@ app.post('/api/clubs/:clubId/claim-manager', async (req, res) => {
   res.json({ ok: true, user });
 });
 
-// Basic logout & whoami
-app.post('/api/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
+// Who am I (manager)
 app.get('/api/auth/me', (req, res) => res.json({ user: me(req) }));
+app.post('/api/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
 
 /* =========================
    RANKINGS / PAYOUTS
@@ -205,7 +221,7 @@ function getDailyPayout(clubId) {
 }
 function ensureWallet(clubId) {
   if (!wallets[clubId]) {
-    wallets[clubId] = { balance: STARTING_BALANCE, lastCollectedAt: Date.now() - 86_400_000 }; // seed with 1 day pending
+    wallets[clubId] = { balance: STARTING_BALANCE, lastCollectedAt: Date.now() - 86_400_000 };
   }
 }
 function collectPreview(clubId) {
@@ -216,10 +232,12 @@ function collectPreview(clubId) {
   return { days, perDay, amount: Math.max(0, days * perDay) };
 }
 
+// Public read
 app.get('/api/rankings', (req, res) => {
   res.json({ rankings, payouts: PAYOUTS, cupPoints: CUP_POINTS });
 });
 
+// Admin write
 app.put('/api/rankings/:clubId', requireAdmin, (req, res) => {
   const { clubId } = req.params;
   const { leaguePos, cup, tier } = req.body || {};
@@ -259,7 +277,7 @@ app.post('/api/rankings/recalc', requireAdmin, (req, res) => {
 });
 
 /* =========================
-   WALLETS
+   WALLETS (manager-only collect)
 ========================= */
 app.get('/api/wallets/:clubId', (req, res) => {
   const { clubId } = req.params;
@@ -269,7 +287,6 @@ app.get('/api/wallets/:clubId', (req, res) => {
   res.json({ wallet: w, preview, perDay: getDailyPayout(clubId) });
 });
 
-// Only the club's manager (session) can collect payouts
 app.post('/api/wallets/:clubId/collect', requireManagerOfClub('clubId'), (req, res) => {
   const { clubId } = req.params;
   ensureWallet(clubId);
@@ -285,7 +302,7 @@ app.post('/api/wallets/:clubId/collect', requireManagerOfClub('clubId'), (req, r
 });
 
 /* =========================
-   CUP BONUSES (one-time/season)
+   CUP BONUSES (admin-only)
 ========================= */
 function seasonKeyFromBody(req) {
   const s = (req.body?.season || '').trim();
@@ -332,11 +349,11 @@ app.get('/api/bonuses/cup', requireAdmin, (req, res) => {
 });
 
 /* =========================
-   EA PASS-THROUGH (kept, but safe for non-numeric IDs)
+   EA PASS-THROUGH (numeric-only IDs)
 ========================= */
 app.get('/api/teams/:clubId/players', async (req, res) => {
   const { clubId } = req.params;
-  if (!/^\d+$/.test(clubId)) return res.json({ members: [] }); // manual/non-numeric IDs
+  if (!/^\d+$/.test(clubId)) return res.json({ members: [] }); // manual teams use string IDs
   const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
 
   const controller = new AbortController();
@@ -361,5 +378,4 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);
   console.log(`Data dir: ${DATA_DIR}`);
-  if (!ADMIN_TOKEN) console.warn('[WARN] ADMIN_TOKEN is not set. Admin routes are open in development but blocked in production.');
 });
