@@ -39,38 +39,26 @@ h2{margin:0 0 8px}
 /* Generic card */
 .m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
 
-/* Fixtures */
+/* Fixtures (legacy wrappers kept for actions layout) */
 .fx-list{display:flex;flex-direction:column;gap:10px}
-.fx{background:#110000;border:1px solid #300000;border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
-.fx .meta{font-size:12px;color:var(--muted)}
-.fx .vs{font-weight:700}
+.fx{background:#110000;border:1px solid #300000;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:10px}
 .fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
-.fx-banner{width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:6px 0}
 
-/* Inputs */
-input,select,textarea{background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:8px}
-label{font-size:12px;color:var(--muted)}
-hr{border:none;border-top:1px solid #220000;margin:14px 0}
-
-/* Modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000}
-.modal.show{display:flex}
-.modal .dialog{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:16px;width:min(520px,92vw);box-shadow:0 6px 18px rgba(255,0,0,.25)}
-.modal .dialog h3{margin:0 0 8px}
-.modal .row{display:grid;grid-template-columns:120px 1fr;gap:8px;align-items:center;margin:8px 0}
-.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-
-/* Leaders (Champions Cup) */
-.leaders{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-.leader-card{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:12px}
-.leader-card ol{margin:8px 0 0 18px}
-.leader-card li{margin:2px 0}
+/* NEW: Scoreboard card */
+.team-badge{width:40px;height:40px;border-radius:50%;object-fit:cover;background:#330000}
+.fx-card{background:#110000;border:1px solid #300000;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.fx-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.fx-side{display:flex;align-items:center;gap:10px;justify-content:flex-start}
+.fx-side.right{justify-content:flex-end;flex-direction:row-reverse}
+.fx-score{font-weight:800;font-size:24px;text-align:center;min-width:120px}
+.fx-meta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;justify-content:space-between}
+.fx-scorers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
 @media(max-width:720px){
   .team-logo{height:100px}
-  .fx{grid-template-columns:1fr;gap:6px}
-  .fx .act{justify-content:flex-start}
+  .fx-score{font-size:20px;min-width:auto}
+  .fx-scorers{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -314,6 +302,66 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
 function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
 function getFixtureBanner(){ return '/assets/ui/fixture-banner.png'; } // put your image here
+
+// NEW helpers for scoreboard
+function isToday(ts){ try{ const d=new Date(ts); const n=new Date(); return d.toDateString()===n.toDateString(); }catch{return false} }
+function whenLabel(f){ if(!f.when) return 'TBD'; return (isToday(f.when)?'Today • ':'')+new Date(f.when).toLocaleString(); }
+function logoTag(id){
+  const t = byId(id); const src = t? teamLogoUrl(t) : '';
+  const name = t?.name || id;
+  return `<img class="team-badge" src="${src}" alt="${escapeHtml(name)} logo"
+           onerror="this.onerror=null;this.src='https://via.placeholder.com/40x40?text=?'">`;
+}
+function listScorers(f, side){
+  const arr = (f.details?.[side]||[]).filter(r=>Number(r.goals||0)>0);
+  return arr.map(r=>`${escapeHtml(r.player||r.playerId||'')}${Number(r.goals)>1?` (${r.goals})`:''}`);
+}
+function scorerLine(lines){ return lines.length ? lines.join(', ') : '<span class="muted">—</span>'; }
+function pensText(f){
+  const p = f.pens || f.pen || f.shootout;
+  if (!p) return '';
+  const hs = Number(p.hs ?? p.home ?? 0);
+  const as = Number(p.as ?? p.away ?? 0);
+  if (Number.isNaN(hs) || Number.isNaN(as)) return '';
+  return `Penalties: ${hs}–${as}`;
+}
+function renderFixtureCard(f){
+  const hn = byId(f.home)?.name || f.home;
+  const an = byId(f.away)?.name || f.away;
+  const scoreTxt = (f.status==='final' || f.status==='scheduled')
+    ? `${Number(f.score?.hs||0)} – ${Number(f.score?.as||0)}`
+    : '–';
+  const pens = pensText(f);
+  const badge = (f.cup===CC_ID) ? `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}</span>` : '';
+  const banner = getFixtureBanner();
+
+  return `
+  <div class="fx-card">
+    <div class="fx-meta">
+      <div>${escapeHtml(f.round||'Fixture')}${badge?` • ${badge}`:''}</div>
+      <div>${f.status==='final'?'Full-time':(f.status==='scheduled'?'Scheduled':'Pending')}</div>
+    </div>
+
+    ${banner ? `<img class="fx-banner" src="${banner}" alt="" style="width:100%;max-height:120px;object-fit:cover;border-radius:8px">` : ''}
+
+    <div class="fx-row">
+      <div class="fx-side left">${logoTag(f.home)}<strong>${escapeHtml(hn)}</strong></div>
+      <div class="fx-score">
+        ${scoreTxt}
+        ${pens?`<div class="muted" style="font-weight:600;font-size:12px">${pens}</div>`:''}
+      </div>
+      <div class="fx-side right">${logoTag(f.away)}<strong>${escapeHtml(an)}</strong></div>
+    </div>
+
+    ${(f.status==='final') ? `
+      <div class="fx-scorers">
+        <div><em>${escapeHtml(hn)}</em>: ${scorerLine(listScorers(f,'home'))}</div>
+        <div><em>${escapeHtml(an)}</em>: ${scorerLine(listScorers(f,'away'))}</div>
+      </div>` : ''}
+
+    <div class="fx-meta"><span>${whenLabel(f)}</span></div>
+  </div>`;
+}
 
 // state
 let isAdmin = false;
@@ -593,7 +641,7 @@ async function loadSquad(clubId){
 
     tools.style.display = (isAdmin ? 'flex' : 'none');
     body.innerHTML = slots.map(s=>{
-      const name = s.player?.eaName || '';
+      const name = s.player?.eaName || s.player?.name || '';
       const pid  = s.playerId || '';
       return `
         <div class="m-card" style="margin:6px 0">
@@ -698,30 +746,9 @@ async function refreshFixturesPublic(){
 }
 function renderFixturesPublic(){
   const list = fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
-  fixturesPublicList.innerHTML = list.length ? list.map(f=>{
-    const banner = getFixtureBanner();
-    const hn = byId(f.home)?.name || f.home;
-    const an = byId(f.away)?.name || f.away;
-    const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
-    const ccBadge = (f.cup===CC_ID) ? ' • <span class="chip">Champions Cup</span>' : '';
-    const homeSc = (f.details?.home||[]).map(p=>`<li>${escapeHtml(p.player||p.playerId||'')}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
-    const awaySc = (f.details?.away||[]).map(p=>`<li>${escapeHtml(p.player||p.playerId||'')}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
-    return `
-      <div class="fx">
-        <div>
-          ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
-          <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
-          <div class="meta">${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
-          ${(f.status==='final' && (homeSc||awaySc)) ? `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
-              <div><em>${escapeHtml(hn)} scorers</em><ul>${homeSc||'<li class="muted">—</li>'}</ul></div>
-              <div><em>${escapeHtml(an)} scorers</em><ul>${awaySc||'<li class="muted">—</li>'}</ul></div>
-            </div>` : ''
-          }
-        </div>
-      </div>`;
-  }).join('') : `<div class="muted">No fixtures yet.</div>`;
+  fixturesPublicList.innerHTML = list.length
+    ? list.map(f=> `<div style="margin-bottom:10px">${renderFixtureCard(f)}</div>`).join('')
+    : `<div class="muted">No fixtures yet.</div>`;
 }
 
 // =======================
@@ -765,6 +792,29 @@ async function refreshFixturesSched(){
 function filterKey(){
   const active = [...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
   return active ? active.getAttribute('data-fxf') : 'upcoming';
+}
+function renderFxSchedRow(f){
+  const props = (f.proposals||[]).map(p=>{
+    const who = (teams.find(t=>String(t.id)===String(p.by))?.name) || p.by || 'unknown';
+    return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
+  }).join('');
+  const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
+
+  return `
+  <div class="fx" id="fx_${f.id}">
+    ${renderFixtureCard(f)}
+    <div class="center" style="margin:8px 0">
+      ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
+    </div>
+    <div class="act">
+      <button class="prop">Propose</button>
+      <button class="agree">Agree</button>
+      <button class="decl">Decline</button>
+      <button class="line">Set Lineup</button>
+      <button class="rep">Submit Result</button>
+      ${adminBtns}
+    </div>
+  </div>`;
 }
 function renderFixturesSched(){
   const key = filterKey();
@@ -833,9 +883,15 @@ function renderFixturesSched(){
       if (!isManagerOf) return alert('Managers only');
       const hs = Number(prompt('Home score?')||0);
       const as = Number(prompt('Away score?')||0);
+      const pensAsk = prompt('Penalties (hs-as) if decided on pens, else leave blank','');
+      let pens=null;
+      if (pensAsk && /(\d+)\s*[-–]\s*(\d+)/.test(pensAsk)){
+        const m = pensAsk.match(/(\d+)\s*[-–]\s*(\d+)/);
+        pens = { hs:Number(m[1]), as:Number(m[2]) };
+      }
       const text = prompt('Notes (optional)')||'';
       try{
-        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, text });
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, text, pens });
         document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
         document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
         await refreshFixturesSched(); renderFixturesSched();
@@ -863,6 +919,7 @@ function renderFixturesSched(){
       const hs = Number(prompt('Home score (hs)')||0);
       const as = Number(prompt('Away score (as)')||0);
       const template = JSON.stringify({
+        pens:{ hs:4, as:3 },
         details:{
           home:[{ player:"Player A", goals:1, assists:0, rating:9.5 }],
           away:[{ player:"Player B", goals:2, assists:0, rating:8.7 }]
@@ -872,7 +929,7 @@ function renderFixturesSched(){
       if (!raw) return;
       try{
         const obj = JSON.parse(raw);
-        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj });
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj, pens: obj.pens || null });
         document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
         document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
         await refreshFixturesSched(); renderFixturesSched();
@@ -880,39 +937,6 @@ function renderFixturesSched(){
       }catch(e){ alert('JSON upload failed: '+e.message); }
     };
   });
-}
-
-function renderFxSchedRow(f){
-  const hn = byId(f.home)?.name || f.home;
-  const an = byId(f.away)?.name || f.away;
-  const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-  const props = (f.proposals||[]).map(p=>{
-    const who = (teams.find(t=>String(t.id)===String(p.by))?.name) || p.by || 'unknown';
-    return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
-  }).join('');
-  const status = f.status || 'pending';
-  const ccBadge = (f.cup===CC_ID) ? `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}</span>` : '';
-  const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
-  const banner = getFixtureBanner();
-  return `
-  <div class="fx" id="fx_${f.id}">
-    <div>
-      ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
-      <div class="vs">${escapeHtml(hn)} <span class="muted">vs</span> ${escapeHtml(an)}</div>
-      <div class="meta">Round: ${escapeHtml(f.round||'')}${ccBadge?` • ${ccBadge}`:''} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
-    </div>
-    <div class="center">
-      ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
-    </div>
-    <div class="act">
-      <button class="prop">Propose</button>
-      <button class="agree">Agree</button>
-      <button class="decl">Decline</button>
-      <button class="line">Set Lineup</button>
-      <button class="rep">Submit Result</button>
-      ${adminBtns}
-    </div>
-  </div>`;
 }
 
 // Next & recent for team (from public cache)
@@ -932,19 +956,12 @@ function renderNextFor(teamId){
   const el = document.getElementById('nextMatchBody');
   const f = nextFor(teamId);
   if (!f){ el.textContent='No scheduled match yet.'; return; }
-  const hn = byId(f.home)?.name || f.home;
-  const an = byId(f.away)?.name || f.away;
-  el.innerHTML = `<div><strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong></div>
-                  <div class="muted">${fmtDate(f.when)}</div>`;
+  el.innerHTML = renderFixtureCard(f);
 }
 function renderTeamResults(teamId){
   const el = document.getElementById('teamResultsBody');
   const list = finalsFor(teamId);
-  el.innerHTML = list.length ? list.map(f=>{
-    const hn = byId(f.home)?.name || f.home;
-    const an = byId(f.away)?.name || f.away;
-    return `<div>FT ${f.score.hs}-${f.score.as}: <strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong> • ${fmtDate(f.when||f.createdAt)}</div>`;
-  }).join('') : 'No finals yet.';
+  el.innerHTML = list.length ? list.map(renderFixtureCard).join('') : 'No finals yet.';
 }
 
 // =======================
@@ -1076,21 +1093,9 @@ function renderCcGroups(groups, tables){
 function renderCcFixtures(list){
   const el = document.getElementById('ccFixtures');
   list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
-  el.innerHTML = list.length ? list.map(f=>{
-    const hn = byId(f.home)?.name || f.home;
-    const an = byId(f.away)?.name || f.away;
-    const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
-    const badge = `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
-    const banner = getFixtureBanner();
-    return `<div class="fx">
-      <div>
-        ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
-        <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
-        <div class="meta">${badge} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
-      </div>
-    </div>`;
-  }).join('') : `<div class="muted">No Champions Cup fixtures yet.</div>`;
+  el.innerHTML = list.length
+    ? list.map(f=> `<div style="margin-bottom:10px">${renderFixtureCard(f)}</div>`).join('')
+    : `<div class="muted">No Champions Cup fixtures yet.</div>`;
 }
 
 // Leaders (client-side fallback)
@@ -1113,15 +1118,15 @@ function computeLeadersFromFixtures(list){
 }
 function renderCcLeaders(data){
   const el = document.getElementById('ccLeaders');
-  const s = data?.topScorers||[], a = data?.topAssisters||[];
+  const s = data?.topScorers||data?.scorers||[], a = data?.topAssisters||data?.assisters||[];
   el.innerHTML = `
     <div class="leader-card">
       <strong>Top Scorers</strong>
-      ${s.length ? `<ol>${s.map(x=>`<li><strong>${escapeHtml(x.name)}</strong> — ${x.stat} goals</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
+      ${s.length ? `<ol>${s.map(x=>`<li><strong>${escapeHtml(x.name||x.playerId)}</strong> — ${x.stat||x.count} goals</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
     </div>
     <div class="leader-card">
       <strong>Top Assisters</strong>
-      ${a.length ? `<ol>${a.map(x=>`<li><strong>${escapeHtml(x.name)}</strong> — ${x.stat} assists</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
+      ${a.length ? `<ol>${a.map(x=>`<li><strong>${escapeHtml(x.name||x.playerId)}</strong> — ${x.stat||x.count} assists</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
     </div>
   `;
 }
@@ -1169,7 +1174,7 @@ function buildManualGroupsEditor(groups){
         const v = sel.value; if(v) out[g].push(v);
       });
     });
-    const all = [...out.A, ...out.B, ...out.C, ...out.D];
+    const all = [...out.A, ...out.B, ...out.D, ...out.C];
     const set = new Set(all);
     if (all.length!==16) return alert('Need 16 unique clubs total.');
     if (all.length!==set.size) return alert('Duplicate club across groups.');
