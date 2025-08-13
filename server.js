@@ -634,6 +634,7 @@ app.post('/api/cup/fixtures', requireAdmin, wrap(async (req, res) => {
     when: when ? Number(when) : null, // locked time (ms)
     lineups: {},
     score: { hs:0, as:0 },
+    pens: null,                 // { hs, as } when decided on penalties
     report: { text:'', mvpHome:'', mvpAway:'', discordMsgUrl:'' },
     details: { home: [], away: [] },
     unresolved: [],
@@ -655,6 +656,7 @@ app.get('/api/cup/fixtures/public', wrap(async (req, res) => {
       home: f.home, away: f.away,
       when: f.when || null, status: f.status,
       score: f.score || { hs: 0, as: 0 },
+      pens: f.pens || null,
       details: f.details || { home: [], away: [] },
       createdAt: f.createdAt || 0
     };
@@ -747,7 +749,7 @@ app.put('/api/cup/fixtures/:id/lineup', requireManagerOrAdmin, wrap(async (req, 
   res.json({ ok:true, fixture: f });
 }));
 
-// Report final (accepts playerId OR player name)
+// Report final (accepts playerId OR player name) — supports penalties
 app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req, res) => {
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error: 'not found' });
@@ -756,9 +758,16 @@ app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req,
     return res.status(403).json({ error: 'Managers of these clubs only (or admin)' });
   }
 
-  const { hs, as, text, mvpHome, mvpAway, discordMsgUrl, details } = req.body || {};
+  const { hs, as, text, mvpHome, mvpAway, discordMsgUrl, details, pens } = req.body || {};
   f.score  = { hs: Number(hs||0), as: Number(as||0) };
+  if (pens && typeof pens === 'object') {
+    f.pens = {
+      hs: Number(pens.hs ?? pens.home ?? 0),
+      as: Number(pens.as ?? pens.away ?? 0)
+    };
+  }
   f.report = { text: String(text||''), mvpHome: String(mvpHome||''), mvpAway: String(mvpAway||''), discordMsgUrl: String(discordMsgUrl||'') };
+
   if (details && typeof details === 'object') {
     f.details = { home: [], away: [] };
     f.unresolved = [];
@@ -782,7 +791,7 @@ app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req,
   res.json({ ok: true, fixture: f });
 }));
 
-// Admin quick paste
+// Admin quick paste (now can parse "penalties 4-3" style too)
 app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res) => {
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error: 'not found' });
@@ -805,6 +814,7 @@ app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res
   }
 
   f.score = parsed.score;
+  f.pens = parsed.pens || null;
   f.details = out;
   f.unresolved = unresolved;
   f.status = 'final';
@@ -815,12 +825,13 @@ app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res
   res.json({ ok: true, fixture: f });
 }));
 
-// Loose text parser
+// Loose text parser (supports "penalties 4-3", "pens: 5-4")
 function parseLooseResultText(str) {
   const toks = String(str).replace(/\n/g, ',').split(',').map(s => s.trim()).filter(Boolean);
   let side = 'home';
   const details = { home: [], away: [] };
   const score = { hs: 0, as: 0 };
+  let pens = null;
   let cur = null;
   const commit = () => {
     if (cur && cur.player) {
@@ -843,6 +854,10 @@ function parseLooseResultText(str) {
     m = t.match(/score\s*:\s*(\d+)/i);
     if (m) { if (side==='home') score.hs = Number(m[1]); else score.as = Number(m[1]); continue; }
 
+    // penalties patterns: "pens 4-3", "penalties: 5-4", "shootout 6-5"
+    m = t.match(/(?:pen|pens|penalties|shootout)\s*[:\-]?\s*(\d+)\s*[-–]\s*(\d+)/i);
+    if (m) { pens = { hs:Number(m[1]), as:Number(m[2]) }; continue; }
+
     m = t.match(/player\s*\d*\s*:\s*(.+)/i);
     if (m) { commit(); cur = { player: m[1].trim() }; continue; }
 
@@ -852,14 +867,14 @@ function parseLooseResultText(str) {
     if (m) { cur = cur || {}; cur.rating = Number(m[1]); continue; }
 
     if (!cur || !cur.player) {
-      if (t && !/^\d+(\.\d+)?$/.test(t) && !/^(score|rating|goal|assist)/i.test(t)) {
+      if (t && !/^\d+(\.\d+)?$/.test(t) && !/^(score|rating|goal|assist|pens?|penalties|shootout)\b/i.test(t)) {
         cur = cur || {};
         cur.player = (cur.player || t);
       }
     }
   }
   commit();
-  return { score, details };
+  return { score, details, pens };
 }
 
 /* =========================
@@ -922,7 +937,7 @@ app.get('/api/champions/:cupId', wrap(async (req,res)=>{
   res.json({ ok:true, cup, tables });
 }));
 
-// Leaders (Top scorers / assisters) — used by the HTML; limit via ?limit=5
+// Leaders (Top scorers / assisters) — limit via ?limit=5
 app.get('/api/champions/:cupId/leaders', wrap(async (req,res)=>{
   const { cupId } = req.params;
   const limit = Math.max(1, Math.min(20, Number(req.query.limit || 5)));
