@@ -42,10 +42,10 @@ if (!admin.apps.length) {
   admin.initializeApp({ credential: admin.credential.cert(svc) });
 }
 const db = admin.firestore();
-const { FieldValue, FieldPath } = admin.firestore;
 
 /* =========================
    CONFIG
+========================= */
 ========================= */
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
