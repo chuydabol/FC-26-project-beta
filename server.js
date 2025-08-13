@@ -12,7 +12,7 @@
 //
 // Required env:
 //   FIREBASE_SERVICE_ACCOUNT (JSON string; if multiline key, keep \n — handled below)
-//   ADMIN_PASSWORD           (e.g. "Chuyacc")
+//   ADMIN_PASSWORD
 //   SESSION_SECRET
 //
 // Optional env:
@@ -23,6 +23,12 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+
+// Optional middlewares (won't crash if not installed)
+let helmet = null;
+let compression = null;
+try { helmet = require('helmet'); } catch {}
+try { compression = require('compression'); } catch {}
 
 // Node 18+ has global fetch; fallback to node-fetch if missing
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
