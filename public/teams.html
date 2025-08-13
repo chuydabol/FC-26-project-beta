@@ -1155,6 +1155,70 @@ function renderCcFixtures(list){
     const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
     const badge = `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
     const banner = getFixtureBanner();
+    const hLogo = teamLogoUrl(byId(f.home) || {name: hn});
+    const aLogo = teamLogoUrl(byId(f.away) || {name: an});
+    const canEdit = isAdmin || (meUser && (String(meUser.teamId)===String(f.home) || String(meUser.teamId)===String(f.away)));
+    const actions = canEdit ? `<div class="act"><button class="res-enter" data-id="${f.id}">Enter Result</button>${isAdmin?`<button class="json" data-id="${f.id}">Upload JSON</button>`:''}</div>` : '<div></div>';
+    return `<div class="fx" id="ccfx_${f.id}">
+      <div>
+        ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
+        <div class="vs" style="display:flex;align-items:center;gap:8px">
+          <img src="${hLogo}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #300000">
+          <strong>${escapeHtml(hn)}</strong>
+          <span class="muted">${scoreTxt}</span>
+          <img src="${aLogo}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #300000">
+          <strong>${escapeHtml(an)}</strong>
+        </div>
+        <div class="meta">${badge} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
+      </div>
+      <div class="center"></div>
+      ${actions}
+    </div>`;
+  }).join('') : `<div class="muted">No Champions Cup fixtures yet.</div>`;
+
+  // Bind result modal openers
+  el.querySelectorAll('.res-enter').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.getAttribute('data-id');
+      try{
+        const d = await apiGet('/api/cup/fixtures/'+id);
+        if (typeof openResultModal === 'function') {
+          openResultModal(d.fixture);
+        } else {
+          alert('Result form unavailable in this build.');
+        }
+      }catch(e){ alert('Could not open result form: '+e.message); }
+    };
+  });
+
+  // Optional: keep JSON upload for admins
+  el.querySelectorAll('.json').forEach(btn=>{
+    btn.onclick = async ()=>{
+      if(!isAdmin) return alert('Admin only');
+      const id = btn.getAttribute('data-id');
+      const hs = Number(prompt('Home score (hs)')||0);
+      const as = Number(prompt('Away score (as)')||0);
+      const template = JSON.stringify({
+        details:{
+          home:[{ player:'Player A', goals:1, assists:0, rating:9.5 }],
+          away:[{ player:'Player B', goals:2, assists:1, rating:8.7 }]
+        }
+      }, null, 2);
+      const raw = prompt('Paste JSON (or edit the template):', template);
+      if (!raw) return;
+      try{
+        const obj = JSON.parse(raw);
+        await apiPost('/api/cup/fixtures/'+id+'/report',{ hs, as, details: obj.details || obj });
+        await loadChampions();
+        await refreshFixturesPublic();
+        renderFixturesPublic();
+      }catch(e){ alert('JSON upload failed: '+e.message); }
+    };
+  });
+}
+–${f.score.as}` : 'vs';
+    const badge = `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
+    const banner = getFixtureBanner();
     return `<div class="fx">
       <div>
         ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
