@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Pro Club — League Hub</title>
 <style>
-:root { --accent:#e00; --muted:#bb4444; }
+:root { --accent:#e00; --muted:#bb8888; --card-h:400px; }
 *{box-sizing:border-box}
 body{background:#000;color:#fff;font-family:Arial,sans-serif;margin:0;min-height:100vh}
 header{background:linear-gradient(90deg,#a00000,#d50000);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -34,14 +34,16 @@ h2{margin:0 0 8px}
 #backBtn{background:#330000;color:#fff;border:1px solid #551111;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:600}
 #detail-title{font-size:20px;font-weight:700}
 .squad-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:14px}
+
+/* Generic card */
 .m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
 
 /* Fixtures */
 .fx-list{display:flex;flex-direction:column;gap:10px}
-.fx{background:#110000;border:1px solid #300000;border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
+.fx{background:#110000;border:1px solid #300000;border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr;gap:8px;align-items:center}
 .fx .meta{font-size:12px;color:var(--muted)}
-.fx .vs{font-weight:700}
-.fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.fx .vs{font-weight:700;margin-bottom:4px}
+.fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-start}
 .fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
 
 /* Inputs */
@@ -49,17 +51,35 @@ input,select,textarea{background:#0d0000;color:#fff;border:1px solid #3a0000;bor
 label{font-size:12px;color:var(--muted)}
 hr{border:none;border-top:1px solid #220000;margin:14px 0}
 
-/* Simple modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:1000}
-.modal .box{background:#140000;border:1px solid #360000;border-radius:12px;max-width:520px;width:100%;padding:16px}
-.modal .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-.modal .row label{width:120px;display:flex;align-items:center}
-.modal .row input, .modal .row select{flex:1}
+/* SVG lineup pitch */
+.pitch {background:#0a7a3b;border:2px solid #0f5d2d;border-radius:10px;position:relative;overflow:hidden;margin-top:8px}
+.pitch svg {display:block;width:100%;height:auto}
+.player-dot{fill:#7c214b;stroke:#ffffff;stroke-width:1.2}
+.player-name{font:10px/1.2 sans-serif;fill:#fff;text-anchor:middle}
+.side-away .player-dot{fill:#444}
+.pitch .team-label{font:12px sans-serif;fill:#fff;opacity:.9}
+
+/* Leaders block */
+.leaders-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.leader-card{background:#100e10;border:1px solid #2a0020;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(255,0,0,.12)}
+.leader-card h3{margin:0 0 8px;font-size:14px;letter-spacing:.2px}
+.lb-row{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px}
+.lb-row:not(:last-child){border-bottom:1px solid #230018}
+.rank{width:26px;height:26px;border-radius:8px;background:#2c001e;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.avatar{width:28px;height:28px;border-radius:50%;background:#6f1a3b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;text-transform:uppercase}
+.lb-main{flex:1;display:flex;flex-direction:column;gap:2px}
+.lb-name{font-weight:700;font-size:13px}
+.lb-sub{color:#bb8888;font-size:12px}
+.lb-count{min-width:40px;text-align:right;font-weight:800;font-size:14px;background:#380016;padding:6px 8px;border-radius:8px}
+
+/* Manager modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
+.modal .panel{background:#120000;border:1px solid #330000;border-radius:12px;max-width:460px;width:100%;padding:16px}
+.modal .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.modal .close{background:#330000;border:1px solid #551111;border-radius:8px;color:#fff;padding:6px 10px;cursor:pointer}
 
 @media(max-width:720px){
   .team-logo{height:100px}
-  .fx{grid-template-columns:1fr;gap:6px}
-  .fx .act{justify-content:flex-start}
 }
 </style>
 </head>
@@ -73,8 +93,7 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
     <button id="navFixturesSched"  aria-pressed="false" style="display:none">Fixtures Scheduling</button>
     <button id="navChampions" aria-pressed="false">Champions Cup</button>
     <button id="navRankings" aria-pressed="false" style="display:none">Rankings</button>
-    <button id="btnMgrLogin">Manager sign in</button>
-    <button id="btnMgrLogout" style="display:none">Manager sign out</button>
+    <button id="btnManagerSignIn">Manager sign in</button>
     <button id="btnAdminLogin">Admin sign in</button>
     <button id="btnAdminLogout" style="display:none">Admin sign out</button>
   </div>
@@ -124,21 +143,9 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
       </div>
     </div>
 
-    <!-- SQUAD EDITOR -->
-    <div class="m-card" id="squadPanel" style="margin-top:12px">
-      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
-        <strong>Squad</strong>
-        <div id="squadAdminBtns" style="display:none;gap:8px">
-          <button id="btnSquadBootstrap">Create 15 slots</button>
-          <button id="btnSquadEnsure">Ensure player IDs</button>
-        </div>
-      </div>
-      <div id="squadContainer" class="squad-grid" style="margin-top:12px"></div>
-      <div class="muted" id="squadHint" style="margin-top:8px">Managers can edit nickname / aliases. Each slot has a fixed playerId.</div>
-    </div>
-
+    <div id="squadContainer" class="squad-grid" style="margin-top:12px"></div>
     <div id="detail-footer" style="margin-top:18px" class="muted center">
-      <small>Data pulled from EA when available; manual names for custom clubs.</small>
+      <small>Data pulled from EA when available; manual for custom clubs.</small>
     </div>
   </section>
 
@@ -182,16 +189,10 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
   <section id="rankings-view" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
       <h2>Rankings & Payouts</h2>
-      <div id="adminControls" style="display:none;gap:8px">
-        <button id="btnSaveRankings">Save</button>
-        <button id="btnRecalc">Recalc tiers</button>
-        <button id="btnCupDry">Cup bonuses (dry run)</button>
-        <button id="btnCupPay">Cup bonuses (pay)</button>
+      <div class="m-card" style="margin-top:10px">
+        <div class="muted" style="margin-bottom:8px">Only admins can view/edit this section.</div>
+        <div id="rankingsTable">Loading…</div>
       </div>
-    </div>
-    <div class="m-card" style="margin-top:10px">
-      <div class="muted" style="margin-bottom:8px">Only admins can view/edit this section.</div>
-      <div id="rankingsTable">Loading…</div>
     </div>
   </section>
 
@@ -209,7 +210,7 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
 
     <div class="m-card" id="ccAdmin" style="display:none;margin-top:10px">
       <strong>Admin tools</strong>
-      <div class="muted">Randomize groups (16 clubs → A–D), save groups, and create fixtures (group stage/knockouts).</div>
+      <div class="muted">Randomize groups, save groups, create fixtures (group/knockouts).</div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
         <button id="ccBtnRandom">Randomize (pick 16)</button>
         <button id="ccBtnSaveGroups">Save groups</button>
@@ -222,39 +223,39 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
       <strong>Champions Cup Fixtures</strong>
       <div id="ccFixtures" class="fx-list" style="margin-top:8px"></div>
     </div>
+
+    <!-- NEW: Leaders card -->
+    <div class="m-card" style="margin-top:10px">
+      <strong>Champions Cup Leaders</strong>
+      <div id="ccLeaders" class="leaders-wrap" style="margin-top:8px"></div>
+    </div>
   </section>
 </main>
 
-<!-- MANAGER SIGN-IN MODAL -->
+<!-- Manager Sign-in Modal -->
 <div id="mgrModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mgrTitle">
-  <div class="box">
-    <div style="display:flex;justify-content:space-between;align-items:center">
+  <div class="panel">
+    <div class="head">
       <strong id="mgrTitle">Manager sign in</strong>
-      <button id="mgrClose" title="Close" style="background:#300;border:1px solid #600;color:#fff;border-radius:6px;padding:4px 8px">✕</button>
+      <button class="close" id="mgrClose">✕</button>
     </div>
-    <div class="row" style="margin-top:10px">
+    <div style="display:grid;gap:8px">
       <label>Club</label>
-      <select id="mgrTeamSelect"></select>
-    </div>
-    <div class="row">
-      <label>Display name</label>
-      <input id="mgrName" placeholder="e.g., Coach Jay" />
-    </div>
-    <div class="row">
+      <select id="mgrClub"></select>
+      <label>Your name</label>
+      <input id="mgrName" placeholder="Display name" />
       <label>Manager code</label>
-      <input id="mgrCode" placeholder="8-char code" />
+      <input id="mgrCode" placeholder="Enter code" />
+      <button id="mgrGo" style="margin-top:8px">Sign in</button>
+      <small class="muted">You’ll need to re-enter this code periodically.</small>
     </div>
-    <div class="row" style="justify-content:flex-end">
-      <button id="mgrDoLogin">Sign in</button>
-    </div>
-    <div class="muted" style="margin-top:8px">Your session lasts ~12h (then re-enter the code).</div>
   </div>
 </div>
 
 <script>
-/* =======================
-   CONFIG / CONSTANTS
-======================= */
+// =======================
+//   CONFIG / CONSTANTS
+// =======================
 const API_BASE = '';
 const CC_ID = 'UPCL_CC_2025_08'; // change per season
 
@@ -265,7 +266,7 @@ const TEAM_TITLES = {
   ]
 };
 
-// Teams (id + name + logo)
+// Teams
 const teams = [
   { id: '2491998', name: 'Royal Republic',   logo: '/assets/logos/royal-republic-logo.png' },
   { id: '1527486', name: 'Gungan FC',         logo: '/assets/logos/gungan-fc.png' },
@@ -284,7 +285,7 @@ const teams = [
   { id: '55408',   name: 'Elite VT',          logo: '/assets/logos/elite-vt.png' },
   { id: '4819681', name: 'EVERYTHING DEAD',   logo: '/assets/logos/everything-dead.png' },
   { id: '35642',   name: 'EBK FC',            logo: '/assets/logos/ebk-fc.png' },
-  // manual clubs
+  // Manual clubs
   { id: 'afc-warriors',  name: 'AFC Warriors',  logo: '/assets/logos/afc-warriors.png' },
   { id: 'jids-trivela',  name: 'Jids Trivela',  logo: '/assets/logos/jids-trivela.png' },
   { id: 'razorblack-fc', name: 'Razorblack FC', logo: '/assets/logos/razorblack-fc.png' }
@@ -297,9 +298,7 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
 function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
 
-/* =======================
-   STATE
-======================= */
+// state
 let isAdmin = false;
 let meUser  = null;
 let isMgr   = false;
@@ -308,16 +307,12 @@ let payouts  = { elite:0, mid:0, bottom:0 };
 let fixturesPublicCache = [];
 let fixturesSchedCache  = [];
 
-/* =======================
-   API
-======================= */
+// api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
-/* =======================
-   NAV
-======================= */
+// nav
 const navTeams    = document.getElementById('navTeams');
 const navMarket   = document.getElementById('navMarket');
 const navFxPublic = document.getElementById('navFixturesPublic');
@@ -357,80 +352,65 @@ navFxSched.onclick     = ()=> setNav('fixturesSched');
 navRankings.onclick    = ()=> setNav('rankings');
 navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
 
-/* =======================
-   AUTH BUTTONS
-======================= */
+// auth / admin
 const btnAdminLogin = document.getElementById('btnAdminLogin');
 const btnAdminLogout= document.getElementById('btnAdminLogout');
-const btnMgrLogin   = document.getElementById('btnMgrLogin');
-const btnMgrLogout  = document.getElementById('btnMgrLogout');
 
 btnAdminLogin.onclick = async ()=>{
   const pw = prompt('Admin password');
   if (!pw) return;
   try{
     await apiPost('/api/admin/login',{ password: pw });
-    await refreshAuthState();
+    await checkAdmin(); await checkMe();
     alert('Admin signed in');
   }catch(e){ alert('Login failed: '+e.message); }
 };
-btnAdminLogout.onclick = async ()=>{ try{ await apiPost('/api/admin/logout',{}); }catch{} await refreshAuthState(); alert('Signed out'); };
+btnAdminLogout.onclick = async ()=>{
+  try{ await apiPost('/api/admin/logout',{}); }catch{}
+  await checkAdmin(); await checkMe();
+  alert('Signed out');
+};
 
-btnMgrLogin.onclick = openMgrModal;
-btnMgrLogout.onclick = async ()=>{ try{ await apiPost('/api/auth/logout',{}); }catch{} await refreshAuthState(); alert('Manager signed out'); };
+async function checkAdmin(){
+  try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
+  navRankings.style.display = isAdmin ? 'inline-block' : 'none';
+  btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+}
+async function checkMe(){
+  try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
+  isMgr = !!(meUser && meUser.role==='Manager');
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+}
 
 /* =======================
    MANAGER SIGN-IN MODAL
 ======================= */
 const mgrModal = document.getElementById('mgrModal');
 const mgrClose = document.getElementById('mgrClose');
-const mgrTeamSelect = document.getElementById('mgrTeamSelect');
-const mgrName = document.getElementById('mgrName');
-const mgrCode = document.getElementById('mgrCode');
-const mgrDoLogin = document.getElementById('mgrDoLogin');
-
-function openMgrModal(){
-  // build dropdown
-  mgrTeamSelect.innerHTML = teams.map(t=> `<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
-  mgrName.value = meUser?.name || '';
-  mgrCode.value = '';
-  mgrModal.style.display = 'flex';
-}
-mgrClose.onclick = ()=> mgrModal.style.display = 'none';
-
-mgrDoLogin.onclick = async ()=>{
-  const clubId = mgrTeamSelect.value;
-  const name = mgrName.value.trim() || 'Manager';
+const mgrClub  = document.getElementById('mgrClub');
+const mgrName  = document.getElementById('mgrName');
+const mgrCode  = document.getElementById('mgrCode');
+const mgrGo    = document.getElementById('mgrGo');
+document.getElementById('btnManagerSignIn').onclick = ()=> {
+  mgrClub.innerHTML = teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${escapeHtml(t.id)})</option>`).join('');
+  mgrName.value=''; mgrCode.value='';
+  mgrModal.style.display='flex';
+};
+mgrClose.onclick = ()=> mgrModal.style.display='none';
+mgrGo.onclick = async ()=>{
+  const clubId = mgrClub.value;
+  const name = mgrName.value.trim();
   const code = mgrCode.value.trim();
-  if (!clubId || !code){ alert('Pick a club and enter the code'); return; }
+  if (!clubId || !name || !code) return alert('Pick a club, enter your name and code.');
   try{
     await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
-    mgrModal.style.display = 'none';
-    await refreshAuthState();
-    alert('Signed in as manager');
-  }catch(e){
-    alert('Sign-in failed: '+(e.message||''));
-  }
+    mgrModal.style.display='none';
+    await checkMe(); await checkAdmin();
+    await refreshFixturesSched(); renderFixturesSched();
+    alert('Signed in as manager.');
+  }catch(e){ alert('Sign-in failed: '+e.message); }
 };
-
-/* =======================
-   AUTH STATE / TOGGLES
-======================= */
-async function refreshAuthState(){
-  try{ isAdmin = !!(await apiGet('/api/admin/me')).admin; }catch{ isAdmin = false; }
-  try{ meUser = (await apiGet('/api/auth/me')).user || null; }catch{ meUser = null; }
-  isMgr = !!(meUser && meUser.role==='Manager');
-
-  navRankings.style.display = isAdmin ? 'inline-block' : 'none';
-  btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
-
-  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
-  btnMgrLogout.style.display = isMgr ? 'inline-block' : 'none';
-
-  document.getElementById('squadAdminBtns').style.display = isAdmin ? 'flex' : 'none';
-
-  if (isAdmin) { await loadRankings(); renderRankings(); }
-}
 
 /* =======================
    TEAMS LIST / DETAIL
@@ -478,14 +458,15 @@ async function showTeam(team){
   } else detailTrophies.textContent = 'No trophies';
 
   await renderWallet(team.id);
-  // refresh public fixtures and render next/recent
   await refreshFixturesPublic();
   renderNextFor(team.id);
   renderTeamResults(team.id);
 
-  // Load Squad panel (always from our DB)
-  await loadSquad(team.id);
-
+  if(/^\d+$/.test(team.id)){
+    await renderEAPlayers(team.id);
+  }else{
+    renderManualPlayers(team);
+  }
   detailSub.textContent = 'Club overview';
 }
 
@@ -495,7 +476,7 @@ backBtn.addEventListener('click', ()=>{
   window.scrollTo({top:0,behavior:'smooth'});
 });
 
-/* ===== Wallet ===== */
+// Wallet
 async function renderWallet(clubId){
   const body = document.getElementById('walletBody');
   const hint = document.getElementById('walletHint');
@@ -526,91 +507,34 @@ async function renderWallet(clubId){
   }
 }
 
-/* ===== Squad (manual) ===== */
-function slotCard(teamId, slot){
-  const p = slot.player || {};
-  const idLine = `<div class="muted" style="font-size:12px;margin-top:4px">playerId: <code>${escapeHtml(slot.playerId||`${teamId}_${slot.slotId}`)}</code></div>`;
-  const editable = (isAdmin || (isMgr && meUser && String(meUser.teamId)===String(teamId)));
-  return `
-    <div class="m-card" id="slot_${slot.slotId}">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <strong>${escapeHtml(slot.label || slot.slotId)}</strong>
-        ${editable ? `<button data-save="${slot.slotId}">Save</button>`:''}
-      </div>
-      ${idLine}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-        <div>
-          <label>Nickname</label>
-          <input name="nickname" value="${escapeHtml(p.nickname||'')}" placeholder="e.g., Jay"/>
-        </div>
-        <div>
-          <label>Last name</label>
-          <input name="lastName" value="${escapeHtml(p.lastName||'')}" placeholder="e.g., Cruz"/>
-        </div>
-        <div style="grid-column:1 / -1">
-          <label>Aliases (comma separated)</label>
-          <input name="aliases" value="${escapeHtml((p.aliases||[]).join(', '))}" placeholder="jay, jcrz, coach"/>
-        </div>
-      </div>
-      ${editable ? `<div style="margin-top:8px;display:flex;gap:8px">
-        <button data-clear="${slot.slotId}">Clear names</button>
-      </div>`:''}
-    </div>`;
-}
-
-async function loadSquad(clubId){
-  // show admin buttons only to admin
-  document.getElementById('squadAdminBtns').style.display = isAdmin ? 'flex' : 'none';
-  document.getElementById('btnSquadBootstrap').onclick = async ()=>{
-    if (!confirm('Create 15 slots for this club?')) return;
-    try{ await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/bootstrap`, { size: 15 }); await loadSquad(clubId); }
-    catch(e){ alert('Bootstrap failed: '+e.message); }
-  };
-  document.getElementById('btnSquadEnsure').onclick = async ()=>{
-    try{ await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/ensure-player-ids`, {}); await loadSquad(clubId); }
-    catch(e){ alert('Ensure failed: '+e.message); }
-  };
-
+// Players
+async function renderEAPlayers(clubId){
+  squadContainer.innerHTML = '<div class="m-card">Loading players from EA…</div>';
   try{
-    const d = await apiGet(`/api/clubs/${encodeURIComponent(clubId)}/squad`);
-    const slots = Array.isArray(d.slots) ? d.slots : [];
-    if (!slots.length){
-      squadContainer.innerHTML = `<div class="m-card muted">No slots. ${isAdmin ? 'Use "Create 15 slots".':''}</div>`;
+    const data = await apiGet(`/api/teams/${encodeURIComponent(clubId)}/players`);
+    const members = Array.isArray(data.members) ? data.members : [];
+    if (!members.length) {
+      squadContainer.innerHTML = '<div class="m-card muted">No players returned by EA.</div>';
       return;
     }
-    squadContainer.innerHTML = slots.map(s=>slotCard(clubId, s)).join('');
-    // wire buttons
-    slots.forEach(s=>{
-      const root = document.getElementById('slot_'+s.slotId);
-      if (!root) return;
-      const btnSave = root.querySelector('[data-save]');
-      const btnClear= root.querySelector('[data-clear]');
-      if (btnSave) btnSave.onclick = async ()=>{
-        const nickname = root.querySelector('input[name="nickname"]').value;
-        const lastName = root.querySelector('input[name="lastName"]').value;
-        const aliases = root.querySelector('input[name="aliases"]').value;
-        try{
-          await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(s.slotId)}/assign`, {
-            nickname, lastName, aliases
-          });
-          alert('Saved');
-        }catch(e){ alert('Save failed: '+e.message); }
-      };
-      if (btnClear) btnClear.onclick = async ()=>{
-        if (!confirm('Clear names for this slot?')) return;
-        try{
-          await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(s.slotId)}/unassign`, {});
-          alert('Cleared'); await loadSquad(clubId);
-        }catch(e){ alert('Clear failed: '+e.message); }
-      };
+    squadContainer.innerHTML = '';
+    members.forEach(p=>{
+      const el = document.createElement('div');
+      el.className='m-card';
+      el.innerHTML = `<strong>${escapeHtml(p.name||'Unknown')}</strong>
+        <div class="muted">Pos: ${escapeHtml(p.proPos||p.position||'—')} • Goals: ${p.goals??0} • Assists: ${p.assists??0}</div>`;
+      squadContainer.appendChild(el);
     });
   }catch(e){
-    squadContainer.innerHTML = `<div class="m-card muted">Failed to load squad.</div>`;
+    squadContainer.innerHTML = '<div class="m-card muted">EA API unavailable.</div>';
   }
+}
+function renderManualPlayers(team){
+  squadContainer.innerHTML = `<div class="m-card muted">Manual club — managers can maintain squads (coming soon).</div>`;
 }
 
 /* =======================
-   MARKET — Free Agents
+   MARKET (Free Agents)
 ======================= */
 async function loadFA(){
   try{
@@ -627,7 +551,6 @@ async function loadFA(){
     }).join('') : 'No free agents listed.';
   }catch{ document.getElementById('faList').textContent = 'Failed to load.'; }
 }
-
 document.getElementById('btnListFA').onclick = async ()=>{
   const name = meUser?.name || prompt('Your display name');
   if (!name) return;
@@ -639,7 +562,8 @@ document.getElementById('btnListFA').onclick = async ()=>{
   const bio = prompt('Short bio (optional)')||'';
   try{
     await apiPost('/api/free-agents/me',{ name, positions, region, foot, availability, discord, bio });
-    alert('Listed!'); await loadFA();
+    alert('Listed!');
+    await loadFA();
   }catch(e){ alert('List failed: '+e.message); }
 };
 document.getElementById('btnUnlistFA').onclick = async ()=>{
@@ -653,10 +577,13 @@ document.getElementById('btnUnlistFA').onclick = async ()=>{
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 async function refreshFixturesPublic(){
   try {
-    const d = await apiGet('/api/cup/fixtures?cup=UPCL');
+    const d = await apiGet('/api/cup/fixtures/public?cup=UPCL&includeLineups=1');
     fixturesPublicCache = d.fixtures || [];
   } catch {
-    fixturesPublicCache = [];
+    try {
+      const d2 = await apiGet('/api/cup/fixtures?cup=UPCL');
+      fixturesPublicCache = d2.fixtures || [];
+    } catch { fixturesPublicCache = []; }
   }
 }
 function renderFixturesPublic(){
@@ -667,20 +594,15 @@ function renderFixturesPublic(){
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
     const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
     const ccBadge = (f.cup===CC_ID) ? ' • <span class="chip">Champions Cup</span>' : '';
-    const homeSc = (f.details?.home||[]).map(p=>`<li>${escapeHtml(p.player)}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
-    const awaySc = (f.details?.away||[]).map(p=>`<li>${escapeHtml(p.player)}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
+    let lineupHtml = '';
+    if (f.lineups && (f.lineups[f.home] || f.lineups[f.away])) {
+      lineupHtml = renderLineupSVG(f, getClubLineup(f, f.home), getClubLineup(f, f.away));
+    }
     return `
       <div class="fx">
-        <div>
-          <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
-          <div class="meta">${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
-          ${(f.status==='final' && (homeSc||awaySc)) ? `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
-              <div><em>${escapeHtml(hn)} scorers</em><ul>${homeSc||'<li class="muted">—</li>'}</ul></div>
-              <div><em>${escapeHtml(an)} scorers</em><ul>${awaySc||'<li class="muted">—</li>'}</ul></div>
-            </div>` : ''
-          }
-        </div>
+        <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
+        <div class="meta">${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
+        ${lineupHtml}
       </div>`;
   }).join('') : `<div class="muted">No fixtures yet.</div>`;
 }
@@ -692,7 +614,7 @@ const fixturesList = document.getElementById('fixturesList');
 const btnCreateFx  = document.getElementById('btnCreateFx');
 
 btnCreateFx.onclick = async ()=>{
-  const home = prompt('Home club ID (use exact from Teams list)');
+  const home = prompt('Home club ID');
   const away = prompt('Away club ID');
   const round= prompt('Round (e.g., League MD1 or Cup QF)');
   if (!home || !away) return;
@@ -715,7 +637,12 @@ async function refreshFixturesSched(){
   try {
     const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
     fixturesSchedCache = d.fixtures || [];
-  } catch { fixturesSchedCache = []; }
+  } catch {
+    try {
+      const d2 = await apiGet('/api/cup/fixtures?cup=UPCL');
+      fixturesSchedCache = d2.fixtures || [];
+    } catch { fixturesSchedCache = []; }
+  }
 }
 function filterKey(){
   const active = [...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
@@ -797,23 +724,8 @@ function renderFixturesSched(){
         await refreshFixturesPublic(); renderFixturesPublic();
       }catch(e){ alert('Report failed: '+e.message); }
     };
-
-    const btnIngest = root.querySelector('.act .ingest');
-    if (btnIngest) btnIngest.onclick = async ()=>{
-      if (!isAdmin) return alert('Admin only');
-      const text = prompt('Paste quick result (score & player lines)');
-      if (!text) return;
-      try{
-        await apiPost(`/api/cup/fixtures/${f.id}/ingest-text`, { text });
-        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
-        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
-        await refreshFixturesSched(); renderFixturesSched();
-        await refreshFixturesPublic(); renderFixturesPublic();
-      }catch(e){ alert('Ingest failed: '+e.message); }
-    };
   });
 }
-
 function renderFxSchedRow(f){
   const hn = byId(f.home)?.name || f.home;
   const an = byId(f.away)?.name || f.away;
@@ -823,15 +735,13 @@ function renderFxSchedRow(f){
     return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
   }).join('');
   const status = f.status || 'pending';
-  const ccBadge = (f.cup===CC_ID) ? `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}</span>` : '';
-  const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button>` : '';
   return `
   <div class="fx" id="fx_${f.id}">
     <div>
       <div class="vs">${escapeHtml(hn)} <span class="muted">vs</span> ${escapeHtml(an)}</div>
-      <div class="meta">Round: ${escapeHtml(f.round||'')}${ccBadge?` • ${ccBadge}`:''} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
+      <div class="meta">Round: ${escapeHtml(f.round||'')} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
     </div>
-    <div class="center">
+    <div>
       ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
     </div>
     <div class="act">
@@ -840,7 +750,6 @@ function renderFxSchedRow(f){
       <button class="decl">Decline</button>
       <button class="line">Set Lineup</button>
       <button class="rep">Submit Result</button>
-      ${adminBtns}
     </div>
   </div>`;
 }
@@ -878,15 +787,8 @@ function renderTeamResults(teamId){
 }
 
 /* =======================
-   RANKINGS (ADMIN)
+   RANKINGS (Admin — table render only)
 ======================= */
-async function loadRankings(){
-  try{
-    const d = await apiGet('/api/rankings');
-    rankings = d.rankings || {};
-    payouts = d.payouts || payouts;
-  }catch(e){ rankings={}; }
-}
 function perDayFor(clubId){
   const r = rankings[clubId] || { tier:'mid' };
   const t = r.tier || 'mid';
@@ -895,12 +797,10 @@ function perDayFor(clubId){
 function renderRankings(){
   const rows = teams.map(t=>{
     const r = rankings[t.id] || { leaguePos:'', cup:'none', points:0, tier:'mid' };
-    const cupOpts = ['none','round_of_16','quarterfinal','semifinal','runner_up','winner']
-      .map(v=>`<option value="${v}" ${r.cup===v?'selected':''}>${v.replace(/_/g,' ')}</option>`).join('');
     return `<tr>
       <td>${escapeHtml(t.name)}</td>
-      <td><input type="number" min="0" style="width:80px" value="${r.leaguePos||''}" data-k="leaguePos" data-id="${t.id}"></td>
-      <td><select data-k="cup" data-id="${t.id}">${cupOpts}</select></td>
+      <td>${escapeHtml(String(r.leaguePos||''))}</td>
+      <td>${escapeHtml((r.cup||'none').replace(/_/g,' '))}</td>
       <td>${escapeHtml(r.tier||'mid')}</td>
       <td>${fmtMoney(perDayFor(t.id))}</td>
     </tr>`;
@@ -913,50 +813,90 @@ function renderRankings(){
       <tbody>${rows}</tbody>
     </table>
   `;
-  const adminControls = document.getElementById('adminControls');
-  adminControls.style.display = isAdmin ? 'flex' : 'none';
-
-  document.getElementById('btnSaveRankings').onclick = async ()=>{
-    const payload = { rankings: {} };
-    document.querySelectorAll('#rankingsTable [data-id]').forEach(el=>{
-      const id = el.getAttribute('data-id');
-      const k  = el.getAttribute('data-k');
-      payload.rankings[id] = payload.rankings[id] || {};
-      payload.rankings[id][k] = k==='leaguePos' ? Number(el.value||0) : el.value;
-    });
-    try{ await apiPost('/api/rankings/bulk', payload); alert('Saved'); await loadRankings(); renderRankings(); }
-    catch(e){ alert('Save failed: '+e.message); }
-  };
-  document.getElementById('btnRecalc').onclick = async ()=>{
-    try{ await apiPost('/api/rankings/recalc',{}); await loadRankings(); renderRankings(); alert('Recalculated'); }
-    catch(e){ alert('Recalc failed: '+e.message); }
-  };
-  document.getElementById('btnCupDry').onclick = async ()=>{
-    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:true }); alert('Would award: '+fmtMoney(r.totalAwarded)); }
-    catch(e){ alert('Dry run failed: '+e.message); }
-  };
-  document.getElementById('btnCupPay').onclick = async ()=>{
-    if (!confirm('Pay cup bonuses now?')) return;
-    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:false }); alert('Awarded: '+fmtMoney(r.totalAwarded)); }
-    catch(e){ alert('Pay failed: '+e.message); }
-  };
 }
 
 /* =======================
-   CHAMPIONS CUP
+   SVG LINEUP RENDERER
+======================= */
+function parseFormation(str){ const m=String(str||'').match(/(\d+)(?:[-–xX](\d+))?(?:[-–xX](\d+))?/); if(!m) return [4,3,3]; return [Number(m[1]||4),Number(m[2]||3),Number(m[3]||3)]; }
+function spreadXs(n){ if(n<=1) return [50]; const xs=[]; for(let i=0;i<n;i++) xs.push(8 + (84 * i/(n-1))); return xs; }
+function namesFromLineup(lineupObj){
+  const L = lineupObj && lineupObj.lineup ? lineupObj.lineup : {};
+  const entries = Object.entries(L);
+  if (!entries.length) return Array(11).fill('—');
+  const gkIdx = entries.findIndex(([k]) => /^gk$/i.test(k));
+  let gk = '', rest = [];
+  if (gkIdx >= 0) { gk = String(entries[gkIdx][1]||''); rest = entries.filter((_,i)=>i!==gkIdx).map(e=>String(e[1]||'')); }
+  else { gk = String(entries[0][1]||''); rest = entries.slice(1).map(e=>String(e[1]||'')); }
+  const names = [gk, ...rest];
+  while(names.length<11) names.push('—');
+  return names.slice(0,11);
+}
+function layoutFor(formation, isHome, names){
+  const [d,m,a] = parseFormation(formation);
+  const rows = isHome ? [{y:90,n:1},{y:70,n:d},{y:50,n:m},{y:30,n:a}] : [{y:10,n:1},{y:30,n:d},{y:50,n:m},{y:70,n:a}];
+  const spots=[]; let idx=0;
+  for (const r of rows){ const xs=spreadXs(r.n); for(let i=0;i<r.n;i++){ spots.push({x:xs[i],y:r.y,name:names[idx]||'—'}); idx++; } }
+  return spots;
+}
+function getClubLineup(f, clubId){ if(!f.lineups) return null; return f.lineups[clubId] || null; }
+function renderLineupSVG(f, homeRec, awayRec){
+  if(!homeRec && !awayRec) return '';
+  const homeNames = namesFromLineup(homeRec||{});
+  const awayNames = namesFromLineup(awayRec||{});
+  const homeSpots = layoutFor(homeRec?.formation || '4-3-3', true,  homeNames);
+  const awaySpots = layoutFor(awayRec?.formation || '4-3-3', false, awayNames);
+  const homeLabel = (byId(f.home)?.name || f.home);
+  const awayLabel = (byId(f.away)?.name || f.away);
+  const field = `
+    <rect x="0" y="0" width="100" height="140" rx="2" ry="2" fill="#0a7a3b"/>
+    <line x1="0" y1="70" x2="100" y2="70" stroke="#cfe9cf" stroke-width="0.8"/>
+    <circle cx="50" cy="70" r="8" fill="none" stroke="#cfe9cf" stroke-width="0.8"/>
+    <rect x="18" y="0" width="64" height="18" fill="none" stroke="#cfe9cf" stroke-width="0.8"/>
+    <rect x="30" y="0" width="40" height="6"  fill="none" stroke="#cfe9cf" stroke-width="0.8"/>
+    <circle cx="50" cy="12" r="0.9" fill="#cfe9cf"/>
+    <rect x="18" y="122" width="64" height="18" fill="none" stroke="#cfe9cf" stroke-width="0.8"/>
+    <rect x="30" y="134" width="40" height="6" fill="none" stroke="#cfe9cf" stroke-width="0.8"/>
+    <circle cx="50" cy="128" r="0.9" fill="#cfe9cf"/>
+  `;
+  const dot = (s, cls)=>`<g class="${cls}"><circle class="player-dot" cx="${s.x}" cy="${s.y}" r="3.5"/><text class="player-name" x="${s.x}" y="${s.y-5}">${escapeHtml(s.name||'')}</text></g>`;
+  const homeDots = homeRec ? homeSpots.map(s=>dot(s,'side-home')).join('') : '';
+  const awayDots = awayRec ? awaySpots.map(s=>dot(s,'side-away')).join('') : '';
+  return `<div class="pitch">
+    <svg viewBox="0 0 100 140" preserveAspectRatio="xMidYMid meet">
+      ${field}
+      <text x="4" y="66" class="team-label">${escapeHtml(homeLabel)} (${escapeHtml(homeRec?.formation||'4-3-3')})</text>
+      <text x="4" y="76" class="team-label">${escapeHtml(awayLabel)} (${escapeHtml(awayRec?.formation||'4-3-3')})</text>
+      ${homeDots}${awayDots}
+    </svg>
+  </div>`;
+}
+
+/* =======================
+   CHAMPIONS CUP (public + leaders + admin panel)
 ======================= */
 async function loadChampions(){
   document.getElementById('ccCupId').textContent = CC_ID;
+
+  // groups + computed tables
   let cupData = { cup:{ groups:{A:[],B:[],C:[],D:[]} }, tables:{} };
-  try { cupData = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}`); }
-  catch(e) { console.warn('Champions fetch failed:', e.message); }
+  try {
+    cupData = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}`);
+  } catch(e) {
+    console.warn('Champions fetch failed:', e.message);
+  }
   renderCcGroups(cupData.cup.groups, cupData.tables);
+
+  // fixtures for this cup (include lineups if available via admin flag)
   try {
     const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`);
     renderCcFixtures(fx.fixtures||[]);
+    await loadCcLeaders(fx.fixtures||[]);
   } catch {
     renderCcFixtures([]);
+    await loadCcLeaders([]);
   }
+
   document.getElementById('ccAdmin').style.display = isAdmin ? 'block' : 'none';
   if (isAdmin) buildManualGroupsEditor(cupData.cup.groups);
 }
@@ -992,80 +932,67 @@ function renderCcFixtures(list){
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
     const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
     const badge = `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
+    let lineupHtml = '';
+    if (f.lineups && (f.lineups[f.home] || f.lineups[f.away])) {
+      lineupHtml = renderLineupSVG(f, getClubLineup(f, f.home), getClubLineup(f, f.away));
+    }
     return `<div class="fx">
-      <div>
-        <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
-        <div class="meta">${badge} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
-      </div>
+      <div class="vs"><strong>${escapeHtml(hn)}</strong> <span class="muted">${scoreTxt}</span> <strong>${escapeHtml(an)}</strong></div>
+      <div class="meta">${badge} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
+      ${lineupHtml}
     </div>`;
   }).join('') : `<div class="muted">No Champions Cup fixtures yet.</div>`;
 }
-function buildManualGroupsEditor(groups){
-  const root = document.getElementById('ccManualGroups');
-  const opts = teams.map(t=> `<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
-  root.innerHTML = ['A','B','C','D'].map(g=>{
-    const rows = (groups[g]||[]).map(v=>`<div><select>${opts}</select></div>`).join('');
-    return `<div class="m-card"><strong>Group ${g}</strong>
-      <div data-g="${g}" class="gbox">${rows||''}</div>
-      <div style="margin-top:6px"><button data-add="${g}">+ Add team</button></div>
+
+// Leaders (Top scorers / assisters)
+function initials(s){ s=String(s||'').trim(); if(!s) return '??'; const p=s.split(/\s+/); return (p[0]?.[0]||'').toUpperCase()+(p[p.length-1]?.[0]||'').toUpperCase(); }
+function renderLeaderList(title, rows, statLabel){
+  if (!rows?.length) return `<div class="leader-card"><h3>${escapeHtml(title)}</h3><div class="muted">No data yet.</div></div>`;
+  const items = rows.map((r,i)=>{
+    const club = byId(r.clubId)?.name || (r.clubId||'');
+    return `<div class="lb-row">
+      <div class="rank">${i+1}</div>
+      <div class="avatar">${escapeHtml(initials(r.name))}</div>
+      <div class="lb-main">
+        <div class="lb-name">${escapeHtml(r.name||'Unknown')}</div>
+        <div class="lb-sub">${escapeHtml(club)}</div>
+      </div>
+      <div class="lb-count">${Number(r.count||0)} ${statLabel}</div>
     </div>`;
   }).join('');
-  root.querySelectorAll('[data-add]').forEach(btn=>{
-    btn.onclick = ()=>{
-      const g = btn.getAttribute('data-add');
-      const box = root.querySelector(`.gbox[data-g="${g}"]`);
-      const div = document.createElement('div');
-      div.innerHTML = `<div><select>${opts}</select></div>`;
-      box.appendChild(div);
-    };
-  });
-
-  document.getElementById('ccBtnRandom').onclick = async ()=>{
-    const picked = prompt('Pick 16 club IDs (comma separated) or leave blank to use first 16 on Teams tab', '');
-    let ids = [];
-    if (picked && picked.trim()){
-      ids = picked.split(',').map(s=>s.trim()).filter(Boolean);
-    } else {
-      ids = teams.map(t=>t.id).slice(0,16);
+  return `<div class="leader-card"><h3>${escapeHtml(title)}</h3>${items}</div>`;
+}
+async function loadCcLeaders(fallbackFixtures){
+  const target = document.getElementById('ccLeaders');
+  try{
+    const r = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}/leaders?limit=5`);
+    target.innerHTML =
+      renderLeaderList('Top Scorers', r.scorers, 'G') +
+      renderLeaderList('Top Assisters', r.assisters, 'A');
+  }catch(e){
+    console.warn('leaders endpoint failed; using client fallback', e);
+    const fx = (fallbackFixtures||[]).filter(f=>f.cup===CC_ID && f.status==='final');
+    const goals = new Map(), assists = new Map(), meta = new Map();
+    const bump = (m,k,n)=>m.set(k,(m.get(k)||0)+n);
+    for(const f of fx){
+      for(const side of ['home','away']){
+        const clubId = side==='home'?f.home:f.away;
+        for(const r of (f.details?.[side]||[])){
+          if(!r.playerId) continue;
+          meta.set(r.playerId,{name:r.player||`#${String(r.playerId).slice(0,6)}`, clubId});
+          if(r.goals)   bump(goals,   r.playerId, Number(r.goals||0));
+          if(r.assists) bump(assists, r.playerId, Number(r.assists||0));
+        }
+      }
     }
-    if (ids.length!==16) return alert('Need exactly 16 clubIds.');
-    try{
-      await apiPost(`/api/champions/${CC_ID}/randomize`, { clubs: ids });
-      alert('Groups randomized'); await loadChampions();
-    }catch(e){ alert('Randomize failed: '+e.message); }
-  };
-
-  document.getElementById('ccBtnSaveGroups').onclick = async ()=>{
-    const out = { A:[], B:[], C:[], D:[] };
-    root.querySelectorAll('.gbox').forEach(box=>{
-      const g = box.getAttribute('data-g');
-      box.querySelectorAll('select').forEach(sel=>{
-        const v = sel.value; if(v) out[g].push(v);
-      });
-    });
-    const all = [...out.A, ...out.B, ...out.C, ...out.D];
-    const set = new Set(all);
-    if (all.length!==16) return alert('Need 16 unique clubs total.');
-    if (all.length!==set.size) return alert('Duplicate club across groups.');
-    try{
-      await apiPost(`/api/champions/${CC_ID}/groups`, { groups: out });
-      alert('Groups saved'); await loadChampions();
-    }catch(e){ alert('Save groups failed: '+e.message); }
-  };
-
-  document.getElementById('ccBtnCreateFx').onclick = async ()=>{
-    const stage = prompt('Stage (e.g., Group A MD1, Semifinal, Final)', 'Group A MD1')||'';
-    const groupMatch = /^group\s+([ABCD])/i.exec(stage);
-    const group = groupMatch ? groupMatch[1].toUpperCase() : null;
-    const home = prompt('Home clubId'); if(!home) return;
-    const away = prompt('Away clubId'); if(!away) return;
-    const whenStr = prompt('Date/time (e.g., 2025-08-20 20:30 local) or blank for TBD','');
-    const when = whenStr ? Date.parse(whenStr) : null;
-    try{
-      await apiPost('/api/cup/fixtures', { home, away, round: stage, cup: CC_ID, group, when });
-      alert('Fixture created'); await loadChampions();
-    }catch(e){ alert('Create failed: '+e.message); }
-  };
+    const toRows = (m)=>Array.from(m.entries())
+      .map(([k,v])=>({playerId:k,count:v,...meta.get(k)}))
+      .sort((a,b)=>(b.count-a.count)||a.name.localeCompare(b.name))
+      .slice(0,5);
+    target.innerHTML =
+      renderLeaderList('Top Scorers',  toRows(goals),   'G') +
+      renderLeaderList('Top Assisters',toRows(assists), 'A');
+  }
 }
 
 /* =======================
@@ -1073,17 +1000,15 @@ function buildManualGroupsEditor(groups){
 ======================= */
 async function init(){
   renderTeams();
-  await refreshAuthState();
+  await checkAdmin();
+  await checkMe();
 
-  // Default to Teams
   setNav('teams');
 
-  // Load data sets
   await refreshFixturesPublic(); renderFixturesPublic();
   if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
   await loadFA();
 
-  // hash-open team
   try{
     const m = location.hash.match(/team=([^&]+)/);
     if (m){ const team = byId(decodeURIComponent(m[1])); if (team) setTimeout(()=>showTeam(team), 150); }
