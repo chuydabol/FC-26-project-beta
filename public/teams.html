@@ -52,12 +52,17 @@ input,select,textarea{background:#0d0000;color:#fff;border:1px solid #3a0000;bor
 label{font-size:12px;color:var(--muted)}
 hr{border:none;border-top:1px solid #220000;margin:14px 0}
 
-/* Manager modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
-.modal .panel{background:#110000;border:1px solid #300000;border-radius:12px;padding:14px;width:min(420px,90vw)}
-.modal .row{display:flex;flex-direction:column;gap:6px;margin:8px 0}
-.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:999}
+.modal .box{background:#130000;border:1px solid #330000;border-radius:12px;max-width:520px;width:92%;padding:16px;box-shadow:0 12px 38px rgba(255,0,0,.25)}
+.modal .box h3{margin:0 0 10px}
+.modal .grid{display:grid;grid-template-columns:1fr;gap:10px}
+.modal .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.modal .row > *{flex:1 1 auto}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.modal .close{background:#330000;border:1px solid #551111;border-radius:8px;padding:6px 10px;color:#fff;cursor:pointer}
 
+/* Responsive */
 @media(max-width:720px){
   .team-logo{height:100px}
   .fx{grid-template-columns:1fr;gap:6px}
@@ -75,11 +80,43 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
     <button id="navFixturesSched"  aria-pressed="false" style="display:none">Fixtures Scheduling</button>
     <button id="navChampions" aria-pressed="false">Champions Cup</button>
     <button id="navRankings" aria-pressed="false" style="display:none">Rankings</button>
-    <button id="btnSetRole">Manager sign in</button>
+
+    <button id="btnManagerLogin">Manager sign in</button>
+    <button id="btnPlayerLogin">Player sign in</button>
+    <button id="btnSignOut" style="display:none">Sign out</button>
+
     <button id="btnAdminLogin">Admin sign in</button>
     <button id="btnAdminLogout" style="display:none">Admin sign out</button>
   </div>
 </header>
+
+<!-- Manager Sign-in Modal -->
+<div id="mgrModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="mgrTitle">
+  <div class="box">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <h3 id="mgrTitle">Manager sign in</h3>
+      <button class="close" id="mgrClose">✕</button>
+    </div>
+    <div class="grid">
+      <div class="row">
+        <input id="mgrFilter" placeholder="Search team by name…" />
+      </div>
+      <div class="row">
+        <select id="mgrTeamSelect" size="6" style="width:100%"></select>
+      </div>
+      <div class="row">
+        <input id="mgrName" placeholder="Your display name" />
+      </div>
+      <div class="row">
+        <input id="mgrCode" placeholder="Manager code" />
+      </div>
+      <div class="actions">
+        <button id="mgrSubmit">Sign in</button>
+      </div>
+      <div class="muted">Tip: Codes are session-based. You’ll be asked again next visit.</div>
+    </div>
+  </div>
+</div>
 
 <main>
   <!-- TEAMS OVERVIEW -->
@@ -122,6 +159,19 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
       <div id="teamResultsPanel" class="m-card">
         <strong>Recent Results</strong>
         <div id="teamResultsBody" class="muted" style="margin-top:6px">No finals yet.</div>
+      </div>
+
+      <!-- NEW: Squad Manager panel -->
+      <div id="squadManagerCard" class="m-card" style="display:none">
+        <strong>Squad (Manager)</strong>
+        <div class="muted" id="squadMgrHint">Assign players to slots to enable name→ID resolution and season stats.</div>
+
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+          <button id="btnBootstrapSlots" style="display:none">Create 15 slots</button>
+          <small class="muted">Admins can bootstrap slots; managers can then assign players.</small>
+        </div>
+
+        <div id="squadSlots" style="margin-top:10px" class="muted">Loading…</div>
       </div>
     </div>
 
@@ -172,16 +222,10 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
   <section id="rankings-view" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
       <h2>Rankings & Payouts</h2>
-      <div id="adminControls" style="display:none;gap:8px">
-        <button id="btnSaveRankings">Save</button>
-        <button id="btnRecalc">Recalc tiers</button>
-        <button id="btnCupDry">Cup bonuses (dry run)</button>
-        <button id="btnCupPay">Cup bonuses (pay)</button>
+      <div class="m-card" style="margin-top:10px">
+        <div class="muted" style="margin-bottom:8px">Only admins can view/edit this section.</div>
+        <div id="rankingsTable">Loading…</div>
       </div>
-    </div>
-    <div class="m-card" style="margin-top:10px">
-      <div class="muted" style="margin-bottom:8px">Only admins can view/edit this section.</div>
-      <div id="rankingsTable">Loading…</div>
     </div>
   </section>
 
@@ -215,35 +259,12 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
   </section>
 </main>
 
-<!-- Manager Sign-in Modal -->
-<div id="mgrModal" class="modal" aria-hidden="true">
-  <div class="panel">
-    <h3 style="margin:0 0 6px">Manager sign in</h3>
-    <div class="row">
-      <label for="mgrClub">Club</label>
-      <select id="mgrClub"></select>
-    </div>
-    <div class="row">
-      <label for="mgrName">Display name</label>
-      <input id="mgrName" placeholder="e.g., Coach Sam" />
-    </div>
-    <div class="row">
-      <label for="mgrCode">Manager code</label>
-      <input id="mgrCode" placeholder="8-char code" />
-    </div>
-    <div class="actions">
-      <button id="mgrCancel">Cancel</button>
-      <button id="mgrSubmit">Sign in</button>
-    </div>
-  </div>
-</div>
-
 <script>
 // =======================
 //   CONFIG / CONSTANTS
 // =======================
 const API_BASE = '';
-const CC_ID = 'UPCL_CC_2025_08'; // change per season (keeps champions fixtures isolated)
+const CC_ID = 'UPCL_CC_2025_08'; // change per season
 
 const TEAM_TITLES = {
   '3638105': [
@@ -286,17 +307,18 @@ function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return
 
 // state
 let isAdmin = false;
-let meUser  = null;
+let meUser  = null; // server returns null if manager session expired
 let isMgr   = false;
 let rankings = {};
 let payouts  = { elite:0, mid:0, bottom:0 };
 let fixturesPublicCache = [];
 let fixturesSchedCache  = [];
+let currentClubIdViewing = null;
 
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
-async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok){ let msg='HTTP '+r.status; try{ const j=await r.json(); msg=j.error||j.message||msg; }catch{} throw new Error(msg); } return r.json(); }
-async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok){ let msg='HTTP '+r.status; try{ const j=await r.json(); msg=j.error||j.message||msg; }catch{} throw new Error(msg); } return r.json(); }
+async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
 // nav
 const navTeams    = document.getElementById('navTeams');
@@ -338,9 +360,12 @@ navFxSched.onclick     = ()=> setNav('fixturesSched');
 navRankings.onclick    = ()=> setNav('rankings');
 navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
 
-// auth / admin
+// auth / admin / user
 const btnAdminLogin = document.getElementById('btnAdminLogin');
 const btnAdminLogout= document.getElementById('btnAdminLogout');
+const btnManagerLogin = document.getElementById('btnManagerLogin');
+const btnPlayerLogin  = document.getElementById('btnPlayerLogin');
+const btnSignOut      = document.getElementById('btnSignOut');
 
 btnAdminLogin.onclick = async ()=>{
   const pw = prompt('Admin password');
@@ -354,13 +379,79 @@ btnAdminLogin.onclick = async ()=>{
 btnAdminLogout.onclick = async ()=>{
   try{ await apiPost('/api/admin/logout',{}); }catch{}
   await checkAdmin(); await checkMe();
+  alert('Signed out of admin');
+};
+btnSignOut.onclick = async ()=>{
+  await apiPost('/api/auth/logout',{});
+  await checkAdmin(); await checkMe();
   alert('Signed out');
+};
+
+// Manager sign in modal behavior
+const mgrModal = document.getElementById('mgrModal');
+const mgrClose = document.getElementById('mgrClose');
+const mgrTeamSelect = document.getElementById('mgrTeamSelect');
+const mgrFilter = document.getElementById('mgrFilter');
+const mgrName = document.getElementById('mgrName');
+const mgrCode = document.getElementById('mgrCode');
+const mgrSubmit = document.getElementById('mgrSubmit');
+
+btnManagerLogin.onclick = openMgrModal;
+mgrClose.onclick = closeMgrModal;
+mgrModal.addEventListener('click', (e)=>{ if(e.target===mgrModal) closeMgrModal(); });
+
+function openMgrModal(){
+  populateTeamSelect('');
+  mgrFilter.value = '';
+  mgrName.value = '';
+  mgrCode.value = '';
+  mgrModal.style.display='flex';
+  setTimeout(()=> mgrFilter.focus(), 50);
+}
+function closeMgrModal(){ mgrModal.style.display='none'; }
+
+function populateTeamSelect(filter){
+  const f = filter.trim().toLowerCase();
+  const list = teams
+    .filter(t=>!f || t.name.toLowerCase().includes(f) || String(t.id).includes(f))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  mgrTeamSelect.innerHTML = list.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
+  if (list.length) mgrTeamSelect.selectedIndex = 0;
+}
+mgrFilter.addEventListener('input', ()=> populateTeamSelect(mgrFilter.value));
+mgrSubmit.onclick = async ()=>{
+  const clubId = mgrTeamSelect.value;
+  const name = mgrName.value.trim() || 'Manager';
+  const code = mgrCode.value.trim();
+  if (!clubId || !code){ alert('Pick a team and enter the code'); return; }
+  try{
+    await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
+    closeMgrModal();
+    await checkMe(); await checkAdmin();
+    // If currently viewing this team, refresh the editor
+    if (currentClubIdViewing && String(currentClubIdViewing)===String(clubId)){
+      await maybeRenderSquadEditor(clubId);
+    }
+    alert('Signed in as manager');
+  }catch(e){ alert('Sign-in failed: '+e.message); }
+};
+
+// Player sign in (simple)
+btnPlayerLogin.onclick = async ()=>{
+  const name = prompt('Your display name');
+  if (!name) return;
+  const maybe = prompt('Optional: Club ID to associate with (or leave blank)')||'';
+  try{
+    await apiPost('/api/players/claim',{ name, teamId: maybe });
+    await checkMe(); alert('Signed in as player');
+  }catch(e){ alert('Sign-in failed: '+e.message); }
 };
 
 async function checkAdmin(){
   try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
   navRankings.style.display = isAdmin ? 'inline-block' : 'none';
   btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
+  btnAdminLogin.style.display  = isAdmin ? 'none' : 'inline-block';
   navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
   if (isAdmin) { await loadRankings(); renderRankings(); }
 }
@@ -368,6 +459,7 @@ async function checkMe(){
   try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
   isMgr = !!(meUser && meUser.role==='Manager');
   navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+  btnSignOut.style.display = (meUser || isAdmin) ? 'inline-block' : 'none';
 }
 
 // =======================
@@ -381,6 +473,12 @@ const detailSub   = document.getElementById('detail-sub');
 const detailTrophies = document.getElementById('detail-trophies');
 const squadContainer = document.getElementById('squadContainer');
 const backBtn = document.getElementById('backBtn');
+
+// Squad manager DOM refs (panel already in HTML)
+const squadManagerCard  = document.getElementById('squadManagerCard');
+const squadSlotsEl      = document.getElementById('squadSlots');
+const btnBootstrapSlots = document.getElementById('btnBootstrapSlots');
+const squadMgrHint      = document.getElementById('squadMgrHint');
 
 function renderTeams(){
   teamsGrid.innerHTML='';
@@ -410,18 +508,21 @@ async function showTeam(team){
   detailView.style.display='block';
   detailTitle.textContent = team.name;
   detailSub.textContent = 'Loading club info…';
+  currentClubIdViewing = team.id;
 
   if(Array.isArray(TEAM_TITLES[team.id])){
     detailTrophies.innerHTML = TEAM_TITLES[team.id].map(t=>`<div>${t.count}x ${t.name}</div>`).join('');
   } else detailTrophies.textContent = 'No trophies';
 
   await renderWallet(team.id);
-  // refresh public fixtures and render next/recent
   await refreshFixturesPublic();
   renderNextFor(team.id);
   renderTeamResults(team.id);
 
-  // EA pass-through for numeric club ids (remove if you want 100% manual)
+  // Squad editor (manager/admin)
+  await maybeRenderSquadEditor(team.id);
+
+  // EA pass-through for numeric club ids
   if(/^\d+$/.test(team.id)){
     await renderEAPlayers(team.id);
   }else{
@@ -456,7 +557,7 @@ async function renderWallet(clubId){
     btn.onclick = async ()=>{
       try{
         const r = await apiPost(`/api/wallets/${encodeURIComponent(clubId)}/collect`,{});
-        alert(r.ok ? 'Payout collected!' : (r.message||'No payout'));
+        alert(r.ok ? `Collected ${fmtMoney(r.collected||0)}` : (r.message||'No payout'));
         await renderWallet(clubId);
       }catch(e){ alert('Collect failed: '+e.message); }
     };
@@ -491,7 +592,120 @@ async function renderEAPlayers(clubId){
   }
 }
 function renderManualPlayers(team){
-  squadContainer.innerHTML = `<div class="m-card muted">Manual club — managers can maintain squads (coming soon).</div>`;
+  squadContainer.innerHTML = `<div class="m-card muted">Manual club — managers can maintain squads in the panel above.</div>`;
+}
+
+// =======================
+//   SQUAD MANAGER (new)
+// =======================
+async function maybeRenderSquadEditor(clubId){
+  const iManage = !!(meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId));
+  const canSee  = iManage || isAdmin;
+
+  if (!canSee) { squadManagerCard.style.display='none'; return; }
+  squadManagerCard.style.display='block';
+
+  btnBootstrapSlots.style.display = isAdmin ? 'inline-block' : 'none';
+  btnBootstrapSlots.onclick = async ()=>{
+    try{
+      await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/bootstrap`, { size: 15 });
+      await loadSquad(clubId);
+    }catch(e){ alert('Bootstrap failed: '+e.message); }
+  };
+
+  await loadSquad(clubId);
+}
+
+async function loadSquad(clubId){
+  squadSlotsEl.textContent = 'Loading…';
+  try{
+    const d = await apiGet(`/api/clubs/${encodeURIComponent(clubId)}/squad`);
+    const slots = Array.isArray(d.slots) ? d.slots : [];
+    if (!slots.length){
+      squadSlotsEl.innerHTML = `
+        <div class="muted">No slots yet. ${isAdmin ? 'Click “Create 15 slots”.' : 'Ask an admin to create slots.'}</div>
+      `;
+      return;
+    }
+    renderSlotsEditor(clubId, slots);
+  }catch(e){
+    squadSlotsEl.textContent = 'Failed to load squad.';
+  }
+}
+
+function renderSlotsEditor(clubId, slots){
+  const rows = slots.map(s=>{
+    const assigned = s.player ? `${escapeHtml(s.player.eaName||s.player.id)} <span class="muted">(${s.player.id})</span>` : '<span class="muted">—</span>';
+    return `
+      <div class="m-card" style="padding:10px;margin:6px 0;display:grid;grid-template-columns:140px 1fr;gap:10px;align-items:center">
+        <div><strong>${escapeHtml(s.slotId)}</strong></div>
+        <div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <label class="muted">Label</label>
+            <input data-slot="${s.slotId}" data-k="label" value="${escapeHtml(s.label||'')}" style="min-width:140px">
+            <button data-act="rename" data-slot="${s.slotId}">Rename</button>
+          </div>
+          <div style="margin-top:6px">
+            <em>Assigned:</em> ${assigned}
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px">
+            <input placeholder="playerId OR EA name"
+                   data-slot="${s.slotId}" data-k="who" style="min-width:220px">
+            <input placeholder="aliases (comma separated)"
+                   data-slot="${s.slotId}" data-k="aliases" style="min-width:240px">
+            <button data-act="assign" data-slot="${s.slotId}">Assign</button>
+            <button data-act="unassign" data-slot="${s.slotId}">Unassign</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  squadSlotsEl.innerHTML = rows || '<div class="muted">No slots.</div>';
+
+  // Wire actions
+  squadSlotsEl.querySelectorAll('[data-act="assign"]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const slotId = btn.getAttribute('data-slot');
+      const who = (squadSlotsEl.querySelector(`[data-k="who"][data-slot="${slotId}"]`)?.value || '').trim();
+      const aliasesRaw = (squadSlotsEl.querySelector(`[data-k="aliases"][data-slot="${slotId}"]`)?.value || '').trim();
+      const aliases = aliasesRaw ? aliasesRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+      if (!who) return alert('Enter a playerId or EA name');
+
+      const isId = /^[a-f0-9-]{8,}$/i.test(who);
+      try{
+        if (isId){
+          await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}/assign`, { playerId: who });
+        }else{
+          await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}/assign`, { eaName: who, aliases });
+        }
+        await loadSquad(clubId);
+      }catch(e){ alert('Assign failed: '+e.message); }
+    };
+  });
+
+  squadSlotsEl.querySelectorAll('[data-act="unassign"]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const slotId = btn.getAttribute('data-slot');
+      try{
+        await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}/unassign`, {});
+        await loadSquad(clubId);
+      }catch(e){ alert('Unassign failed: '+e.message); }
+    };
+  });
+
+  squadSlotsEl.querySelectorAll('[data-act="rename"]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const slotId = btn.getAttribute('data-slot');
+      const label = (squadSlotsEl.querySelector(`[data-k="label"][data-slot="${slotId}"]`)?.value || '').trim();
+      try{
+        await fetch(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}`, {
+          method:'PATCH', headers:{'Content-Type':'application/json'}, credentials:'include',
+          body: JSON.stringify({ label })
+        });
+        await loadSquad(clubId);
+      }catch(e){ alert('Rename failed: '+e.message); }
+    };
+  });
 }
 
 // =======================
@@ -538,7 +752,6 @@ document.getElementById('btnUnlistFA').onclick = async ()=>{
 // =======================
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 async function refreshFixturesPublic(){
-  // Try preferred endpoint, fallback if older server
   try {
     const d = await apiGet('/api/cup/fixtures?cup=UPCL');
     fixturesPublicCache = d.fixtures || [];
@@ -602,7 +815,6 @@ document.querySelectorAll('[data-fxf]').forEach(btn=>{
 
 async function refreshFixturesSched(){
   if (!(isMgr || isAdmin)) { fixturesSchedCache=[]; return; }
-  // Try scheduling endpoint, fallback to general list
   try {
     const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
     fixturesSchedCache = d.fixtures || [];
@@ -641,7 +853,7 @@ function renderFixturesSched(){
 
     const btnProp = root.querySelector('.act .prop');
     if (btnProp) btnProp.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
       const atStr = prompt('Propose time (e.g., 2025-08-20 20:30)');
       if (!atStr) return;
       const at = Date.parse(atStr);
@@ -652,7 +864,7 @@ function renderFixturesSched(){
 
     const btnAgree = root.querySelector('.act .agree');
     if (btnAgree) btnAgree.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
@@ -661,7 +873,7 @@ function renderFixturesSched(){
 
     const btnDecl = root.querySelector('.act .decl');
     if (btnDecl) btnDecl.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixturesSched(); renderFixturesSched(); }
@@ -670,7 +882,7 @@ function renderFixturesSched(){
 
     const btnLine = root.querySelector('.act .line');
     if (btnLine) btnLine.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
       const formation = prompt('Formation (e.g., 4-3-3)') || '';
       const starters = prompt('Comma-separated starters (GK,RB,CB,...) or names list') || '';
       const lineup = {};
@@ -681,7 +893,7 @@ function renderFixturesSched(){
 
     const btnReport = root.querySelector('.act .rep');
     if (btnReport) btnReport.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
       const hs = Number(prompt('Home score?')||0);
       const as = Number(prompt('Away score?')||0);
       const text = prompt('Notes (optional)')||'';
@@ -832,78 +1044,7 @@ function renderRankings(){
       <tbody>${rows}</tbody>
     </table>
   `;
-  const adminControls = document.getElementById('adminControls');
-  adminControls.style.display = isAdmin ? 'flex' : 'none';
-
-  document.getElementById('btnSaveRankings').onclick = async ()=>{
-    const payload = { rankings: {} };
-    document.querySelectorAll('#rankingsTable [data-id]').forEach(el=>{
-      const id = el.getAttribute('data-id');
-      const k  = el.getAttribute('data-k');
-      payload.rankings[id] = payload.rankings[id] || {};
-      payload.rankings[id][k] = k==='leaguePos' ? Number(el.value||0) : el.value;
-    });
-    try{ await apiPost('/api/rankings/bulk', payload); alert('Saved'); await loadRankings(); renderRankings(); }
-    catch(e){ alert('Save failed: '+e.message); }
-  };
-  document.getElementById('btnRecalc').onclick = async ()=>{
-    try{ await apiPost('/api/rankings/recalc',{}); await loadRankings(); renderRankings(); alert('Recalculated'); }
-    catch(e){ alert('Recalc failed: '+e.message); }
-  };
-  document.getElementById('btnCupDry').onclick = async ()=>{
-    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:true }); alert('Would award: '+fmtMoney(r.totalAwarded)); }
-    catch(e){ alert('Dry run failed: '+e.message); }
-  };
-  document.getElementById('btnCupPay').onclick = async ()=>{
-    if (!confirm('Pay cup bonuses now?')) return;
-    try{ const r = await apiPost('/api/bonuses/cup',{ dryRun:false }); alert('Awarded: '+fmtMoney(r.totalAwarded)); }
-    catch(e){ alert('Pay failed: '+e.message); }
-  };
 }
-
-// =======================
-//   MANAGER SIGN-IN MODAL
-// =======================
-const mgrModal  = document.getElementById('mgrModal');
-const mgrClub   = document.getElementById('mgrClub');
-const mgrName   = document.getElementById('mgrName');
-const mgrCode   = document.getElementById('mgrCode');
-const mgrCancel = document.getElementById('mgrCancel');
-const mgrSubmit = document.getElementById('mgrSubmit');
-const btnSetRole = document.getElementById('btnSetRole');
-
-btnSetRole.textContent = 'Manager sign in';
-btnSetRole.onclick = openMgrModal;
-
-function openMgrModal(){
-  mgrClub.innerHTML = teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
-  mgrName.value = (meUser && meUser.name) ? meUser.name : '';
-  mgrCode.value = '';
-  mgrModal.style.display = 'flex';
-  mgrModal.setAttribute('aria-hidden','false');
-}
-function closeMgrModal(){
-  mgrModal.style.display = 'none';
-  mgrModal.setAttribute('aria-hidden','true');
-}
-mgrCancel.onclick = closeMgrModal;
-mgrSubmit.onclick = async ()=>{
-  const clubId = mgrClub.value;
-  const name   = (mgrName.value || '').trim() || 'Manager';
-  const code   = (mgrCode.value || '').trim();
-  if (!code) return alert('Enter your manager code');
-  try{
-    await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
-    closeMgrModal();
-    alert('Signed in as Manager');
-    await checkMe();
-    await refreshFixturesSched(); renderFixturesSched();
-    navFxSched.style.display = 'inline-block';
-    setNav('fixturesSched');
-  }catch(e){
-    alert('Sign-in failed: ' + (e.message || ''));
-  }
-};
 
 // =======================
 //   CHAMPIONS CUP (public + admin)
@@ -928,7 +1069,7 @@ async function loadChampions(){
     renderCcFixtures([]);
   }
 
-  // admin panel
+  // admin panel (CRUD wired server-side)
   document.getElementById('ccAdmin').style.display = isAdmin ? 'block' : 'none';
   if (isAdmin) buildManualGroupsEditor(cupData.cup.groups);
 }
