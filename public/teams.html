@@ -52,9 +52,11 @@ input,select,textarea{background:#0d0000;color:#fff;border:1px solid #3a0000;bor
 label{font-size:12px;color:var(--muted)}
 hr{border:none;border-top:1px solid #220000;margin:14px 0}
 
-/* Dialog base */
-dialog{border:none;padding:0}
-dialog::backdrop{background:rgba(0,0,0,.6)}
+/* Manager modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:9999}
+.modal .panel{background:#110000;border:1px solid #300000;border-radius:12px;padding:14px;width:min(420px,90vw)}
+.modal .row{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
 
 @media(max-width:720px){
   .team-logo{height:100px}
@@ -73,8 +75,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
     <button id="navFixturesSched"  aria-pressed="false" style="display:none">Fixtures Scheduling</button>
     <button id="navChampions" aria-pressed="false">Champions Cup</button>
     <button id="navRankings" aria-pressed="false" style="display:none">Rankings</button>
-    <button id="btnSetRole">Set Role</button>
-    <button id="btnClaimManager">Manager Login</button>
+    <button id="btnSetRole">Manager sign in</button>
     <button id="btnAdminLogin">Admin sign in</button>
     <button id="btnAdminLogout" style="display:none">Admin sign out</button>
   </div>
@@ -212,32 +213,30 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <div id="ccFixtures" class="fx-list" style="margin-top:8px"></div>
     </div>
   </section>
-
-  <!-- Manager Login dialog -->
-  <dialog id="claimManagerDialog" style="border-radius:12px;max-width:480px;width:calc(100% - 32px)">
-    <form method="dialog" id="claimManagerForm" style="background:#110000;color:#fff;border:1px solid #2a0000;border-radius:12px;padding:16px">
-      <h3 style="margin:0 0 10px">Manager Login</h3>
-      <div style="display:grid;gap:10px">
-        <label>
-          <div class="muted">Club</div>
-          <select id="claimTeamSelect" required style="width:100%"></select>
-        </label>
-        <label>
-          <div class="muted">Your display name</div>
-          <input id="claimMgrName" type="text" required placeholder="e.g., Ace" />
-        </label>
-        <label>
-          <div class="muted">Manager code</div>
-          <input id="claimMgrCode" type="password" required autocomplete="one-time-code" placeholder="8-char code" />
-        </label>
-        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
-          <button type="button" id="claimCancel" style="background:#330000;border:1px solid #551111;border-radius:8px;padding:8px 12px">Cancel</button>
-          <button type="submit" style="background:#550000;border:1px solid #aa1111;border-radius:8px;padding:8px 12px">Login</button>
-        </div>
-      </div>
-    </form>
-  </dialog>
 </main>
+
+<!-- Manager Sign-in Modal -->
+<div id="mgrModal" class="modal" aria-hidden="true">
+  <div class="panel">
+    <h3 style="margin:0 0 6px">Manager sign in</h3>
+    <div class="row">
+      <label for="mgrClub">Club</label>
+      <select id="mgrClub"></select>
+    </div>
+    <div class="row">
+      <label for="mgrName">Display name</label>
+      <input id="mgrName" placeholder="e.g., Coach Sam" />
+    </div>
+    <div class="row">
+      <label for="mgrCode">Manager code</label>
+      <input id="mgrCode" placeholder="8-char code" />
+    </div>
+    <div class="actions">
+      <button id="mgrCancel">Cancel</button>
+      <button id="mgrSubmit">Sign in</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // =======================
@@ -296,8 +295,8 @@ let fixturesSchedCache  = [];
 
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
-async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok){ let msg='HTTP '+r.status; try{ msg=(await r.json()).error||msg; }catch{} throw new Error(msg);} return r.json(); }
-async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok){ let msg='HTTP '+r.status; try{ msg=(await r.json()).error||msg; }catch{} throw new Error(msg);} return r.json(); }
+async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok){ let msg='HTTP '+r.status; try{ const j=await r.json(); msg=j.error||j.message||msg; }catch{} throw new Error(msg); } return r.json(); }
+async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok){ let msg='HTTP '+r.status; try{ const j=await r.json(); msg=j.error||j.message||msg; }catch{} throw new Error(msg); } return r.json(); }
 
 // nav
 const navTeams    = document.getElementById('navTeams');
@@ -363,9 +362,6 @@ async function checkAdmin(){
   navRankings.style.display = isAdmin ? 'inline-block' : 'none';
   btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
   navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
-  // Show "Create fixture" if admin
-  const _btnCreateFx = document.getElementById('btnCreateFx');
-  if (_btnCreateFx) _btnCreateFx.style.display = isAdmin ? 'inline-block' : 'none';
   if (isAdmin) { await loadRankings(); renderRankings(); }
 }
 async function checkMe(){
@@ -586,7 +582,6 @@ const fixturesList = document.getElementById('fixturesList');
 const btnCreateFx  = document.getElementById('btnCreateFx');
 
 btnCreateFx.onclick = async ()=>{
-  if(!isAdmin) return alert('Admin only');
   const home = prompt('Home club ID (use exact from Teams list)');
   const away = prompt('Away club ID');
   const round= prompt('Round (e.g., League MD1 or Cup QF)');
@@ -594,7 +589,6 @@ btnCreateFx.onclick = async ()=>{
   try{
     const d = await apiPost('/api/cup/fixtures', { home, away, round, cup:'UPCL' });
     alert('Created fixture'); await refreshFixturesSched(); renderFixturesSched();
-    await refreshFixturesPublic(); renderFixturesPublic();
   }catch(e){ alert('Create failed: '+e.message); }
 };
 
@@ -647,7 +641,7 @@ function renderFixturesSched(){
 
     const btnProp = root.querySelector('.act .prop');
     if (btnProp) btnProp.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const atStr = prompt('Propose time (e.g., 2025-08-20 20:30)');
       if (!atStr) return;
       const at = Date.parse(atStr);
@@ -658,7 +652,7 @@ function renderFixturesSched(){
 
     const btnAgree = root.querySelector('.act .agree');
     if (btnAgree) btnAgree.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
@@ -667,7 +661,7 @@ function renderFixturesSched(){
 
     const btnDecl = root.querySelector('.act .decl');
     if (btnDecl) btnDecl.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixturesSched(); renderFixturesSched(); }
@@ -676,7 +670,7 @@ function renderFixturesSched(){
 
     const btnLine = root.querySelector('.act .line');
     if (btnLine) btnLine.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const formation = prompt('Formation (e.g., 4-3-3)') || '';
       const starters = prompt('Comma-separated starters (GK,RB,CB,...) or names list') || '';
       const lineup = {};
@@ -687,7 +681,7 @@ function renderFixturesSched(){
 
     const btnReport = root.querySelector('.act .rep');
     if (btnReport) btnReport.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isManagerOf) return alert('Managers only');
       const hs = Number(prompt('Home score?')||0);
       const as = Number(prompt('Away score?')||0);
       const text = prompt('Notes (optional)')||'';
@@ -868,98 +862,48 @@ function renderRankings(){
 }
 
 // =======================
-//   ROLE CLAIM (legacy)
+//   MANAGER SIGN-IN MODAL
 // =======================
-document.getElementById('btnSetRole').onclick = async ()=>{
-  const role = (prompt('Role (Manager or Player)')||'').trim().toLowerCase();
-  if (!role) return;
+const mgrModal  = document.getElementById('mgrModal');
+const mgrClub   = document.getElementById('mgrClub');
+const mgrName   = document.getElementById('mgrName');
+const mgrCode   = document.getElementById('mgrCode');
+const mgrCancel = document.getElementById('mgrCancel');
+const mgrSubmit = document.getElementById('mgrSubmit');
+const btnSetRole = document.getElementById('btnSetRole');
 
-  if (role === 'manager') {
-    const clubId = prompt('Enter your Club ID exactly as shown in Teams (e.g., 2491998 or afc-warriors)');
-    const name   = prompt('Your display name');
-    const code   = prompt('Manager code (ask admin)');
-    if (!clubId || !name || !code) return;
-    try {
-      await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
-      alert('Manager role claimed');
-      await checkMe(); await refreshFixturesSched(); renderFixturesSched();
-    } catch (e) { alert('Claim failed: ' + e.message); }
-    return;
-  }
+btnSetRole.textContent = 'Manager sign in';
+btnSetRole.onclick = openMgrModal;
 
-  if (role === 'player') {
-    const name = prompt('Your display name');
-    const clubId = prompt('Optional: Club ID to associate with (or leave blank)');
-    if (!name) return;
-    try {
-      await apiPost('/api/players/claim', { name, teamId: clubId || '' });
-      alert('Player role set');
-      await checkMe();
-    } catch (e) { alert('Player claim failed: ' + e.message); }
-    return;
-  }
-
-  alert('Unsupported role. Use Manager or Player.');
-};
-
-// =======================
-//   MANAGER LOGIN (modal)
-// =======================
-const btnClaimManager   = document.getElementById('btnClaimManager');
-const dlgClaim          = document.getElementById('claimManagerDialog');
-const formClaim         = document.getElementById('claimManagerForm');
-const selTeam           = document.getElementById('claimTeamSelect');
-const inpName           = document.getElementById('claimMgrName');
-const inpCode           = document.getElementById('claimMgrCode');
-document.getElementById('claimCancel')?.addEventListener('click', ()=> dlgClaim.close());
-
-function populateTeamSelect() {
-  selTeam.innerHTML = '';
-  [...teams].slice().sort((a,b)=> a.name.localeCompare(b.name)).forEach(t=>{
-    const opt = document.createElement('option');
-    opt.value = t.id;
-    opt.textContent = `${t.name} (${t.id})`;
-    selTeam.appendChild(opt);
-  });
+function openMgrModal(){
+  mgrClub.innerHTML = teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
+  mgrName.value = (meUser && meUser.name) ? meUser.name : '';
+  mgrCode.value = '';
+  mgrModal.style.display = 'flex';
+  mgrModal.setAttribute('aria-hidden','false');
 }
-
-btnClaimManager?.addEventListener('click', ()=>{
-  try { populateTeamSelect(); } catch {}
-  if (meUser?.teamId) selTeam.value = String(meUser.teamId);
-  inpName.value = meUser?.name || '';
-  inpCode.value = '';
-  if (dlgClaim?.showModal) dlgClaim.showModal();
-  else {
-    // fallback if <dialog> not supported
-    const name = prompt('Your display name'); if(!name) return;
-    const clubId = prompt('Pick Club ID (exact, from Teams grid)'); if(!clubId) return;
-    const code = prompt('Manager code'); if(!code) return;
-    claimManager(clubId, name, code);
-  }
-});
-
-formClaim?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const clubId = selTeam.value;
-  const name   = inpName.value.trim();
-  const code   = inpCode.value.trim();
-  await claimManager(clubId, name, code);
-  dlgClaim.close();
-});
-
-async function claimManager(clubId, name, code){
-  if (!clubId || !name || !code) { alert('Please fill all fields.'); return; }
+function closeMgrModal(){
+  mgrModal.style.display = 'none';
+  mgrModal.setAttribute('aria-hidden','true');
+}
+mgrCancel.onclick = closeMgrModal;
+mgrSubmit.onclick = async ()=>{
+  const clubId = mgrClub.value;
+  const name   = (mgrName.value || '').trim() || 'Manager';
+  const code   = (mgrCode.value || '').trim();
+  if (!code) return alert('Enter your manager code');
   try{
     await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
-    alert('Manager session started!');
+    closeMgrModal();
+    alert('Signed in as Manager');
     await checkMe();
-    navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
-    // Optionally jump to scheduling:
-    // setNav('fixturesSched'); await refreshFixturesSched(); renderFixturesSched();
+    await refreshFixturesSched(); renderFixturesSched();
+    navFxSched.style.display = 'inline-block';
+    setNav('fixturesSched');
   }catch(e){
-    alert('Login failed: ' + (e.message || 'Unknown error'));
+    alert('Sign-in failed: ' + (e.message || ''));
   }
-}
+};
 
 // =======================
 //   CHAMPIONS CUP (public + admin)
