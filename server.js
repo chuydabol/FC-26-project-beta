@@ -1,4 +1,21 @@
-// server.js — Firestore backend for Pro Clubs League (slots, players, fixtures)
+// server.js — Pro Clubs League backend (Firestore)
+// Includes:
+// - Admin login (env ADMIN_PASSWORD), sessions
+// - Manager codes: rotate/reset/claim + BULK ROTATE (CSV)
+// - Player claim + Free agents
+// - Rankings / wallets (daily payouts) / cup bonuses
+// - EA pass-through (numeric clubIds)
+// - Fixtures: create/list/get/propose/vote/lineup/report/ingest-text (records proposer club)
+// - Rosters: 15 slots per club; managers assign EA usernames -> playerId registry
+// - Champions Cup: groups randomize/save/get + computed tables
+// - Admin exports: manager-codes CSV
+//
+// ENV required:
+//   FIREBASE_SERVICE_ACCOUNT (JSON string; \n normalized below)
+//   ADMIN_PASSWORD           (e.g. "Chuyacc")
+//   SESSION_SECRET
+// Optional:
+//   PAYOUT_ELITE, PAYOUT_MID, PAYOUT_BOTTOM, STARTING_BALANCE
 
 const express = require('express');
 const path = require('path');
@@ -6,23 +23,14 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-// Node 18+ has global fetch; fallback to node-fetch if missing
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
 
-/* =========================
-   FIREBASE ADMIN INIT
-========================= */
 const admin = require('firebase-admin');
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT env var is required (paste the service account JSON).');
-}
+if (!process.env.FIREBASE_SERVICE_ACCOUNT) throw new Error('FIREBASE_SERVICE_ACCOUNT env var is required');
+
 const svc = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-if (svc.private_key && svc.private_key.includes('\\n')) {
-  svc.private_key = svc.private_key.replace(/\\n/g, '\n');
-}
-if (!admin.apps.length) {
-  admin.initializeApp({ credential: admin.credential.cert(svc) });
-}
+if (svc.private_key && svc.private_key.includes('\\n')) svc.private_key = svc.private_key.replace(/\\n/g, '\n');
+if (!admin.apps.length) admin.initializeApp({ credential: admin.credential.cert(svc) });
 const db = admin.firestore();
 
 /* =========================
@@ -33,17 +41,15 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProd = NODE_ENV === 'production';
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-session-secret';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''; // e.g. "Chuyacc"
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
-// Economy (month-long season suggestion)
 const PAYOUTS = {
-  elite: Number(process.env.PAYOUT_ELITE  || 1_100_000),
-  mid:   Number(process.env.PAYOUT_MID    ||   900_000),
-  bottom:Number(process.env.PAYOUT_BOTTOM ||   700_000),
+  elite : Number(process.env.PAYOUT_ELITE  || 1_100_000),
+  mid   : Number(process.env.PAYOUT_MID    ||   900_000),
+  bottom: Number(process.env.PAYOUT_BOTTOM ||   700_000),
 };
 const STARTING_BALANCE = Number(process.env.STARTING_BALANCE || 10_000_000);
 
-// Cup bonuses (one-time per season)
 const CUP_BONUSES = {
   winner:       6_000_000,
   runner_up:    3_600_000,
@@ -56,7 +62,7 @@ const CUP_BONUSES = {
 const CUP_POINTS = { winner:60, runner_up:40, semifinal:25, quarterfinal:15, round_of_16:10, none:0 };
 
 /* =========================
-   EXPRESS APP
+   APP
 ========================= */
 const app = express();
 app.set('trust proxy', 1);
@@ -68,93 +74,79 @@ app.use(session({
   cookie: { httpOnly: true, sameSite: 'lax', secure: isProd, maxAge: 1000*60*60*24*30 }
 }));
 
-// Static site
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'teams.html')));
 
 /* =========================
-   HELPERS / COLLECTIONS
+   HELPERS / DB
 ========================= */
 const COL = {
-  rankings    : () => db.collection('rankings'),    // docId = clubId
-  wallets     : () => db.collection('wallets'),     // docId = clubId
-  awards      : () => db.collection('cupAwards'),   // docId = season
-  users       : () => db.collection('users'),       // docId = userId
-  clubCodes   : () => db.collection('clubCodes'),   // docId = clubId { hash, rotatedAt, claimedBy }
-  fixtures    : () => db.collection('fixtures'),    // docId = fixtureId
-  freeAgents  : () => db.collection('freeAgents'),  // docId = userId
-  players     : () => db.collection('players'),     // docId = playerId
-  clubSquadSlots: (clubId) => db.collection('clubSquads').doc(clubId).collection('slots'),
-  playerStats : () => db.collection('playerStats'), // docId = `${season}_${playerId}`
+  rankings : () => db.collection('rankings'),   // docId = clubId
+  wallets  : () => db.collection('wallets'),    // docId = clubId
+  awards   : () => db.collection('cupAwards'),  // docId = season
+  users    : () => db.collection('users'),      // docId = userId
+  clubCodes: () => db.collection('clubCodes'),  // docId = clubId
+  fixtures : () => db.collection('fixtures'),   // docId = fixtureId
+  agents   : () => db.collection('freeAgents'), // docId = userId
+  champions: () => db.collection('champions'),  // docId = cupId
+  rosters  : () => db.collection('rosters'),    // docId = clubId
+  players  : () => db.collection('players'),    // docId = playerId
 };
 
-async function getDoc(col, id){ const s = await COL[col]().doc(id).get(); return s.exists ? s.data() : null; }
+async function getDoc(col, id){ const d = await COL[col]().doc(id).get(); return d.exists ? d.data() : null; }
 async function setDoc(col, id, obj){ await COL[col]().doc(id).set(obj, { merge:false }); return obj; }
 async function updateDoc(col, id, patch){ await COL[col]().doc(id).set(patch, { merge:true }); }
+async function deleteDoc(col, id){ await COL[col]().doc(id).delete(); }
 async function listAll(col){ const snap = await COL[col]().get(); return snap.docs.map(d=>({ id:d.id, ...d.data() })); }
 
-function isAdminSession(req) { return req.session?.admin === true; }
+function isAdminSession(req){ return req.session?.admin === true; }
 function me(req){ return req.session.user || null; }
-
-function requireAdmin(req, res, next) {
-  if (isAdminSession(req)) return next();
-  return res.status(403).json({ error: 'Admin only' });
-}
-function requireManagerOfFixture(req, res, fixture) {
+function requireAdmin(req,res,next){ if(isAdminSession(req)) return next(); return res.status(403).json({ error: 'Admin only' }); }
+function requireManagerOfFixture(req,res,fixture){
   const u = me(req);
-  return !!(u && u.role === 'Manager' && [fixture.home, fixture.away].includes(u.teamId));
+  return !!(u && u.role==='Manager' && [fixture.home, fixture.away].includes(u.teamId));
 }
-function requireManagerOfClubParam(param = 'clubId') {
-  return (req, res, next) => {
+function requireManagerOfClubParam(param='clubId'){
+  return (req,res,next)=>{
     const u = me(req);
-    if (!u || u.role !== 'Manager' || u.teamId !== req.params[param]) {
+    if (!u || u.role!=='Manager' || String(u.teamId)!==String(req.params[param])) {
       return res.status(403).json({ error: 'Manager of this club only' });
     }
     next();
   };
 }
-function requireManagerOrAdmin(req, res, next) {
-  if (isAdminSession(req)) return next();
-  const u = me(req);
-  if (u && u.role === 'Manager') return next();
-  return res.status(403).json({ error: 'Managers or Admins only' });
-}
-function requirePlayerOrManager(req, res, next) {
-  const u = me(req);
-  if (u && (u.role === 'Player' || u.role === 'Manager')) return next();
-  return res.status(403).json({ error: 'Players or Managers only' });
-}
-
+function seasonKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 function leaguePoints(pos){ pos=Number(pos||0); if(!pos) return 0; if(pos===1) return 100; if(pos===2) return 80; if(pos<=4) return 60; if(pos<=8) return 40; return 20; }
 function tierFromPoints(points){ if(points>=120) return 'elite'; if(points>=60) return 'mid'; return 'bottom'; }
-function getDailyPayoutLocal(ranking){ const tier=(ranking?.tier)||'mid'; return PAYOUTS[tier]||PAYOUTS.mid; }
-function genCode(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join(''); }
-function seasonKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
-function norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+function getDailyPayoutLocal(r){ const tier=(r?.tier)||'mid'; return PAYOUTS[tier]||PAYOUTS.mid; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function normUser(name){ return String(name||'').trim().toLowerCase(); }
 
 /* =========================
-   AUTH (Admin + Session User)
+   AUTH
 ========================= */
-if (!ADMIN_PASSWORD) console.warn('[WARN] ADMIN_PASSWORD not set — admin login will fail until you set it.');
-
-app.post('/api/admin/login', (req, res) => {
+if (!ADMIN_PASSWORD) console.warn('[WARN] ADMIN_PASSWORD not set — admin login will fail until set.');
+app.post('/api/admin/login', (req,res)=>{
   const { password } = req.body || {};
-  if (!ADMIN_PASSWORD) return res.status(500).json({ error: 'ADMIN_PASSWORD not set' });
-  if (!password || password !== ADMIN_PASSWORD) return res.status(403).json({ error: 'Bad password' });
+  if (!ADMIN_PASSWORD) return res.status(500).json({ error:'ADMIN_PASSWORD not set' });
+  if (!password || password!==ADMIN_PASSWORD) return res.status(403).json({ error:'Bad password' });
   req.session.admin = true;
   res.json({ ok:true });
 });
-app.post('/api/admin/logout', (req, res) => { req.session.admin = false; res.json({ ok:true }); });
-app.get('/api/admin/me', (req, res) => res.json({ admin: isAdminSession(req) }));
+app.post('/api/admin/logout', (req,res)=>{ req.session.admin=false; res.json({ ok:true }) });
+app.get('/api/admin/me', (req,res)=> res.json({ admin:isAdminSession(req) }));
 
-app.get('/api/auth/me', (req, res) => res.json({ user: me(req) }));
+app.get('/api/auth/me', (req,res)=> res.json({ user: me(req) }));
 app.post('/api/auth/logout', (req,res)=> req.session.destroy(()=> res.json({ ok:true })));
 
 /* =========================
-   MANAGER CODES
+   MANAGER CODES (Single + BULK)
 ========================= */
-app.post('/api/clubs/:clubId/manager-code/rotate', requireAdmin, async (req, res) => {
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function genCode(len=8){ return Array.from({length:len},()=> CODE_ALPHABET[Math.floor(Math.random()*CODE_ALPHABET.length)]).join(''); }
+
+app.post('/api/clubs/:clubId/manager-code/rotate', requireAdmin, async (req,res)=>{
   const { clubId } = req.params;
   const code = genCode(8);
   const hash = await bcrypt.hash(code, 10);
@@ -165,92 +157,137 @@ app.post('/api/clubs/:clubId/manager-code/rotate', requireAdmin, async (req, res
 app.post('/api/clubs/:clubId/manager-code/reset', requireAdmin, async (req,res)=>{
   const { clubId } = req.params;
   const rec = await getDoc('clubCodes', clubId);
-  if (!rec) return res.status(400).json({ error: 'No code set for this club' });
+  if (!rec) return res.status(400).json({ error:'No code set for this club' });
   await updateDoc('clubCodes', clubId, { claimedBy: null, rotatedAt: Date.now() });
   res.json({ ok:true });
 });
 app.post('/api/clubs/:clubId/claim-manager', async (req,res)=>{
   const { clubId } = req.params;
   const { name, code } = req.body || {};
-  if (!name || !code) return res.status(400).json({ error: 'name and code required' });
+  if (!name || !code) return res.status(400).json({ error:'name and code required' });
   const rec = await getDoc('clubCodes', clubId);
-  if (!rec) return res.status(400).json({ error: 'No manager code set. Ask admin.' });
+  if (!rec) return res.status(400).json({ error:'No manager code set. Ask admin.' });
   const ok = await bcrypt.compare(String(code).trim(), rec.hash || '');
-  if (!ok) return res.status(403).json({ error: 'Invalid code' });
-  if (rec.claimedBy) return res.status(409).json({ error: 'Club already has a manager' });
-
+  if (!ok) return res.status(403).json({ error:'Invalid code' });
+  if (rec.claimedBy) return res.status(409).json({ error:'Club already has a manager' });
   const id = uuidv4();
-  const user = { id, name: String(name).trim(), role: 'Manager', teamId: clubId };
+  const user = { id, name:String(name).trim(), role:'Manager', teamId:String(clubId) };
   await setDoc('users', id, user);
-  await updateDoc('clubCodes', clubId, { claimedBy: id });
+  await updateDoc('clubCodes', clubId, { claimedBy:id });
   req.session.user = user;
   res.json({ ok:true, user });
 });
 
+// BULK rotate manager codes (returns JSON + CSV)
+// Body: { clubs: ["2491998","afc-warriors", ...] }
+app.post('/api/admin/manager-codes/rotate-all', requireAdmin, async (req,res)=>{
+  const clubs = Array.isArray(req.body?.clubs) ? req.body.clubs.map(String) : [];
+  if (!clubs.length) return res.status(400).json({ error:'body.clubs array required' });
+  const items = [];
+  for (const clubId of clubs){
+    const code = genCode(8);
+    const hash = await bcrypt.hash(code, 10);
+    const rec = await getDoc('clubCodes', clubId) || {};
+    await setDoc('clubCodes', clubId, { hash, rotatedAt: Date.now(), claimedBy: rec.claimedBy || null });
+    items.push({ clubId, code });
+  }
+  const csv = 'clubId,code\n' + items.map(x=>`${x.clubId},${x.code}`).join('\n');
+  res.json({ ok:true, count: items.length, items, csv });
+});
+
+// Export manager-code status (no plaintext codes)
+// GET /api/admin/manager-codes/export
+app.get('/api/admin/manager-codes/export', requireAdmin, async (req,res)=>{
+  const snap = await COL.clubCodes().get();
+  const rows = snap.docs.map(d=>{
+    const x = d.data();
+    return { clubId:d.id, hasCode: !!x.hash, claimedBy: x.claimedBy || '', rotatedAt: x.rotatedAt || 0 };
+  });
+  const csv = 'clubId,hasCode,claimedBy,rotatedAt\n' + rows.map(r=>`${r.clubId},${r.hasCode},${r.claimedBy},${r.rotatedAt}`).join('\n');
+  res.json({ ok:true, count: rows.length, csv, rows });
+});
+
 /* =========================
-   PLAYER ROLE + FREE AGENTS
+   PLAYER CLAIM + FREE AGENTS
 ========================= */
-app.post('/api/players/claim', async (req, res) => {
-  const { name, teamId = '' } = req.body || {};
-  if (!name) return res.status(400).json({ error: 'name required' });
+app.post('/api/players/claim', async (req,res)=>{
+  const { name, teamId='' } = req.body || {};
+  if (!name) return res.status(400).json({ error:'name required' });
   const id = uuidv4();
-  const user = { id, name: String(name).trim(), role: 'Player', teamId: String(teamId) };
+  const user = { id, name:String(name).trim(), role:'Player', teamId: String(teamId||'') };
   await setDoc('users', id, user);
   req.session.user = user;
-  res.json({ ok: true, user });
+  res.json({ ok:true, user });
 });
 
-app.get('/api/free-agents', async (req, res) => {
-  const snap = await COL.freeAgents().orderBy('listedAt', 'desc').get();
-  res.json({ agents: snap.docs.map(d => d.data()) });
+app.get('/api/free-agents', async (req,res)=>{
+  const snap = await COL.agents().get();
+  const agents = snap.docs.map(d=> d.data());
+  res.json({ agents });
 });
-app.post('/api/free-agents/me', requirePlayerOrManager, async (req, res) => {
-  const u = me(req);
-  const {
-    positions = [], foot = '', region = '', bio = '',
-    availability = '', discord = '', lookingFor = ''
-  } = req.body || {};
-  const doc = {
+app.post('/api/free-agents/me', async (req,res)=>{
+  let u = me(req);
+  if (!u || u.role!=='Player') return res.status(403).json({ error:'Set Player role first' });
+  const { name, positions='', region='', foot='', availability='', discord='', bio='' } = req.body || {};
+  const agent = {
     id: u.id,
-    name: u.name,
-    role: u.role,
-    teamId: u.teamId || '',
-    positions: Array.isArray(positions) ? positions : String(positions).split(',').map(s => s.trim()).filter(Boolean),
-    foot: String(foot || ''),
-    region: String(region || ''),
-    bio: String(bio || ''),
-    availability: String(availability || ''),
-    discord: String(discord || ''),
-    lookingFor: String(lookingFor || ''),
-    listedAt: Date.now()
+    name: name||u.name,
+    positions: String(positions).split(',').map(s=>s.trim()).filter(Boolean),
+    region: String(region||''),
+    foot: String(foot||''),
+    availability: String(availability||''),
+    discord: String(discord||''),
+    bio: String(bio||''),
+    updatedAt: Date.now()
   };
-  await COL.freeAgents().doc(u.id).set(doc);
-  res.json({ ok: true, agent: doc });
+  await setDoc('freeAgents', u.id, agent);
+  res.json({ ok:true, agent });
 });
-app.delete('/api/free-agents/me', requirePlayerOrManager, async (req, res) => {
-  const u = me(req);
-  await COL.freeAgents().doc(u.id).delete();
-  res.json({ ok: true });
+app.delete('/api/free-agents/me', async (req,res)=>{
+  let u = me(req);
+  if (!u || u.role!=='Player') return res.status(403).json({ error:'Set Player role first' });
+  await deleteDoc('freeAgents', u.id);
+  res.json({ ok:true });
 });
 
 /* =========================
-   RANKINGS / PAYOUTS / WALLETS
+   RANKINGS / WALLETS / BONUSES
 ========================= */
+async function ensureWallet(clubId){
+  const w = await getDoc('wallets', clubId);
+  if (!w) {
+    const doc = { balance: STARTING_BALANCE, lastCollectedAt: Date.now() - 86_400_000 };
+    await setDoc('wallets', clubId, doc);
+    return doc;
+  }
+  return w;
+}
+async function getRanking(clubId){
+  return (await getDoc('rankings', clubId)) || { leaguePos:'', cup:'none', points:0, tier:'mid' };
+}
+async function collectPreview(clubId){
+  const w = await ensureWallet(clubId);
+  const r = await getRanking(clubId);
+  const perDay = getDailyPayoutLocal(r);
+  const days = Math.floor((Date.now() - (w.lastCollectedAt || 0)) / 86_400_000);
+  return { days, perDay, amount: Math.max(0, days * perDay) };
+}
+
 app.get('/api/rankings', async (req,res)=>{
   const all = await listAll('rankings');
   const map = {};
-  for (const r of all) map[r.id] = { leaguePos:r.leaguePos||'', cup:r.cup||'none', points:r.points||0, tier:r.tier||'mid' };
-  res.json({ rankings: map, payouts: PAYOUTS, cupPoints: CUP_POINTS });
+  for(const r of all) map[r.id] = { leaguePos:r.leaguePos||'', cup:r.cup||'none', points:r.points||0, tier:r.tier||'mid' };
+  res.json({ rankings:map, payouts:PAYOUTS, cupPoints:CUP_POINTS });
 });
 app.post('/api/rankings/bulk', requireAdmin, async (req,res)=>{
   const payload = req.body?.rankings || {};
   const ops = [];
-  for (const clubId of Object.keys(payload)){
+  for (const clubId of Object.keys(payload)) {
     const src = payload[clubId] || {};
     const leaguePos = Number(src.leaguePos || 0);
     const cup = String(src.cup || 'none');
     let tier = src.tier || 'mid';
-    const points = leaguePoints(leaguePos) + (CUP_POINTS[cup] || 0);
+    const points = leaguePoints(leaguePos) + (CUP_POINTS[cup]||0);
     if (!src.tier) tier = tierFromPoints(points);
     ops.push(setDoc('rankings', clubId, { leaguePos, cup, points, tier }));
   }
@@ -267,35 +304,12 @@ app.post('/api/rankings/recalc', requireAdmin, async (req,res)=>{
   res.json({ ok:true });
 });
 
-// Wallet helpers
-async function ensureWallet(clubId){
-  const w = await getDoc('wallets', clubId);
-  if (!w) {
-    const doc = { balance: STARTING_BALANCE, lastCollectedAt: Date.now() - 86_400_000 };
-    await setDoc('wallets', clubId, doc);
-    return doc;
-  }
-  return w;
-}
-async function getRanking(clubId){
-  const r = await getDoc('rankings', clubId);
-  return r || { leaguePos:'', cup:'none', points:0, tier:'mid' };
-}
-async function collectPreview(clubId){
-  const w = await ensureWallet(clubId);
-  const r = await getRanking(clubId);
-  const perDay = getDailyPayoutLocal(r);
-  const days = Math.floor((Date.now() - (w.lastCollectedAt || 0)) / 86_400_000);
-  return { days, perDay, amount: Math.max(0, days * perDay) };
-}
-
-// Wallet endpoints
 app.get('/api/wallets/:clubId', async (req,res)=>{
   const { clubId } = req.params;
   const w = await ensureWallet(clubId);
   const preview = await collectPreview(clubId);
   const r = await getRanking(clubId);
-  res.json({ wallet: w, preview, perDay: getDailyPayoutLocal(r) });
+  res.json({ wallet:w, preview, perDay:getDailyPayoutLocal(r) });
 });
 app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), async (req,res)=>{
   const { clubId } = req.params;
@@ -304,15 +318,13 @@ app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), as
   if (preview.days <= 0) return res.json({ ok:false, message:'No payout available yet', preview });
   const newBal = (w.balance||0) + preview.amount;
   const newLast = (w.lastCollectedAt || 0) + preview.days * 86_400_000;
-  await setDoc('wallets', clubId, { balance: newBal, lastCollectedAt: newLast });
+  await setDoc('wallets', clubId, { balance:newBal, lastCollectedAt:newLast });
   const updated = await ensureWallet(clubId);
-  const r = await getRanking(clubId);
-  res.json({ ok:true, wallet: updated, preview: await collectPreview(clubId), perDay: getDailyPayoutLocal(r) });
+  const rnk = await getRanking(clubId);
+  res.json({ ok:true, wallet:updated, preview:await collectPreview(clubId), perDay:getDailyPayoutLocal(rnk) });
 });
 
-/* =========================
-   CUP BONUSES (Admin)
-========================= */
+// Cup bonuses
 app.post('/api/bonuses/cup', requireAdmin, async (req,res)=>{
   const dryRun = !!req.body?.dryRun;
   const season = (req.body?.season || '').trim() || seasonKey();
@@ -329,19 +341,17 @@ app.post('/api/bonuses/cup', requireAdmin, async (req,res)=>{
     const cup = r.cup || 'none';
     const bonus = Number(CUP_BONUSES[cup] || 0);
     const paid = !!already[r.id];
-    results.push({ clubId: r.id, cup, bonus, alreadyPaid: paid });
+    results.push({ clubId:r.id, cup, bonus, alreadyPaid:paid });
     willAward += bonus;
     if (!dryRun && bonus>0 && !paid){
       const w = await ensureWallet(r.id);
-      await setDoc('wallets', r.id, { balance: (w.balance||0) + bonus, lastCollectedAt: w.lastCollectedAt||Date.now() });
+      await setDoc('wallets', r.id, { balance:(w.balance||0) + bonus, lastCollectedAt:w.lastCollectedAt||Date.now() });
       already[r.id] = bonus;
       actually += bonus;
     }
   }
 
-  if (!dryRun){
-    await awardsDocRef.set({ paid: already }, { merge:false });
-  }
+  if (!dryRun) await awardsDocRef.set({ paid: already }, { merge:false });
   res.json({ ok:true, season, dryRun, totalAwarded: dryRun ? willAward : actually, results });
 });
 app.get('/api/bonuses/cup', requireAdmin, async (req,res)=>{
@@ -351,11 +361,11 @@ app.get('/api/bonuses/cup', requireAdmin, async (req,res)=>{
 });
 
 /* =========================
-   EA PASS-THROUGH
+   EA PASS-THROUGH (optional)
 ========================= */
 app.get('/api/teams/:clubId/players', async (req, res) => {
   const { clubId } = req.params;
-  if (!/^\d+$/.test(clubId)) return res.json({ members: [] }); // manual clubs are strings
+  if (!/^\d+$/.test(clubId)) return res.json({ members: [] });
   const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10_000);
@@ -374,257 +384,154 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
 });
 
 /* =========================
-   SQUAD SLOTS (no jersey numbers)
+   ROSTERS (15 slots / club)
 ========================= */
-// Bootstrap S01..S15 (admin)
-app.post('/api/clubs/:clubId/squad/bootstrap', requireAdmin, async (req, res) => {
-  const { clubId } = req.params;
-  const size = Math.max(1, Math.min(30, Number(req.body?.size || 15)));
-  const ops = [];
-  for (let i=1;i<=size;i++){
-    const slotId = `S${String(i).padStart(2,'0')}`;
-    ops.push(COL.clubSquadSlots(clubId).doc(slotId).set({
-      slotId, clubId, label: `Slot ${i}`, playerId: '', createdAt: Date.now()
-    }, { merge: false }));
+function defaultSlots(){
+  return Array.from({length:15}, (_,i)=> ({
+    slotId: 'S'+(i+1), playerId:'', username:'', active:false, updatedAt: Date.now()
+  }));
+}
+async function ensureRoster(clubId){
+  const r = await getDoc('rosters', clubId);
+  if (!r){
+    const doc = { clubId, slots: defaultSlots(), updatedAt: Date.now() };
+    await setDoc('rosters', clubId, doc);
+    return doc;
   }
-  await Promise.all(ops);
-  res.json({ ok:true, created:size });
-});
-
-// List squad (hydrated)
-app.get('/api/clubs/:clubId/squad', async (req, res) => {
-  const { clubId } = req.params;
-  const snap = await COL.clubSquadSlots(clubId).orderBy('slotId').get();
-  const slots = [];
-  for (const d of snap.docs){
-    const s = d.data();
-    let player=null;
-    if (s.playerId){
-      const p = await COL.players().doc(s.playerId).get();
-      if (p.exists) player = p.data();
-    }
-    slots.push({ ...s, player });
+  if (!Array.isArray(r.slots) || r.slots.length<15){
+    const have = r.slots || [];
+    const need = defaultSlots();
+    for (let i=0;i<15;i++){ if (!have[i]) have[i]=need[i]; }
+    r.slots = have; r.updatedAt = Date.now();
+    await setDoc('rosters', clubId, r);
   }
-  res.json({ clubId, slots });
-});
-
-// Assign a username to a slot (create player if needed)
-app.post('/api/clubs/:clubId/squad/slots/:slotId/assign', requireManagerOfClubParam('clubId'), async (req,res)=>{
-  const { clubId, slotId } = req.params;
-  let { playerId, eaName='', platform='ps', aliases=[] } = req.body || {};
-  if (!playerId && !eaName) return res.status(400).json({ error:'playerId or eaName required' });
-
-  if (!playerId){
-    const id = uuidv4();
-    const aliasArr = Array.isArray(aliases) ? aliases : String(aliases).split(',').map(s=>s.trim()).filter(Boolean);
-    const search = [eaName, ...aliasArr].map(norm);
-    await COL.players().doc(id).set({ id, eaName:String(eaName).trim(), platform, aliases:aliasArr, search, createdAt: Date.now() });
-    playerId = id;
-  }
-  await COL.clubSquadSlots(clubId).doc(slotId).set({ playerId }, { merge:true });
-  const slot = (await COL.clubSquadSlots(clubId).doc(slotId).get()).data();
-  res.json({ ok:true, slot });
-});
-
-// Unassign / Rename slot
-app.post('/api/clubs/:clubId/squad/slots/:slotId/unassign', requireManagerOfClubParam('clubId'), async (req,res)=>{
-  const { clubId, slotId } = req.params;
-  await COL.clubSquadSlots(clubId).doc(slotId).set({ playerId:'' }, { merge:true });
-  res.json({ ok:true });
-});
-app.patch('/api/clubs/:clubId/squad/slots/:slotId', requireManagerOfClubParam('clubId'), async (req,res)=>{
-  const { clubId, slotId } = req.params;
-  const patch = {};
-  if (req.body?.label) patch.label = String(req.body.label);
-  await COL.clubSquadSlots(clubId).doc(slotId).set(patch, { merge:true });
-  res.json({ ok:true });
-});
-
-/* =========================
-   PLAYER REGISTRY (EA usernames + aliases)
-========================= */
-app.post('/api/players/register', async (req, res) => {
-  const { eaName, platform='ps', aliases=[] } = req.body || {};
-  if (!eaName) return res.status(400).json({ error:'eaName required' });
+  return r;
+}
+async function getOrCreatePlayerByUsername(username){
+  const uname = String(username||'').trim();
+  if (!uname) return null;
+  const unameLower = normUser(uname);
+  const q = await COL.players().where('usernameLower','==', unameLower).limit(1).get();
+  if (!q.empty){ const d = q.docs[0]; return { id:d.id, ...d.data() }; }
   const id = uuidv4();
-  const aliasArr = Array.isArray(aliases) ? aliases : String(aliases).split(',').map(s=>s.trim()).filter(Boolean);
-  const search = [eaName, ...aliasArr].map(norm);
-  const doc = { id, eaName:String(eaName).trim(), platform, aliases:aliasArr, search, createdAt: Date.now() };
-  await COL.players().doc(id).set(doc);
-  res.json({ ok:true, player: doc });
-});
-app.post('/api/players/:playerId/update', requireAdmin, async (req, res) => {
-  const { playerId } = req.params;
-  const patch = req.body || {};
-  if (patch.eaName || patch.aliases){
-    const aliasArr = Array.isArray(patch.aliases) ? patch.aliases : String(patch.aliases||'').split(',').map(s=>s.trim()).filter(Boolean);
-    const base = patch.eaName ? String(patch.eaName).trim() : null;
-    patch.search = [ base, ...aliasArr ].filter(Boolean).map(norm);
-    patch.aliases = aliasArr;
-    if (base) patch.eaName = base;
-  }
-  await COL.players().doc(playerId).set(patch, { merge:true });
-  const doc = await COL.players().doc(playerId).get();
-  res.json({ ok:true, player: doc.data() });
-});
+  const doc = { id, username: uname, usernameLower: unameLower, currentTeamId:'', createdAt: Date.now() };
+  await setDoc('players', id, doc);
+  return doc;
+}
 
-/* =========================
-   NAME → ID RESOLUTION
-========================= */
-async function resolvePlayerIdByName(name, clubId){
-  const n = norm(name);
-  if (!n) return null;
+app.get('/api/clubs/:clubId/roster', async (req,res)=>{
+  const { clubId } = req.params;
+  const r = await ensureRoster(clubId);
+  res.json({ ok:true, roster: r });
+});
+app.put('/api/clubs/:clubId/roster', requireManagerOfClubParam('clubId'), async (req,res)=>{
+  const { clubId } = req.params;
+  const slotsPatch = Array.isArray(req.body?.slots) ? req.body.slots : [];
+  if (!slotsPatch.length) return res.status(400).json({ error:'slots array required' });
 
-  // 1) Prefer the club's assigned slots
-  const snap = await COL.clubSquadSlots(clubId).get();
-  for (const d of snap.docs){
-    const slot = d.data();
-    if (!slot.playerId) continue;
-    const p = await COL.players().doc(slot.playerId).get();
-    if (p.exists) {
-      const pr = p.data();
-      if ((pr.search||[]).includes(n)) return pr.id;
+  const roster = await ensureRoster(clubId);
+  const map = new Map(roster.slots.map(s=>[s.slotId, s]));
+
+  for (const p of slotsPatch){
+    const slotId = String(p.slotId||'').trim();
+    if (!map.has(slotId)) continue;
+    const entry = map.get(slotId);
+    const uname = (p.username||'').trim();
+
+    if (!uname){
+      entry.playerId = '';
+      entry.username = '';
+      entry.active = false;
+      entry.updatedAt = Date.now();
+    } else {
+      const player = await getOrCreatePlayerByUsername(uname);
+      if (!player) continue;
+      entry.playerId = player.id;
+      entry.username = player.username;
+      entry.active = true;
+      entry.updatedAt = Date.now();
+      await updateDoc('players', player.id, { currentTeamId: clubId, lastSeenAt: Date.now() });
     }
   }
-  // 2) Fallback global alias match
-  const q = await COL.players().where('search','array-contains', n).limit(1).get();
-  if (!q.empty) return q.docs[0].data().id;
 
-  return null;
-}
-
-async function resolvePlayerIdFromRow(row, clubId){
-  if (row.playerId) return row.playerId;
-  if (row.player)   return resolvePlayerIdByName(row.player, clubId);
-  return null;
-}
+  roster.slots = Array.from(map.values());
+  roster.updatedAt = Date.now();
+  await setDoc('rosters', clubId, roster);
+  res.json({ ok:true, roster });
+});
 
 /* =========================
-   PLAYER STATS (per season)
+   FIXTURES (League/Cup/Champions)
 ========================= */
-async function bumpPlayerStatsFromFixture(f){
-  const season = seasonKey();
-  for (const side of ['home','away']){
-    for (const r of (f.details?.[side]||[])){
-      if (!r.playerId) continue; // only counted when resolved
-      const id = `${season}_${r.playerId}`;
-      const ref = COL.playerStats().doc(id);
-      const snap = await ref.get();
-      const prev = snap.exists ? snap.data() : { season, playerId:r.playerId, goals:0, assists:0, ratingsSum:0, ratingsCount:0 };
-      await ref.set({
-        season, playerId:r.playerId,
-        goals: (prev.goals||0) + Number(r.goals||0),
-        assists: (prev.assists||0) + Number(r.assists||0),
-        ratingsSum: (prev.ratingsSum||0) + Number(r.rating||0),
-        ratingsCount: (prev.ratingsCount||0) + (r.rating ? 1 : 0)
-      }, { merge:true });
-    }
-  }
-}
-
-/* =========================
-   UPCL FIXTURES
-========================= */
-// Create fixture (Admin)
 app.post('/api/cup/fixtures', requireAdmin, async (req, res) => {
-  const { home, away, round, cup = 'UPCL' } = req.body || {};
-  if (!home || !away) return res.status(400).json({ error: 'home and away required' });
-  if (home === away)   return res.status(400).json({ error: 'home and away cannot match' });
+  const { home, away, round, cup='UPCL', group=null, when=null } = req.body || {};
+  if (!home || !away) return res.status(400).json({ error:'home and away required' });
+  if (home===away) return res.status(400).json({ error:'home and away cannot match' });
 
   const id = uuidv4();
   const fixture = {
-    id, cup,
+    id,
+    cup: String(cup),
+    group: group ? String(group) : null,
     round: String(round || 'Round'),
     home: String(home), away: String(away),
-    teams: [String(home), String(away)],
-    status: 'pending',          // pending | scheduled | final
-    timeLockedAt: null,
-    proposals: [],              // [{ at:number, by:string }]
-    votes: {},                  // { "<timestamp>": { [clubId]: true|false } }
-    when: null,                 // locked time (ms)
-    lineups: {
-      [home]: { formation:'', lineup:{} },
-      [away]: { formation:'', lineup:{} }
-    },
+    teams:[String(home), String(away)],
+    status: when ? 'scheduled' : 'pending',
+    when: when ? Number(when) : null,
+    timeLockedAt: when ? Date.now() : null,
+    proposals: [],         // [{ at:number, by: clubId }]
+    votes: {},             // { "<timestamp>": { [clubId]: true|false } }
+    lineups: { [home]:{ formation:'', lineup:{} }, [away]:{ formation:'', lineup:{} } },
     score: { hs:0, as:0 },
     report: { text:'', mvpHome:'', mvpAway:'', discordMsgUrl:'' },
-    details: { home: [], away: [] },
-    unresolved: [],
     createdAt: Date.now()
   };
   await setDoc('fixtures', id, fixture);
   res.json({ ok:true, fixture });
 });
 
-// Public sanitized feed
-app.get('/api/cup/fixtures/public', async (req, res) => {
-  const cup = (req.query.cup || 'UPCL').trim();
-  const snap = await COL.fixtures().where('cup','==',cup).get();
-  const list = snap.docs.map(d => {
-    const f = d.data();
-    return {
-      id: f.id, cup: f.cup, round: f.round,
-      home: f.home, away: f.away,
-      when: f.when || null, status: f.status,
-      score: f.score || { hs: 0, as: 0 },
-      details: f.details || { home: [], away: [] },
-      createdAt: f.createdAt || 0
-    };
-  });
-  res.json({ fixtures: list });
-});
-
-// Scheduling feed (Managers or Admins)
-app.get('/api/cup/fixtures/scheduling', requireManagerOrAdmin, async (req, res) => {
-  const cup = (req.query.cup || 'UPCL').trim();
-  const snap = await COL.fixtures().where('cup', '==', cup).get();
-  res.json({ fixtures: snap.docs.map(d => d.data()) });
-});
-
-// Compatibility list
-app.get('/api/cup/fixtures', async (req, res) => {
+async function listFixtures(req, res){
   const cup = (req.query.cup || 'UPCL').trim();
   const clubId = (req.query.clubId || '').trim();
   const snap = await COL.fixtures().where('cup','==',cup).get();
-  let fixtures = snap.docs.map(d => d.data());
-  if (clubId) fixtures = fixtures.filter(f => f.home === clubId || f.away === clubId);
+  let fixtures = snap.docs.map(d=> d.data());
+  if (clubId) fixtures = fixtures.filter(f => f.home===clubId || f.away===clubId);
   res.json({ fixtures });
-});
+}
+app.get('/api/cup/fixtures', listFixtures);
+app.get('/api/cup/fixtures/public', listFixtures);
+app.get('/api/cup/fixtures/scheduling', listFixtures);
 
-// Propose time (Managers/Admin)
-app.post('/api/cup/fixtures/:id/propose', requireManagerOrAdmin, async (req, res) => {
+app.get('/api/cup/fixtures/:id', async (req,res)=>{
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error:'not found' });
+  res.json({ fixture: f });
+});
+
+app.post('/api/cup/fixtures/:id/propose', async (req,res)=>{
+  const f = await getDoc('fixtures', req.params.id);
+  if (!f) return res.status(404).json({ error:'not found' });
+  if (!requireManagerOfFixture(req,res,f)) return res.status(403).json({ error:'Managers of these clubs only' });
   const at = Number(req.body?.at || 0);
   if (!at) return res.status(400).json({ error:'timestamp (ms) required' });
-
-  const isAdmin = isAdminSession(req);
-  if (!isAdmin && !requireManagerOfFixture(req, res, f)) return res.status(403).json({ error:'Managers of these clubs only' });
-
   f.proposals = f.proposals || [];
   f.votes = f.votes || {};
-  f.proposals.push({ at, by: isAdmin ? 'admin' : me(req).teamId });
+  const proposer = me(req).teamId;
+  f.proposals.push({ at, by: proposer });
   f.votes[String(at)] = f.votes[String(at)] || {};
   await setDoc('fixtures', f.id, f);
   res.json({ ok:true, fixture: f });
 });
 
-// Vote (Managers/Admin)
-app.post('/api/cup/fixtures/:id/vote', requireManagerOrAdmin, async (req, res) => {
+app.post('/api/cup/fixtures/:id/vote', async (req,res)=>{
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error:'not found' });
-
+  if (!requireManagerOfFixture(req,res,f)) return res.status(403).json({ error:'Managers of these clubs only' });
   const at = String(req.body?.at || '');
   const agree = !!req.body?.agree;
-  if (!at) return res.status(400).json({ error:'invalid slot' });
+  if (!at || !f.votes || !f.votes[at]) return res.status(400).json({ error:'invalid slot' });
 
-  const isAdmin = isAdminSession(req);
-  if (!isAdmin && !requireManagerOfFixture(req, res, f)) return res.status(403).json({ error:'Managers of these clubs only' });
-
-  const teamId = isAdmin ? 'admin' : me(req).teamId;
-  f.votes = f.votes || {};
-  f.votes[at] = f.votes[at] || {};
-  f.votes[at][teamId] = agree;
+  f.votes[at][me(req).teamId] = agree;
 
   if (f.votes[at][f.home] === true && f.votes[at][f.away] === true) {
     f.when = Number(at);
@@ -632,138 +539,130 @@ app.post('/api/cup/fixtures/:id/vote', requireManagerOrAdmin, async (req, res) =
     f.timeLockedAt = Date.now();
   }
   await setDoc('fixtures', f.id, f);
-  res.json({ ok:true, fixture: f });
+  res.json({ ok:true, fixture:f });
 });
 
-// Set lineup (Managers/Admin)
-app.put('/api/cup/fixtures/:id/lineup', requireManagerOrAdmin, async (req, res) => {
+app.put('/api/cup/fixtures/:id/lineup', async (req,res)=>{
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error:'not found' });
-
-  const isAdmin = isAdminSession(req);
-  if (!isAdmin && !requireManagerOfFixture(req, res, f)) return res.status(403).json({ error:'Managers of these clubs only' });
-
+  if (!requireManagerOfFixture(req,res,f)) return res.status(403).json({ error:'Managers of these clubs only' });
   const { formation, lineup } = req.body || {};
   f.lineups = f.lineups || {};
-  const owner = isAdmin ? 'admin' : me(req).teamId;
-  f.lineups[owner] = { formation: String(formation||''), lineup: lineup && typeof lineup==='object' ? lineup : {} , at: Date.now() };
+  f.lineups[me(req).teamId] = { formation:String(formation||''), lineup: lineup && typeof lineup==='object' ? lineup : {} };
   await setDoc('fixtures', f.id, f);
-  res.json({ ok:true, fixture: f });
+  res.json({ ok:true, fixture:f });
 });
 
-// Report final (Admin OR managers). Accepts playerId OR player (username)
-app.post('/api/cup/fixtures/:id/report', async (req, res) => {
-  const f = await getDoc('fixtures', req.params.id);
-  if (!f) return res.status(404).json({ error: 'not found' });
-
-  const isAdmin = isAdminSession(req);
-  if (!isAdmin && !requireManagerOfFixture(req, res, f)) {
-    return res.status(403).json({ error: 'Managers of these clubs only (or admin)' });
+// Attach playerIds to details (home/away arrays)
+async function attachPlayerIds(details){
+  if (!details || typeof details!=='object') return details;
+  for (const side of ['home','away']){
+    const arr = Array.isArray(details[side]) ? details[side] : [];
+    for (const item of arr){
+      if (!item || !item.player) continue;
+      const p = await getOrCreatePlayerByUsername(item.player);
+      if (p) item.playerId = p.id;
+    }
   }
+  return details;
+}
+
+app.post('/api/cup/fixtures/:id/report', async (req,res)=>{
+  const f = await getDoc('fixtures', req.params.id);
+  if (!f) return res.status(404).json({ error:'not found' });
+  if (!requireManagerOfFixture(req,res,f)) return res.status(403).json({ error:'Managers of these clubs only' });
 
   const { hs, as, text, mvpHome, mvpAway, discordMsgUrl, details } = req.body || {};
   f.score  = { hs: Number(hs||0), as: Number(as||0) };
-  f.report = { text: String(text||''), mvpHome: String(mvpHome||''), mvpAway: String(mvpAway||''), discordMsgUrl: String(discordMsgUrl||'') };
-  if (details && typeof details === 'object') {
-    f.details = { home: [], away: [] };
-    f.unresolved = [];
-    for (const side of ['home','away']){
-      for (const row of (details[side]||[])){
-        let { playerId, player, goals=0, assists=0, rating=0 } = row || {};
-        if (!playerId && player){
-          playerId = await resolvePlayerIdByName(player, side==='home' ? f.home : f.away);
-        }
-        const item = { playerId: playerId||'', player: player||'', goals:Number(goals||0), assists:Number(assists||0), rating:Number(rating||0) };
-        f.details[side].push(item);
-        if (!playerId && player) f.unresolved.push({ side, name: player });
-      }
-    }
-  }
+  f.report = { text:String(text||''), mvpHome:String(mvpHome||''), mvpAway:String(mvpAway||''), discordMsgUrl:String(discordMsgUrl||'') };
+  if (details && typeof details==='object') f.details = await attachPlayerIds(details);
   f.status = 'final';
-  if (!f.when) f.when = Date.now();
-
   await setDoc('fixtures', f.id, f);
-  await bumpPlayerStatsFromFixture(f);
-  res.json({ ok: true, fixture: f });
+  res.json({ ok:true, fixture:f });
 });
 
-// Admin paste: parse quick text -> score + scorers
-app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, async (req, res) => {
+// Admin quick-ingest from pasted text (stores text + score if "N-N" present)
+app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, async (req,res)=>{
   const f = await getDoc('fixtures', req.params.id);
-  if (!f) return res.status(404).json({ error: 'not found' });
-  const { text } = req.body || {};
-  if (!text) return res.status(400).json({ error: 'text required' });
+  if (!f) return res.status(404).json({ error:'not found' });
+  const text = String(req.body?.text || '').trim();
+  if (!text) return res.status(400).json({ error:'text required' });
 
-  const parsed = parseLooseResultText(text, f);
-  if (!parsed) return res.status(400).json({ error: 'could not parse input' });
+  let hs = 0, as = 0;
+  const m = text.match(/(\d+)\s*[-–]\s*(\d+)/);
+  if (m) { hs = Number(m[1]); as = Number(m[2]); }
 
-  // resolve names to ids
-  const out = { home: [], away: [] }, unresolved = [];
-  for (const side of ['home','away']){
-    for (const r of parsed.details[side]){
-      let pid = r.playerId || null;
-      if (!pid && r.player) pid = await resolvePlayerIdByName(r.player, side==='home' ? f.home : f.away);
-      const item = { playerId: pid||'', player: r.player||'', goals:Number(r.goals||0), assists:Number(r.assists||0), rating:Number(r.rating||0) };
-      out[side].push(item);
-      if (!pid && r.player) unresolved.push({ side, name:r.player });
-    }
-  }
-
-  f.score = parsed.score;
-  f.details = out;
-  f.unresolved = unresolved;
+  f.score = { hs, as };
+  f.report = { ...(f.report||{}), text };
   f.status = 'final';
-  if (!f.when) f.when = Date.now();
-
   await setDoc('fixtures', f.id, f);
-  await bumpPlayerStatsFromFixture(f);
-  res.json({ ok: true, fixture: f });
+  res.json({ ok:true, fixture:f });
 });
 
-// Tolerant parser for "quick text" format
-function parseLooseResultText(str, f) {
-  const toks = String(str).replace(/\n/g, ',').split(',').map(s => s.trim()).filter(Boolean);
-  let side = 'home';
-  const details = { home: [], away: [] };
-  const score = { hs: 0, as: 0 };
-  let cur = null;
-  const commit = () => {
-    if (cur && cur.player) {
-      cur.goals = Number(cur.goals || 0);
-      cur.assists = Number(cur.assists || 0);
-      cur.rating = Number(cur.rating || 0);
-      details[side].push(cur);
-    }
-    cur = null;
-  };
-  for (let t of toks) {
-    const low = t.toLowerCase();
+/* =========================
+   CHAMPIONS CUP (Groups)
+========================= */
+async function computeGroupTables(cupId, groups){
+  const snap = await COL.fixtures().where('cup','==',cupId).get();
+  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const table = { A:{}, B:{}, C:{}, D:{} };
+  const touch = (g,id)=> table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
 
-    // switch sides if tokens mention team or 'home/away'
-    if (low.includes('home') || (f.home && low.includes(String(f.home).toLowerCase()))) { commit(); side='home'; continue; }
-    if (low.includes('away') || (f.away && low.includes(String(f.away).toLowerCase()))) { commit(); side='away'; continue; }
-
-    let m = t.match(/score\s*:\s*(\d+)/i);
-    if (m) { if (side==='home') score.hs = Number(m[1]); else score.as = Number(m[1]); continue; }
-
-    m = t.match(/player\s*\d*\s*:\s*(.+)/i);
-    if (m) { commit(); cur = { player: m[1].trim() }; continue; }
-
-    m = t.match(/(\d+)\s*goal/i); if (m) { cur = cur || {}; cur.goals = Number(m[1]); continue; }
-    m = t.match(/(\d+)\s*assist/i); if (m) { cur = cur || {}; cur.assists = Number(m[1]); continue; }
-    m = t.match(/rating\s*:\s*([0-9]+(?:\.[0-9]+)?)/i);
-    if (m) { cur = cur || {}; cur.rating = Number(m[1]); continue; }
-
-    if (!cur || !cur.player) {
-      if (t && !/^\d+(\.\d+)?$/.test(t) && !/^(score|rating|goal|assist)/i.test(t)) {
-        cur = cur || {};
-        cur.player = (cur.player || t);
-      }
-    }
+  for (const g of ['A','B','C','D']){
+    for (const id of (groups[g]||[])) touch(g,id);
   }
-  commit();
-  return { score, details };
+  for (const f of fx){
+    const g = f.group || null; if(!g || !table[g]) continue;
+    touch(g, f.home); touch(g, f.away);
+    const H = table[g][f.home], A = table[g][f.away];
+    const hs = Number(f.score?.hs||0), as = Number(f.score?.as||0);
+    H.P++; A.P++;
+    H.GF+=hs; H.GA+=as; H.GD=H.GF-H.GA;
+    A.GF+=as; A.GA+=hs; A.GD=A.GF-A.GA;
+    if(hs>as){ H.W++; H.Pts+=3; A.L++; }
+    else if(hs<as){ A.W++; A.Pts+=3; H.L++; }
+    else { H.D++; A.D++; H.Pts++; A.Pts++; }
+  }
+  const sorted = {};
+  for (const g of ['A','B','C','D']){
+    sorted[g] = Object.values(table[g]).sort((x,y)=>
+      (y.Pts-x.Pts) || (y.GD-x.GD) || (y.GF-x.GF));
+  }
+  return sorted;
 }
+
+// Save groups
+app.post('/api/champions/:cupId/groups', requireAdmin, async (req,res)=>{
+  const { cupId } = req.params;
+  const groups = req.body?.groups || {};
+  const doc = { cupId, groups:{
+    A: groups.A||[], B: groups.B||[], C: groups.C||[], D: groups.D||[]
+  }, createdAt: Date.now() };
+  await setDoc('champions', cupId, doc);
+  res.json({ ok:true, cup:doc });
+});
+
+// Randomize groups from 16 clubs
+app.post('/api/champions/:cupId/randomize', requireAdmin, async (req,res)=>{
+  const { cupId } = req.params;
+  let clubs = Array.isArray(req.body?.clubs) ? req.body.clubs.slice() : [];
+  if (clubs.length!==16) return res.status(400).json({ error:'Provide exactly 16 clubIds in body.clubs' });
+  shuffle(clubs);
+  const groups = { A:[], B:[], C:[], D:[] };
+  clubs.forEach((id,i)=> groups[['A','B','C','D'][i%4]].push(String(id)));
+  const doc = { cupId, groups, createdAt: Date.now() };
+  await setDoc('champions', cupId, doc);
+  res.json({ ok:true, cup:doc });
+});
+
+// Read state + live tables
+app.get('/api/champions/:cupId', async (req,res)=>{
+  const { cupId } = req.params;
+  const d = await COL.champions().doc(cupId).get();
+  const cup = d.exists ? d.data() : { cupId, groups:{A:[],B:[],C:[],D:[]}, createdAt: Date.now() };
+  const tables = await computeGroupTables(cupId, cup.groups);
+  res.json({ ok:true, cup, tables });
+});
 
 /* =========================
    START
