@@ -87,7 +87,7 @@ app.use(session({
 // Static site
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'teams.html')));
 
 /* =========================
    HELPERS / COLLECTIONS
