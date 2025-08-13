@@ -107,7 +107,7 @@ app.use(session({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 // Change to 'teams.html' if that's your entry HTML
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'teams.html')));
 
 /* =========================
    HELPERS / COLLECTIONS
