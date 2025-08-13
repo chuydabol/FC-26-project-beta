@@ -25,10 +25,11 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 // Optional middlewares (won't crash if not installed)
-let helmet = null;
-let compression = null;
+let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
 try { compression = require('compression'); } catch {}
+try { cors = require('cors'); } catch {}
+try { morgan = require('morgan'); } catch {}
 
 // Node 18+ has global fetch; fallback to node-fetch if missing
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
@@ -48,10 +49,11 @@ if (!admin.apps.length) {
   admin.initializeApp({ credential: admin.credential.cert(svc) });
 }
 const db = admin.firestore();
+// Firestore helpers used later
+const { FieldValue, FieldPath } = admin.firestore;
 
 /* =========================
    CONFIG
-========================= */
 ========================= */
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -104,6 +106,7 @@ app.use(session({
 // Static site
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
+// Change to 'teams.html' if that's your entry HTML
 app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 /* =========================
@@ -148,6 +151,11 @@ function userForClient(req){
   return u;
 }
 
+// --- Role guards (add missing requireAdmin) ---
+function requireAdmin(req, res, next) {
+  if (isAdminSession(req)) return next();
+  return res.status(403).json({ error: 'Admin only' });
+}
 function requireManagerOfClubParam(param = 'clubId') {
   return (req, res, next) => {
     const u = me(req);
@@ -423,10 +431,8 @@ app.post('/api/bonuses/cup', requireAdmin, wrap(async (req,res)=>{
     results.push({ clubId: r.id, cup, bonus, alreadyPaid: paid });
     willAward += bonus;
     if (!dryRun && bonus>0 && !paid){
-      await COL.wallets().doc(r.id).set({
-        balance: FieldValue.increment(bonus),
-        lastCollectedAt: FieldValue.serverTimestamp(),
-      }, { merge:true });
+      // increment only balance; keep lastCollectedAt numeric untouched
+      await COL.wallets().doc(r.id).set({ balance: FieldValue.increment(bonus) }, { merge:true });
       already[r.id] = bonus;
       actually += bonus;
     }
@@ -460,7 +466,7 @@ app.get('/api/teams/:clubId/players', wrap(async (req, res) => {
   }
 
   const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
-  const Controller = AbortControllerPoly || AbortController;
+  const Controller = global.AbortController;
   const controller = new Controller();
   const timer = setTimeout(() => controller.abort(), 10_000);
 
