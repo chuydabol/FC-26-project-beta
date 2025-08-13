@@ -1,26 +1,22 @@
-/**
- * Pro Clubs League backend (Firestore)
- * Session-based Manager login with code (no permanent claim)
- * - Admin auth, sessions
- * - Manager codes (rotate/bulk/export) — anyone with the code can login per session
- * - Player claim + Free agents
- * - Rankings / wallets (daily payouts) / cup bonuses
- * - EA pass-through (numeric clubIds) with 60s cache
- * - Squad slots; players registry; name→id resolution
- * - Fixtures: create/list/public/scheduling/get/propose/vote/lineup/report/ingest-text
- * - Player season stats accumulation on report / ingest
- * - Champions Cup: randomize/save groups + live computed tables
- *
- * ENV (required): FIREBASE_SERVICE_ACCOUNT (JSON string), ADMIN_PASSWORD, SESSION_SECRET
- * ENV (optional): PAYOUT_ELITE, PAYOUT_MID, PAYOUT_BOTTOM, STARTING_BALANCE, MANAGER_SESSION_HOURS, NODE_ENV, PORT
- */
-
-'use strict';
-
-/* =========================
-   Optional requires (so deploys don't crash if missing)
-========================= */
-function optRequire(name) { try { return require(name); } catch { return null; } }
+// server.js — Pro Clubs League backend (Firestore)
+// Everything included:
+// - Admin auth (env ADMIN_PASSWORD), sessions
+// - Manager codes: rotate/reset/claim + BULK ROTATE (CSV) + export
+// - Player claim + Free agents
+// - Rankings / wallets (daily payouts) / cup bonuses
+// - EA pass-through (numeric clubIds)
+// - Squad slots (15+) per club; players registry (EA usernames + aliases); name→id resolution
+// - Fixtures: create/list/public/scheduling/get/propose/vote/lineup/report/ingest-text
+// - Player season stats accumulation on report / ingest
+// - Champions Cup: randomize/save groups + live computed tables
+//
+// Required env:
+//   FIREBASE_SERVICE_ACCOUNT (JSON string; if multiline key, keep \n — handled below)
+//   ADMIN_PASSWORD           (e.g. "Chuyacc")
+//   SESSION_SECRET
+//
+// Optional env:
+//   PAYOUT_ELITE, PAYOUT_MID, PAYOUT_BOTTOM, STARTING_BALANCE
 
 const express = require('express');
 const path = require('path');
@@ -28,14 +24,8 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-const compression = optRequire('compression');
-const helmet = optRequire('helmet');
-const cors = optRequire('cors');
-const morgan = optRequire('morgan');
-
-// Node 18+/24+ have global fetch & AbortController
-const fetchFn = global.fetch;
-const AbortControllerPoly = global.AbortController;
+// Node 18+ has global fetch; fallback to node-fetch if missing
+const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
 
 /* =========================
    FIREBASE ADMIN INIT
