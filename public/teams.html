@@ -1152,29 +1152,35 @@ function renderCcFixtures(list){
     const hn = byId(f.home)?.name || f.home;
     const an = byId(f.away)?.name || f.away;
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
-    const badge = `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
+    const scoreTxt = (f.status==='final') ? (String(f.score?.hs||0)+'–'+String(f.score?.as||0)) : 'vs';
+    const badge = '<span class="chip">Champions Cup' + (f.group ? (' • Group '+escapeHtml(f.group)) : '') + (f.round ? (' • '+escapeHtml(f.round)) : '') + '</span>';
     const banner = getFixtureBanner();
-    const hLogo = teamLogoUrl(byId(f.home) || {name: hn});
-    const aLogo = teamLogoUrl(byId(f.away) || {name: an});
+    const hLogo = teamLogoUrl(byId(f.home) || { name: hn });
+    const aLogo = teamLogoUrl(byId(f.away) || { name: an });
     const canEdit = isAdmin || (meUser && (String(meUser.teamId)===String(f.home) || String(meUser.teamId)===String(f.away)));
-    const actions = canEdit ? `<div class="act"><button class="res-enter" data-id="${f.id}">Enter Result</button>${isAdmin?`<button class="json" data-id="${f.id}">Upload JSON</button>`:''}</div>` : '<div></div>';
-    return `<div class="fx" id="ccfx_${f.id}">
+    const actions = canEdit ? ('<div class="act"><button class="res-enter" data-id="'+f.id+'">Enter Result</button>' + (isAdmin?('<button class="json" data-id="'+f.id+'">Upload JSON</button>'):'') + '</div>') : '<div></div>';
+
+    return '<div class="fx" id="ccfx_'+f.id+'">
       <div>
-        ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
+        '+(banner ? '<img class="fx-banner" src="'+banner+'" alt="">' : '')+'
         <div class="vs" style="display:flex;align-items:center;gap:8px">
-          <img src="${hLogo}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #300000">
-          <strong>${escapeHtml(hn)}</strong>
-          <span class="muted">${scoreTxt}</span>
-          <img src="${aLogo}" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #300000">
-          <strong>${escapeHtml(an)}</strong>
+          <img src="'+hLogo+'" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #300000">
+          <strong>'+escapeHtml(hn)+'</strong>
+          <span class="muted">'+scoreTxt+'</span>
+          <img src="'+aLogo+'" alt="" style="width:28px;height:28px;border-radius:6px;object-fit:cover;border:1px solid #300000">
+          <strong>'+escapeHtml(an)+'</strong>
         </div>
-        <div class="meta">${badge} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
+        <div class="meta">'+badge+' • '+whenTxt+' • '+escapeHtml(f.status||'')+'</div>
       </div>
       <div class="center"></div>
-      ${actions}
-    </div>`;
-  }).join('') : `<div class="muted">No Champions Cup fixtures yet.</div>`;
+      '+actions+'
+    </div>';
+  }).join('') : '<div class="muted">No Champions Cup fixtures yet.</div>';
+
+  // Guard: ensure openResultModal exists to avoid breaking the page
+  if (typeof window.openResultModal !== 'function') {
+    window.openResultModal = function(){ alert('Result form is missing in this build.'); };
+  }
 
   // Bind result modal openers
   el.querySelectorAll('.res-enter').forEach(btn=>{
@@ -1182,11 +1188,7 @@ function renderCcFixtures(list){
       const id = btn.getAttribute('data-id');
       try{
         const d = await apiGet('/api/cup/fixtures/'+id);
-        if (typeof openResultModal === 'function') {
-          openResultModal(d.fixture);
-        } else {
-          alert('Result form unavailable in this build.');
-        }
+        openResultModal(d.fixture);
       }catch(e){ alert('Could not open result form: '+e.message); }
     };
   });
@@ -1216,6 +1218,7 @@ function renderCcFixtures(list){
     };
   });
 }
+
 –${f.score.as}` : 'vs';
     const badge = `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
     const banner = getFixtureBanner();
