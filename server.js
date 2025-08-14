@@ -1,7 +1,6 @@
 // server.js — Pro Clubs League backend (Firestore)
-// Clean build: no EA API dependency; supports squads, fixtures (incl. Champions Cup),
-// admin JSON/quick-paste results, dynamic News generation, and Discord webhook posts
-// for Champions Cup fixtures (created/scheduled/final) + consolidated upcoming/TBD posts.
+// Clean build: no EA API, Champions Cup (groups/fixtures/leaders), News, Discord posting,
+// fixtures scheduling & reporting, squads/players/free-agents, minimal rankings/wallets.
 
 const express = require('express');
 const path = require('path');
@@ -10,12 +9,11 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 // Optional middlewares (used if installed)
-let helmet = null, compression = null, cors = null, morgan = null, cron = null;
+let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
 try { compression = require('compression'); } catch {}
 try { cors = require('cors'); } catch {}
 try { morgan = require('morgan'); } catch {}
-try { cron = require('node-cron'); } catch {}
 
 // Node 18+ has global fetch; fallback if needed
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
@@ -48,17 +46,22 @@ const isProd = NODE_ENV === 'production';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'dev-session-secret';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 
-const PAYOUTS = {
-  elite : Number(process.env.PAYOUT_ELITE  || 1_100_000),
-  mid   : Number(process.env.PAYOUT_MID    ||   900_000),
-  bottom: Number(process.env.PAYOUT_BOTTOM ||   700_000),
-};
-const STARTING_BALANCE = Number(process.env.STARTING_BALANCE || 10_000_000);
+// Public base (for absolute asset URLs in Discord)
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || '').replace(/\/+$/,''); // no trailing slash
+const ABS = (p)=> PUBLIC_BASE_URL ? (PUBLIC_BASE_URL + p) : p;
 
 // Manager session lifetime (hours); must re-enter manager code when expired
 const MANAGER_SESSION_HOURS = Number(process.env.MANAGER_SESSION_HOURS || 12);
 
-// Cups & points
+// Minimal payouts (keep UI happy); feel free to change
+const PAYOUTS = {
+  elite : Number(process.env.PAYOUT_ELITE  || 1_000_000),
+  mid   : Number(process.env.PAYOUT_MID    ||   800_000),
+  bottom: Number(process.env.PAYOUT_BOTTOM ||   600_000),
+};
+const STARTING_BALANCE = Number(process.env.STARTING_BALANCE || 10_000_000);
+
+// Cup bonuses (kept light)
 const CUP_BONUSES = {
   winner:       6_000_000,
   runner_up:    3_600_000,
@@ -70,14 +73,6 @@ const CUP_BONUSES = {
 };
 const CUP_POINTS = { winner:60, runner_up:40, semifinal:25, quarterfinal:15, round_of_16:10, none:0 };
 
-// Champions Cup ID (keep in sync with frontend CC_ID) and helpers
-const CC_CURRENT_ID = process.env.CC_CURRENT_ID || 'UPCL_CC_2025_08';
-const CC_PREFIX = 'UPCL_CC';
-
-// Discord webhook config (optional)
-const DISCORD_WEBHOOK_CC = process.env.DISCORD_WEBHOOK_CC || '';
-const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || (isProd ? '' : `http://localhost:${PORT}`);
-
 /* =========================
    EXPRESS APP
 ========================= */
@@ -87,7 +82,7 @@ app.set('trust proxy', 1);
 if (helmet) app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 if (cors) app.use(cors({ origin: true, credentials: true }));
 if (compression) app.use(compression());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '1mb' }));
 if (morgan) app.use(morgan(isProd ? 'combined' : 'dev'));
 
 app.use(session({
@@ -116,7 +111,7 @@ const COL = {
   players     : () => db.collection('players'),     // docId = playerId
   clubSquadSlots: (clubId) => db.collection('clubSquads').doc(clubId).collection('slots'),
   playerStats : () => db.collection('playerStats'), // docId = `${season}_${playerId}`
-  champions   : () => db.collection('champions'),   // docId = cupId { groups:{A:[ids],...} }
+  champions   : () => db.collection('champions'),   // docId = cupId
   news        : () => db.collection('news'),        // docId = newsId
 };
 
@@ -169,101 +164,14 @@ function managerOwnsFixture(req, f) {
   return !!(u && u.role==='Manager' && isManagerActive(req) && [f.home, f.away].includes(u.teamId));
 }
 
-// Misc helpers
+// utils
+function leaguePoints(pos){ pos=Number(pos||0); if(!pos) return 0; if(pos===1) return 100; if(pos===2) return 80; if(pos<=4) return 60; if(pos<=8) return 40; return 20; }
+function tierFromPoints(points){ if(points>=120) return 'elite'; if(points>=60) return 'mid'; return 'bottom'; }
+function getDailyPayoutLocal(ranking){ const tier=(ranking?.tier)||'mid'; return PAYOUTS[tier]||PAYOUTS.mid; }
+function genCode(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join(''); }
 function seasonKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 function norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
-function genCode(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join(''); }
-
-/* =========================
-   DISCORD WEBHOOK (Champions Cup)
-========================= */
-function absUrl(u) {
-  if (!u) return '';
-  return /^https?:\/\//i.test(u) ? u : (PUBLIC_BASE_URL ? PUBLIC_BASE_URL.replace(/\/$/,'') : '') + u;
-}
-function isChampionsCup(cup) {
-  return String(cup||'').startsWith(CC_PREFIX);
-}
-async function postDiscord(payload) {
-  try {
-    if (!DISCORD_WEBHOOK_CC) return;
-    await fetchFn(DISCORD_WEBHOOK_CC, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
-      body: JSON.stringify(payload)
-    });
-  } catch (e) {
-    console.error('[discord] webhook send failed:', e.message);
-  }
-}
-// Minimal server-side team map for embeds (add as needed)
-const TEAMS_SERVER = new Map([
-  ['2491998', { name:'Royal Republic',   logo:'/assets/logos/royal-republic-logo.png' }],
-  ['1527486', { name:'Gungan FC',        logo:'/assets/logos/gungan-fc.png' }],
-  ['1969494', { name:'Club Frijol',      logo:'/assets/logos/club-frijol.png' }],
-  ['2086022', { name:'Brehemen',         logo:'/assets/logos/brehemen.png' }],
-  ['2462194', { name:'Costa Chica FC',   logo:'/assets/logos/costa-chica-fc.png' }],
-  ['5098824', { name:'Sporting de la ma',logo:'/assets/logos/sporting-de-la-ma.png' }],
-  ['4869810', { name:'Afc Tekki',        logo:'/assets/logos/afc-tekki.png' }],
-  ['576007',  { name:'Ethabella FC',     logo:'/assets/logos/ethabella-fc.png' }],
-  ['4933507', { name:'Loss Toyz',        logo:'/assets/logos/loss-toyz.png' }],
-  ['4824736', { name:'GoldenGoals FC',   logo:'/assets/logos/goldengoals-fc.png' }],
-  ['481847',  { name:'Rooney tunes',     logo:'/assets/logos/rooney-tunes.png' }],
-  ['3050467', { name:'invincible afc',   logo:'/assets/logos/invincible-afc.png' }],
-  ['4154835', { name:'khalch Fc',        logo:'/assets/logos/khalch-fc.png' }],
-  ['3638105', { name:'Real mvc',         logo:'/assets/logos/real-mvc.png' }],
-  ['55408',   { name:'Elite VT',         logo:'/assets/logos/elite-vt.png' }],
-  ['4819681', { name:'EVERYTHING DEAD',  logo:'/assets/logos/everything-dead.png' }],
-  ['35642',   { name:'EBK FC',           logo:'/assets/logos/ebk-fc.png' }],
-  // Manual clubs
-  ['afc-warriors',  { name:'AFC Warriors',  logo:'/assets/logos/afc-warriors.png' }],
-  ['jids-trivela',  { name:'Jids Trivela',  logo:'/assets/logos/jids-trivela.png' }],
-  ['razorblack-fc', { name:'Razorblack FC', logo:'/assets/logos/razorblack-fc.png' }],
-  ['fc-dhizz',      { name:'FC Dhizz',      logo:'/assets/logos/fc-dhizz.png' }],
-]);
-function teamMeta(id) {
-  const m = TEAMS_SERVER.get(String(id));
-  return m ? { name: m.name, logo: absUrl(m.logo) } : { name:String(id), logo: 'https://via.placeholder.com/128?text=Club' };
-}
-function discordFixtureEmbed(fixture, state='created') {
-  const H = teamMeta(fixture.home);
-  const A = teamMeta(fixture.away);
-  const whenUnix = fixture.when ? Math.floor(fixture.when / 1000) : null;
-
-  const title =
-    state === 'final'
-      ? `FT ${fixture.score?.hs ?? 0}-${fixture.score?.as ?? 0}: ${H.name} vs ${A.name}`
-      : state === 'scheduled'
-        ? `Scheduled: ${H.name} vs ${A.name}`
-        : `New fixture: ${H.name} vs ${A.name}`;
-
-  const descParts = [];
-  if (fixture.round) descParts.push(`**${fixture.round}**`);
-  if (fixture.group) descParts.push(`Group ${fixture.group}`);
-  descParts.push(whenUnix ? `<t:${whenUnix}:F>` : 'TBD');
-  const description = descParts.join(' • ');
-
-  const toLines = arr => (arr||[])
-    .map(p => `• ${p.player || ('#' + String(p.playerId||'').slice(0,6))}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}`)
-    .join('\n') || '—';
-
-  return {
-    username: 'UPCL',
-    embeds: [{
-      title,
-      description,
-      color: state === 'final' ? 0x2ecc71 : state === 'scheduled' ? 0xf1c40f : 0xe74c3c,
-      author: { name: H.name, icon_url: H.logo },
-      thumbnail: { url: A.logo },
-      image: { url: absUrl('/assets/ui/fixture-banner.png') },
-      fields: state === 'final' ? [
-        { name: H.name, value: toLines(fixture.details?.home), inline: true },
-        { name: A.name, value: toLines(fixture.details?.away), inline: true }
-      ] : [],
-      footer: { text: fixture.cup || '' }
-    }]
-  };
-}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
 /* =========================
    AUTH (Admin + Session User)
@@ -334,13 +242,13 @@ app.post('/api/clubs/:clubId/claim-manager', wrap(async (req,res)=>{
   if (!ok) return res.status(403).json({ error: 'Invalid code' });
 
   req.session.user = {
-    id: uuidv4(),
+    id: uuidv4(), // ephemeral id per session
     name: String(name).trim(),
     role: 'Manager',
     teamId: String(clubId),
   };
   req.session.managerExpiresAt = Date.now() + MANAGER_SESSION_HOURS * 60 * 60 * 1000;
-  await updateDoc('clubCodes', clubId, { lastUsedAt: Date.now() });
+  await updateDoc('clubCodes', clubId, { lastUsedAt: Date.now() }); // optional audit
 
   res.json({ ok:true, user: userForClient(req), expiresAt: req.session.managerExpiresAt });
 }));
@@ -392,12 +300,8 @@ app.delete('/api/free-agents/me', requireManagerOrAdmin, wrap(async (req, res) =
 }));
 
 /* =========================
-   RANKINGS / PAYOUTS / WALLETS (light)
+   RANKINGS / PAYOUTS / WALLETS (minimal to support UI)
 ========================= */
-function leaguePoints(pos){ pos=Number(pos||0); if(!pos) return 0; if(pos===1) return 100; if(pos===2) return 80; if(pos<=4) return 60; if(pos<=8) return 40; return 20; }
-function tierFromPoints(points){ if(points>=120) return 'elite'; if(points>=60) return 'mid'; return 'bottom'; }
-function getDailyPayoutLocal(ranking){ const tier=(ranking?.tier)||'mid'; return PAYOUTS[tier]||PAYOUTS.mid; }
-
 app.get('/api/rankings', wrap(async (_req,res)=>{
   const all = await listAll('rankings');
   const map = {};
@@ -453,8 +357,6 @@ app.get('/api/wallets/:clubId', wrap(async (req,res)=>{
   ]);
   res.json({ wallet: w, preview, perDay: getDailyPayoutLocal(r) });
 }));
-
-// Transactional collect
 app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), wrap(async (req,res)=>{
   const { clubId } = req.params;
   const result = await db.runTransaction(async (tx)=>{
@@ -470,7 +372,7 @@ app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), wr
     if (amount <= 0) return { ok:false, message:'No payout available yet' };
     tx.set(wRef, {
       balance: Number(w.balance||0) + amount,
-      lastCollectedAt: (w.lastCollectedAt || 0) + days * 86_400_000,
+      lastCollectedAt: (w.lastCollectedAt || 0) + days * 86_400_000, // preserve partial day
     }, { merge:false });
     return { ok:true, collected: amount };
   });
@@ -479,49 +381,7 @@ app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), wr
 }));
 
 /* =========================
-   CUP BONUSES (Admin)
-========================= */
-app.post('/api/bonuses/cup', requireAdmin, wrap(async (req,res)=>{
-  const dryRun = !!req.body?.dryRun;
-  const season = (req.body?.season || '').trim() || seasonKey();
-
-  const awardsDocRef = COL.awards().doc(season);
-  const awardsDoc = await awardsDocRef.get();
-  const already = awardsDoc.exists ? (awardsDoc.data().paid || {}) : {};
-
-  const allRankings = await listAll('rankings');
-  let willAward = 0, actually = 0;
-  const results = [];
-
-  for (const r of allRankings){
-    const cup = r.cup || 'none';
-    const bonus = Number(CUP_BONUSES[cup] || 0);
-    const paid = !!already[r.id];
-    results.push({ clubId: r.id, cup, bonus, alreadyPaid: paid });
-    willAward += bonus;
-    if (!dryRun && bonus>0 && !paid){
-      await COL.wallets().doc(r.id).set({
-        balance: FieldValue.increment(bonus),
-        lastCollectedAt: FieldValue.serverTimestamp(),
-      }, { merge:true });
-      already[r.id] = bonus;
-      actually += bonus;
-    }
-  }
-
-  if (!dryRun){
-    await awardsDocRef.set({ paid: already }, { merge:false });
-  }
-  res.json({ ok:true, season, dryRun, totalAwarded: dryRun ? willAward : actually, results });
-}));
-app.get('/api/bonuses/cup', requireAdmin, wrap(async (req,res)=>{
-  const season = (req.query.season || '').trim() || seasonKey();
-  const doc = await COL.awards().doc(season).get();
-  res.json({ ok:true, season, paid: doc.exists ? (doc.data().paid || {}) : {} });
-}));
-
-/* =========================
-   SQUAD SLOTS (with hydration)
+   SQUAD SLOTS (with batched hydration)
 ========================= */
 app.post('/api/clubs/:clubId/squad/bootstrap', requireAdmin, wrap(async (req, res) => {
   const { clubId } = req.params;
@@ -586,7 +446,7 @@ app.patch('/api/clubs/:clubId/squad/slots/:slotId', requireManagerOfClubParam('c
 }));
 
 /* =========================
-   PLAYER REGISTRY
+   PLAYER REGISTRY & RESOLUTION
 ========================= */
 app.post('/api/players/register', wrap(async (req, res) => {
   const { eaName, platform='manual', aliases=[] } = req.body || {};
@@ -613,13 +473,9 @@ app.post('/api/players/:playerId/update', requireAdmin, wrap(async (req, res) =>
   res.json({ ok:true, player: doc.data() });
 }));
 
-/* =========================
-   NAME → ID RESOLUTION
-========================= */
 async function resolvePlayerIdByName(name, clubId){
   const n = norm(name);
   if (!n) return null;
-
   // Prefer the club's assigned slots
   const snap = await COL.clubSquadSlots(clubId).get();
   for (const d of snap.docs){
@@ -634,12 +490,11 @@ async function resolvePlayerIdByName(name, clubId){
   // Fallback global alias match
   const q = await COL.players().where('search','array-contains', n).limit(1).get();
   if (!q.empty) return q.docs[0].data().id;
-
   return null;
 }
 
 /* =========================
-   PLAYER STATS (per season) + news streak helpers
+   PLAYER STATS (per season) — supports leaders & streaks
 ========================= */
 async function bumpPlayerStatsFromFixture(f){
   const season = seasonKey();
@@ -648,19 +503,14 @@ async function bumpPlayerStatsFromFixture(f){
       if (!r.playerId) continue;
       const id = `${season}_${r.playerId}`;
       const ref = COL.playerStats().doc(id);
-      const inc = {
+      await ref.set({
         season, playerId:r.playerId,
         goals: FieldValue.increment(Number(r.goals||0)),
         assists: FieldValue.increment(Number(r.assists||0)),
         ratingsSum: FieldValue.increment(Number(r.rating||0)),
         ratingsCount: FieldValue.increment(r.rating ? 1 : 0),
-        matches: FieldValue.increment(1),
-      };
-      if (Number(r.goals||0) > 0) {
-        await ref.set({ ...inc, scoringStreak: FieldValue.increment(1), lastScoredAt: Date.now() }, { merge:true });
-      } else {
-        await ref.set({ ...inc, scoringStreak: 0 }, { merge:true });
-      }
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge:true });
     }
   }
 }
@@ -668,7 +518,7 @@ async function bumpPlayerStatsFromFixture(f){
 /* =========================
    FIXTURES
 ========================= */
-// Create fixture (Admin). Use cup ids: "UPCL" (league cup) or "UPCL_CC_YYYY_MM" (Champions)
+// Create fixture (Admin). Use cup ids: "UPCL" (league) or "UPCL_CC_YYYY_MM" (Champions)
 app.post('/api/cup/fixtures', requireAdmin, wrap(async (req, res) => {
   const { home, away, round, cup = 'UPCL', group=null, when=null } = req.body || {};
   if (!home || !away) return res.status(400).json({ error: 'home and away required' });
@@ -695,7 +545,10 @@ app.post('/api/cup/fixtures', requireAdmin, wrap(async (req, res) => {
   };
   await setDoc('fixtures', id, fixture);
 
-  if (isChampionsCup(fixture.cup)) postDiscord(discordFixtureEmbed(fixture, 'created'));
+  // Discord: "New fixture" only for Champions Cup
+  if ((process.env.DISCORD_WEBHOOK_CC||'') && String(cup).startsWith('UPCL_CC')) {
+    try { await discordPostSimple(`New CC fixture: ${fixture.home} vs ${fixture.away} — ${fixture.round}${fixture.group?` (Group ${fixture.group})`:''}`); } catch {}
+  }
 
   res.json({ ok:true, fixture });
 }));
@@ -728,7 +581,7 @@ app.get('/api/cup/fixtures/scheduling', requireManagerOrAdmin, wrap(async (req, 
   res.json({ fixtures: snap.docs.map(d => d.data()) });
 }));
 
-// List (compat) + optional filter by club
+// List + optional filter by club
 app.get('/api/cup/fixtures', wrap(async (req, res) => {
   const cup = (req.query.cup || 'UPCL').trim();
   const clubId = (req.query.clubId || '').trim();
@@ -751,12 +604,12 @@ app.post('/api/cup/fixtures/:id/propose', requireManagerOrAdmin, wrap(async (req
   if (!f) return res.status(404).json({ error:'not found' });
   const at = Number(req.body?.at || 0);
   if (!at) return res.status(400).json({ error:'timestamp (ms) required' });
-  const asAdmin = isAdminSession(req);
-  if (!asAdmin && !managerOwnsFixture(req, f)) return res.status(403).json({ error:'Managers of these clubs only' });
+  const isAdmin = isAdminSession(req);
+  if (!isAdmin && !managerOwnsFixture(req, f)) return res.status(403).json({ error:'Managers of these clubs only' });
 
   f.proposals = f.proposals || [];
   f.votes = f.votes || {};
-  if (!f.proposals.some(p=>Number(p.at)===at)) f.proposals.push({ at, by: asAdmin ? 'admin' : me(req).teamId });
+  if (!f.proposals.some(p=>Number(p.at)===at)) f.proposals.push({ at, by: isAdmin ? 'admin' : me(req).teamId });
   f.votes[String(at)] = f.votes[String(at)] || {};
   await setDoc('fixtures', f.id, f);
   res.json({ ok:true, fixture: f });
@@ -771,10 +624,10 @@ app.post('/api/cup/fixtures/:id/vote', requireManagerOrAdmin, wrap(async (req, r
   const agree = !!req.body?.agree;
   if (!at) return res.status(400).json({ error:'invalid slot' });
 
-  const asAdmin = isAdminSession(req);
-  if (!asAdmin && !managerOwnsFixture(req, f)) return res.status(403).json({ error:'Managers of these clubs only' });
+  const isAdmin = isAdminSession(req);
+  if (!isAdmin && !managerOwnsFixture(req, f)) return res.status(403).json({ error:'Managers of these clubs only' });
 
-  const teamId = asAdmin ? 'admin' : me(req).teamId;
+  const teamId = isAdmin ? 'admin' : me(req).teamId;
   f.votes = f.votes || {};
   f.votes[at] = f.votes[at] || {};
   f.votes[at][teamId] = agree;
@@ -784,7 +637,10 @@ app.post('/api/cup/fixtures/:id/vote', requireManagerOrAdmin, wrap(async (req, r
     f.status = 'scheduled';
     f.timeLockedAt = Date.now();
 
-    if (isChampionsCup(f.cup)) postDiscord(discordFixtureEmbed(f, 'scheduled'));
+    // Discord: "Scheduled" for Champions Cup
+    if ((process.env.DISCORD_WEBHOOK_CC||'') && String(f.cup).startsWith('UPCL_CC')) {
+      try { await discordPostSimple(`CC match scheduled: ${f.home} vs ${f.away} — ${new Date(f.when).toLocaleString()} ${f.group?`(Group ${f.group})`: (f.round?`(${f.round})`: '')}`); } catch {}
+    }
   }
   await setDoc('fixtures', f.id, f);
   res.json({ ok:true, fixture: f });
@@ -795,54 +651,15 @@ app.put('/api/cup/fixtures/:id/lineup', requireManagerOrAdmin, wrap(async (req, 
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error:'not found' });
 
-  const asAdmin = isAdminSession(req);
-  if (!asAdmin && !managerOwnsFixture(req, f)) return res.status(403).json({ error:'Managers of these clubs only' });
+  const isAdmin = isAdminSession(req);
+  if (!isAdmin && !managerOwnsFixture(req, f)) return res.status(403).json({ error:'Managers of these clubs only' });
 
   const { formation, lineup } = req.body || {};
   f.lineups = f.lineups || {};
-  const owner = asAdmin ? 'admin' : me(req).teamId;
+  const owner = isAdmin ? 'admin' : me(req).teamId;
   f.lineups[owner] = { formation: String(formation||''), lineup: lineup && typeof lineup==='object' ? lineup : {} , at: Date.now() };
   await setDoc('fixtures', f.id, f);
   res.json({ ok:true, fixture: f });
-}));
-
-/* ===== Results ingest & News ===== */
-
-// Admin quick paste (loose text)
-app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res) => {
-  const f = await getDoc('fixtures', req.params.id);
-  if (!f) return res.status(404).json({ error: 'not found' });
-  const { text } = req.body || {};
-  if (!text) return res.status(400).json({ error: 'text required' });
-
-  const parsed = parseLooseResultText(text);
-  if (!parsed) return res.status(400).json({ error: 'could not parse input' });
-
-  // resolve names to ids
-  const out = { home: [], away: [] }, unresolved = [];
-  for (const side of ['home','away']){
-    for (const r of parsed.details[side]){
-      let pid = r.playerId || null;
-      if (!pid && r.player) pid = await resolvePlayerIdByName(r.player, side==='home' ? f.home : f.away);
-      const item = { playerId: pid||'', player: r.player||'', goals:Number(r.goals||0), assists:Number(r.assists||0), rating:Number(r.rating||0) };
-      out[side].push(item);
-      if (!pid && r.player) unresolved.push({ side, name:r.player });
-    }
-  }
-
-  f.score = parsed.score;
-  f.details = out;
-  f.unresolved = unresolved;
-  f.status = 'final';
-  if (!f.when) f.when = Date.now();
-
-  await setDoc('fixtures', f.id, f);
-  await bumpPlayerStatsFromFixture(f);
-  await maybeCreateNewsFromFixture(f);
-
-  if (isChampionsCup(f.cup)) postDiscord(discordFixtureEmbed(f, 'final'));
-
-  res.json({ ok: true, fixture: f });
 }));
 
 // Report final (accepts playerId OR player name)
@@ -877,10 +694,55 @@ app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req,
 
   await setDoc('fixtures', f.id, f);
   await bumpPlayerStatsFromFixture(f);
-  await maybeCreateNewsFromFixture(f);
 
-  if (isChampionsCup(f.cup)) postDiscord(discordFixtureEmbed(f, 'final'));
+  // News: final + hat-tricks
+  try { await newsFromFinal(f); } catch(e){ console.warn('newsFromFinal:', e.message); }
 
+  // Discord: "Final" for Champions Cup
+  if ((process.env.DISCORD_WEBHOOK_CC||'') && String(f.cup).startsWith('UPCL_CC')) {
+    const scorers = [];
+    for (const s of ['home','away']){
+      for (const r of (f.details?.[s]||[])) if (Number(r.goals||0)>0) scorers.push(`${r.player||('#'+(r.playerId||'').slice(0,6))} (${r.goals})`);
+    }
+    try {
+      await discordPostSimple(`FT (CC): ${f.home} ${f.score.hs}-${f.score.as} ${f.away}${scorers.length?`\nScorers: ${scorers.join(', ')}`:''}`);
+    } catch {}
+  }
+
+  res.json({ ok: true, fixture: f });
+}));
+
+// Admin quick paste (loose)
+app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res) => {
+  const f = await getDoc('fixtures', req.params.id);
+  if (!f) return res.status(404).json({ error: 'not found' });
+  const { text } = req.body || {};
+  if (!text) return res.status(400).json({ error: 'text required' });
+
+  const parsed = parseLooseResultText(text);
+  if (!parsed) return res.status(400).json({ error: 'could not parse input' });
+
+  // resolve names to ids
+  const out = { home: [], away: [] }, unresolved = [];
+  for (const side of ['home','away']){
+    for (const r of parsed.details[side]){
+      let pid = r.playerId || null;
+      if (!pid && r.player) pid = await resolvePlayerIdByName(r.player, side==='home' ? f.home : f.away);
+      const item = { playerId: pid||'', player: r.player||'', goals:Number(r.goals||0), assists:Number(r.assists||0), rating:Number(r.rating||0) };
+      out[side].push(item);
+      if (!pid && r.player) unresolved.push({ side, name:r.player });
+    }
+  }
+
+  f.score = parsed.score;
+  f.details = out;
+  f.unresolved = unresolved;
+  f.status = 'final';
+  if (!f.when) f.when = Date.now();
+
+  await setDoc('fixtures', f.id, f);
+  await bumpPlayerStatsFromFixture(f);
+  try { await newsFromFinal(f); } catch{}
   res.json({ ok: true, fixture: f });
 }));
 
@@ -932,87 +794,12 @@ function parseLooseResultText(str) {
 }
 
 /* =========================
-   NEWS (auto from fixtures)
-========================= */
-async function maybeCreateNewsFromFixture(f) {
-  try {
-    // Hattricks
-    for (const side of ['home','away']) {
-      for (const r of (f.details?.[side] || [])) {
-        if (Number(r.goals||0) >= 3) {
-          const id = `news_ht_${f.id}_${side}_${r.playerId||norm(r.player)}`;
-          const exists = await COL.news().doc(id).get();
-          if (!exists.exists) {
-            await COL.news().doc(id).set({
-              id, type:'hattrick', cup:f.cup, fixtureId:f.id,
-              player: r.player || '', playerId: r.playerId || '',
-              teamId: side==='home'?f.home:f.away,
-              goals: Number(r.goals||0), createdAt: Date.now(),
-              text: `${r.player || 'Unknown'} scored a hat-trick for ${side==='home'?teamMeta(f.home).name:teamMeta(f.away).name}!`
-            });
-          }
-        }
-      }
-    }
-    // Finals headline
-    {
-      const id = `news_ft_${f.id}`;
-      const exists = await COL.news().doc(id).get();
-      if (!exists.exists) {
-        await COL.news().doc(id).set({
-          id, type:'final', cup:f.cup, fixtureId:f.id,
-          score: f.score, home:f.home, away:f.away, when:f.when||Date.now(),
-          createdAt: Date.now(),
-          text: `FT ${teamMeta(f.home).name} ${f.score.hs}-${f.score.as} ${teamMeta(f.away).name}`
-        });
-      }
-    }
-    // Scoring streaks (3+)
-    for (const side of ['home','away']) {
-      for (const r of (f.details?.[side] || [])) {
-        if (!r.playerId || Number(r.goals||0) <= 0) continue;
-        const psDoc = await COL.playerStats().doc(`${seasonKey()}_${r.playerId}`).get();
-        const st = psDoc.exists ? (psDoc.data().scoringStreak || 0) : 0;
-        if (st >= 3) {
-          const id = `news_streak_${f.id}_${r.playerId}`;
-          const exists = await COL.news().doc(id).get();
-          if (!exists.exists) {
-            await COL.news().doc(id).set({
-              id, type:'streak', cup:f.cup, fixtureId:f.id,
-              player: r.player || '', playerId: r.playerId,
-              teamId: side==='home'?f.home:f.away,
-              streak: st, createdAt: Date.now(),
-              text: `${r.player || 'Player'} has scored in ${st} consecutive matches.`
-            });
-          }
-        }
-      }
-    }
-  } catch (e) {
-    console.error('[news] generation failed:', e.message);
-  }
-}
-
-// News feed (public)
-app.get('/api/news', wrap(async (req,res)=>{
-  const cup = (req.query.cup || '').trim();
-  let q = COL.news().orderBy('createdAt', 'desc').limit(50);
-  if (cup) {
-    const snap = await q.get();
-    const items = snap.docs.map(d=>d.data()).filter(x=>x.cup===cup);
-    return res.json({ items });
-  }
-  const snap = await q.get();
-  res.json({ items: snap.docs.map(d=>d.data()) });
-}));
-
-/* =========================
-   CHAMPIONS CUP (Groups + Tables + Leaders)
+   CHAMPIONS CUP (Groups A–D + Leaders)
 ========================= */
 app.post('/api/champions/:cupId/groups', requireAdmin, wrap(async (req,res)=>{
   const { cupId } = req.params;
-  const groups = req.body?.groups || {}; // e.g., { A:[ids], B:[ids], ... } — any count is fine
-  const doc = { cupId, groups, createdAt: Date.now() };
+  const groups = req.body?.groups || {};
+  const doc = { cupId, groups:{ A:groups.A||[], B:groups.B||[], C:groups.C||[], D:groups.D||[] }, createdAt: Date.now() };
   await COL.champions().doc(cupId).set(doc);
   res.json({ ok:true, cup:doc });
 }));
@@ -1020,17 +807,11 @@ app.post('/api/champions/:cupId/groups', requireAdmin, wrap(async (req,res)=>{
 app.post('/api/champions/:cupId/randomize', requireAdmin, wrap(async (req,res)=>{
   const { cupId } = req.params;
   let clubs = Array.isArray(req.body?.clubs) ? req.body.clubs.slice() : [];
-  if (!clubs.length) return res.status(400).json({ error:'Provide clubs[] with 1+ clubIds' });
-  const letters = String(req.body?.groupsAlpha || 'ABCD').split('').filter(Boolean);
-  if (!letters.length) return res.status(400).json({ error:'groupsAlpha required (e.g., "ABC" or "ABCD")' });
-
-  // shuffle
-  for (let i=clubs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [clubs[i],clubs[j]]=[clubs[j],clubs[i]]; }
-
-  const groups = {};
-  letters.forEach(l=>groups[l]=[]);
-  clubs.forEach((id,i)=> groups[letters[i % letters.length]].push(String(id)));
-
+  if (clubs.length<4) return res.status(400).json({ error:'Need at least 4 clubs total' });
+  shuffle(clubs);
+  // Distribute across A–D (works with 8, 12, 16, etc.)
+  const groups = { A:[], B:[], C:[], D:[] };
+  clubs.forEach((id,i)=> groups[['A','B','C','D'][i%4]].push(String(id)));
   const doc = { cupId, groups, createdAt: Date.now() };
   await COL.champions().doc(cupId).set(doc);
   res.json({ ok:true, cup:doc });
@@ -1039,11 +820,10 @@ app.post('/api/champions/:cupId/randomize', requireAdmin, wrap(async (req,res)=>
 async function computeGroupTables(cupId, groups){
   const snap = await COL.fixtures().where('cup','==',cupId).get();
   const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
-  const letters = Object.keys(groups||{});
-  const table = {};
-  const touch = (g,id)=> { table[g] = table[g] || {}; table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 }; };
+  const table = { A:{}, B:{}, C:{}, D:{} };
+  const touch = (g,id)=> table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
 
-  for (const g of letters){
+  for (const g of ['A','B','C','D']){
     for (const id of (groups[g]||[])) touch(g,id);
   }
   for (const f of fx){
@@ -1059,8 +839,8 @@ async function computeGroupTables(cupId, groups){
     else { H.D++; A.D++; H.Pts++; A.Pts++; }
   }
   const sorted = {};
-  for (const g of letters){
-    sorted[g] = Object.values(table[g]||{}).sort((x,y)=>
+  for (const g of ['A','B','C','D']){
+    sorted[g] = Object.values(table[g]).sort((x,y)=>
       (y.Pts-x.Pts) || (y.GD-x.GD) || (y.GF - x.GF));
   }
   return sorted;
@@ -1069,7 +849,7 @@ async function computeGroupTables(cupId, groups){
 app.get('/api/champions/:cupId', wrap(async (req,res)=>{
   const { cupId } = req.params;
   const snap = await COL.champions().doc(cupId).get();
-  const cup = snap.exists ? snap.data() : { cupId, groups:{}, createdAt: Date.now() };
+  const cup = snap.exists ? snap.data() : { cupId, groups:{A:[],B:[],C:[],D:[]}, createdAt: Date.now() };
   const tables = await computeGroupTables(cupId, cup.groups);
   res.json({ ok:true, cup, tables });
 }));
@@ -1087,10 +867,9 @@ app.get('/api/champions/:cupId/leaders', wrap(async (req,res)=>{
 
   for(const f of fx){
     for(const side of ['home','away']){
-      const clubId = side==='home'?f.home:f.away;
       for(const r of (f.details?.[side]||[])){
         if(!r.playerId) continue;
-        meta.set(r.playerId,{ name: r.player || `#${String(r.playerId).slice(0,6)}`, clubId });
+        meta.set(r.playerId,{ name: r.player || `#${String(r.playerId).slice(0,6)}` });
         if(r.goals)   bump(goals,   r.playerId, Number(r.goals||0));
         if(r.assists) bump(assists, r.playerId, Number(r.assists||0));
       }
@@ -1105,93 +884,179 @@ app.get('/api/champions/:cupId/leaders', wrap(async (req,res)=>{
 }));
 
 /* =========================
-   DISCORD: Current & Upcoming (Scheduled + TBD)
+   NEWS (finals + hat-tricks)
 ========================= */
-async function getCCFixtures(cupId) {
-  const snap = await COL.fixtures().where('cup','==', cupId).get();
-  return snap.docs.map(d=>d.data());
-}
-function formatFixtureLine(f) {
-  const H = teamMeta(f.home), A = teamMeta(f.away);
-  const bits = [];
-  if (f.round) bits.push(`**${f.round}**`);
-  if (f.group) bits.push(`Group ${f.group}`);
-  if (f.when) {
-    const unix = Math.floor(f.when/1000);
-    bits.push(`<t:${unix}:F>`);
-  } else {
-    bits.push('TBD');
+async function newsFromFinal(f){
+  const idFinal = `final_${f.id}`;
+  await COL.news().doc(idFinal).set({
+    id: idFinal, type:'final', ts: Date.now(),
+    cup: f.cup, group: f.group||null, round: f.round||'',
+    home: f.home, away: f.away, score: f.score,
+  });
+
+  // Hat-tricks
+  for (const side of ['home','away']){
+    for (const r of (f.details?.[side]||[])){
+      const g = Number(r.goals||0);
+      if (g>=3){
+        const nid = `hattrick_${f.id}_${side}_${r.playerId||norm(r.player||'')||uuidv4()}`;
+        await COL.news().doc(nid).set({
+          id: nid, type:'hattrick', ts: Date.now(),
+          cup: f.cup, group: f.group||null, round: f.round||'',
+          club: side==='home'?f.home:f.away,
+          playerId: r.playerId||'', player: r.player||'',
+          goals: g
+        });
+      }
+    }
   }
-  return `${H.name} vs ${A.name}\n${bits.join(' • ')}`;
-}
-async function buildUpcomingPayload(cupId) {
-  const now = Date.now();
-  const all = await getCCFixtures(cupId);
-
-  const scheduled = all
-    .filter(f => f.status !== 'final' && !!f.when && f.when >= now)
-    .sort((a,b) => (a.when||0) - (b.when||0))
-    .slice(0, 15);
-
-  const tbd = all
-    .filter(f => f.status !== 'final' && !f.when)
-    .sort((a,b) => (b.createdAt||0) - (a.createdAt||0))
-    .slice(0, 15);
-
-  const fields = [];
-
-  if (scheduled.length) {
-    fields.push({ name: '— Scheduled —', value: ' ', inline: false });
-    scheduled.forEach(f => fields.push({
-      name: '\u200b',
-      value: formatFixtureLine(f),
-      inline: false
-    }));
-  }
-
-  if (tbd.length) {
-    fields.push({ name: '— TBD / Negotiating —', value: ' ', inline: false });
-    tbd.forEach(f => fields.push({
-      name: '\u200b',
-      value: formatFixtureLine(f),
-      inline: false
-    }));
-  }
-
-  return {
-    payload: {
-      username: 'UPCL',
-      embeds: [{
-        title: 'Champions Cup — Current & Upcoming Fixtures',
-        color: 0x7289da,
-        fields: fields.length ? fields : [{ name: '—', value: 'No current/upcoming fixtures.', inline: false }],
-        footer: { text: cupId }
-      }]
-    },
-    counts: { scheduled: scheduled.length, tbd: tbd.length }
-  };
 }
 
-// Manual consolidated post
-app.post('/api/discord/cc/upcoming', requireAdmin, wrap(async (req, res) => {
-  const cupId = (req.query.cup || CC_CURRENT_ID);
-  const { payload, counts } = await buildUpcomingPayload(cupId);
-  await postDiscord(payload);
-  res.json({ ok:true, cup: cupId, ...counts });
+app.get('/api/news', wrap(async (req,res)=>{
+  const limit = Math.max(1, Math.min(50, Number(req.query.limit || 20)));
+  const snap = await COL.news().orderBy('ts','desc').limit(limit).get();
+  res.json({ ok:true, items: snap.docs.map(d=>d.data()) });
 }));
 
-// Optional CRON for daily consolidated post
-if (cron && process.env.CRON_DISCORD_CC) {
-  cron.schedule(process.env.CRON_DISCORD_CC, async () => {
-    try {
-      const cupId = CC_CURRENT_ID;
-      const { payload } = await buildUpcomingPayload(cupId);
-      await postDiscord(payload);
-    } catch (e) {
-      console.error('[discord] daily post error:', e.message);
-    }
+/* =========================
+   DISCORD — helpers & routes
+========================= */
+const DISCORD_WEBHOOK_CC = process.env.DISCORD_WEBHOOK_CC || '';
+
+async function discordSend(webhookUrl, payload){
+  const r = await (global.fetch || fetchFn)(webhookUrl, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
   });
+  if (!r.ok){
+    const t = await r.text().catch(()=> '');
+    throw new Error(`Discord ${r.status}: ${t}`);
+  }
 }
+async function discordPostSimple(text){
+  if (!DISCORD_WEBHOOK_CC) throw new Error('DISCORD_WEBHOOK_CC not set');
+  await discordSend(DISCORD_WEBHOOK_CC, { content: text });
+}
+
+// Debug routes
+app.get('/api/debug/discord', requireAdmin, wrap(async (req,res)=>{
+  const w = DISCORD_WEBHOOK_CC;
+  const masked = w ? w.replace(
+    /https:\/\/discord\.com\/api\/webhooks\/(\d+)\/(.{6})(.*)(.{6})$/,
+    (m,id,a,b,c)=>`https://discord.com/api/webhooks/${id}/${a}…${c}`
+  ) : '(unset)';
+  res.json({ ok:true, hasWebhook: !!w, webhookMasked: masked, nodeEnv: NODE_ENV });
+}));
+app.post('/api/discord/test', requireAdmin, wrap(async (req,res)=>{
+  if (!DISCORD_WEBHOOK_CC) return res.status(500).json({ error:'DISCORD_WEBHOOK_CC not set' });
+  const { msg = 'Ping from server', thread_name = '' } = req.body || {};
+  const payload = thread_name ? { thread_name, content: msg } : { content: msg };
+  const r = await (global.fetch || fetchFn)(DISCORD_WEBHOOK_CC, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  const text = await r.text().catch(()=> '');
+  res.json({ ok: r.ok, status: r.status, note: '204 means accepted', bodySample: text.slice(0,200) });
+}));
+
+// Consolidated "upcoming" poster (Scheduled + optional TBD)
+app.post('/api/discord/cc/upcoming', requireAdmin, wrap(async (req,res)=>{
+  if (!DISCORD_WEBHOOK_CC) return res.status(500).json({ error:'DISCORD_WEBHOOK_CC not set' });
+
+  const cup = String(req.query.cup || '').trim();
+  if (!cup || !cup.startsWith('UPCL_CC')) return res.status(400).json({ error:'Provide Champions Cup id (starts with UPCL_CC).' });
+
+  const includeTbd = String(req.query.includeTbd || '0') === '1';
+  const dry = String(req.query.dry || '0') === '1';
+
+  const snap = await COL.fixtures().where('cup','==',cup).get();
+  const all  = snap.docs.map(d=>d.data());
+  const now  = Date.now();
+
+  const scheduled = all.filter(f => f.status==='scheduled' && (!f.when || f.when >= now));
+  const tbd = includeTbd ? all.filter(f => f.status!=='final' && !f.when) : [];
+
+  const fmt = (ms)=> ms ? new Date(ms).toLocaleString() : 'TBD';
+  const badge = (f)=> f.group ? `Group ${f.group}` : (f.round||'');
+  const line = (f) => `${f.home} vs ${f.away} — ${fmt(f.when)}${badge(f)?` (${badge(f)})`:''}`;
+
+  const desc = [];
+  if (scheduled.length){
+    desc.push(`**Scheduled**`);
+    scheduled.sort((a,b)=>(a.when||0)-(b.when||0)).forEach(f=>desc.push(`• ${line(f)}`));
+  }
+  if (tbd.length){
+    if (desc.length) desc.push('');
+    desc.push(`**TBD / negotiating**`);
+    tbd.forEach(f=>desc.push(`• ${line(f)}`));
+  }
+  if (!desc.length){
+    return res.json({ ok:true, scheduled:0, tbd:0, posted:false, dry });
+  }
+
+  const embed = {
+    title: 'UPCL Champions Cup – Fixtures',
+    description: desc.join('\n'),
+    timestamp: new Date().toISOString(),
+    footer: { text: cup }
+  };
+
+  if (!dry) await discordSend(DISCORD_WEBHOOK_CC, { embeds:[embed] });
+  res.json({ ok:true, scheduled: scheduled.length, tbd: tbd.length, posted: !dry, dry });
+}));
+
+// Snapshot (fixtures + standings) similar to your CC page
+app.post('/api/discord/cc/snapshot', requireAdmin, wrap(async (req,res)=>{
+  if (!DISCORD_WEBHOOK_CC) return res.status(500).json({ error:'DISCORD_WEBHOOK_CC not set' });
+
+  const cup = String(req.query.cup || '').trim() || 'UPCL_CC_2025_08';
+  if (!cup.startsWith('UPCL_CC')) return res.status(400).json({ error:'cup must start with UPCL_CC' });
+
+  const dry = String(req.query.dry || '0') === '1';
+  const limitUpcoming = Math.max(1, Math.min(12, Number(req.query.limit || 12)));
+
+  // Load groups + tables
+  const snapCup = await COL.champions().doc(cup).get();
+  const cupDoc = snapCup.exists ? snapCup.data() : { cupId:cup, groups:{A:[],B:[],C:[],D:[]} };
+  const tables = await computeGroupTables(cup, cupDoc.groups);
+
+  // Load fixtures
+  const snapFx = await COL.fixtures().where('cup','==',cup).get();
+  const all = snapFx.docs.map(d=>d.data());
+  const now = Date.now();
+  const scheduled = all.filter(f => f.status==='scheduled' && (!f.when || f.when>=now)).sort((a,b)=>(a.when||0)-(b.when||0));
+  const tbd = all.filter(f => f.status!=='final' && !f.when);
+
+  const fmt = (ms)=> ms ? new Date(ms).toLocaleString() : 'TBD';
+  const badge = (f)=> f.group ? `Group ${f.group}` : (f.round||'');
+  const lines = (list)=> list.slice(0,limitUpcoming)
+    .map(f => `• ${f.home} vs ${f.away} — ${fmt(f.when)}${badge(f)?` (${badge(f)})`:''}`)
+    .join('\n') || '—';
+
+  const standings = (g)=> (tables[g]||[])
+    .map((r,i)=> `${i+1}. ${r.clubId} — ${r.Pts} pts (${r.GD>=0?'+':''}${r.GD})`)
+    .join('\n') || '—';
+
+  const embeds = [{
+    title: 'UPCL Champions Cup',
+    description: `**Fixtures**\nScheduled:\n${lines(scheduled)}\n\nTBD / negotiating:\n${lines(tbd)}`,
+    timestamp: new Date().toISOString(),
+    footer: { text: cup }
+  },{
+    title: 'Group Tables',
+    fields: [
+      { name:'Group A', value: standings('A'), inline:true },
+      { name:'Group B', value: standings('B'), inline:true },
+      { name:'\u200b', value:'\u200b', inline:true },
+      { name:'Group C', value: standings('C'), inline:true },
+      { name:'Group D', value: standings('D'), inline:true },
+      { name:'\u200b', value:'\u200b', inline:true },
+    ]
+  }];
+
+  if (!dry) await discordSend(DISCORD_WEBHOOK_CC, { embeds });
+  res.json({ ok:true, posted: !dry, counts:{ scheduled: scheduled.length, tbd: tbd.length }, cup });
+}));
 
 /* =========================
    MISC / HEALTH & ERRORS
