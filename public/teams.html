@@ -182,7 +182,6 @@ h2{margin:0 0 10px}
         <div id="detail-title" style="font-size:20px;font-weight:800">Team name</div>
         <div class="muted" id="detail-sub">squad & trophies</div>
       </div>
-      <div style="margin-left:auto"><span class="trophy-badge" id="detail-trophies">0 🏆</span></div>
     </div>
 
     <div id="teamPanels" class="grid-panels" style="display:grid;grid-template-columns:1fr;gap:12px">
@@ -238,11 +237,11 @@ h2{margin:0 0 10px}
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
-  <!-- FIXTURES SCHEDULING -->
+  <!-- FIXTURES SCHEDULING (MANAGERS/Admins) -->
   <section id="fixtures-sched" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
       <h2>Fixtures Scheduling</h2>
-      <div style="display:flex;gap:6px;align-items:center;overflow:auto">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
         <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
         <button data-fxf="final" aria-pressed="false">Final</button>
         <button data-fxf="all" aria-pressed="false">All</button>
@@ -260,21 +259,61 @@ h2{margin:0 0 10px}
       <div class="chip">Cup ID: <span id="ccCupId"></span></div>
     </div>
 
+    <!-- Groups + tables (names once, standings only) -->
     <div class="m-card" style="margin-top:10px">
       <strong>Groups</strong>
       <div id="ccGroups" class="group-grid" style="margin-top:8px"></div>
     </div>
 
+    <!-- Admin tools (group editor + easy create fixture) -->
     <div class="m-card" id="ccAdmin" style="display:none;margin-top:10px">
       <strong>Admin tools</strong>
       <div class="muted">Assign teams to groups, save groups, and create fixtures.</div>
+
+      <div id="ccManualGroups" style="display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:10px;margin-top:10px"></div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
         <button id="ccBtnSaveGroups">Save groups</button>
-        <button id="ccBtnCreateFx">Create fixture</button>
       </div>
-      <div id="ccManualGroups" style="display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:10px;margin-top:10px"></div>
+
+      <hr style="border:none;border-top:1px solid #220000;margin:12px 0">
+
+      <div>
+        <strong>Create Champions Cup fixture</strong>
+        <div class="grid2" style="margin-top:8px">
+          <div>
+            <label class="muted">Home</label>
+            <select id="ccHomeSel"></select>
+          </div>
+          <div>
+            <label class="muted">Away</label>
+            <select id="ccAwaySel"></select>
+          </div>
+          <div>
+            <label class="muted">Group (optional)</label>
+            <select id="ccGroupSel">
+              <option value="">— none —</option>
+              <option value="A">Group A</option>
+              <option value="B">Group B</option>
+              <option value="C">Group C</option>
+              <option value="D">Group D</option>
+            </select>
+          </div>
+          <div>
+            <label class="muted">Stage / Round</label>
+            <input id="ccRoundInput" placeholder="e.g., Group A MD1 or Semifinal">
+          </div>
+          <div>
+            <label class="muted">Date & time (optional)</label>
+            <input id="ccWhenInput" type="datetime-local">
+          </div>
+          <div style="align-self:end">
+            <button id="ccFormCreate">Create fixture</button>
+          </div>
+        </div>
+      </div>
     </div>
 
+    <!-- CC Fixtures -->
     <div class="m-card" style="margin-top:10px">
       <strong>Champions Cup Fixtures</strong>
       <div id="ccFixtures" class="fx-list" style="margin-top:8px"></div>
@@ -282,59 +321,22 @@ h2{margin:0 0 10px}
   </section>
 </main>
 
-<!-- Results Modal (sheet editor + JSON paste) -->
-<div class="modal" id="resModal" aria-hidden="true">
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="resTitle">
-    <h3 id="resTitle">Submit Result</h3>
-    <div class="grid2">
-      <div class="sheet">
-        <div><strong id="homeName">Home</strong></div>
-        <div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap">
-          <label class="muted" for="hsInput">Score</label>
-          <input id="hsInput" type="number" min="0" value="0" style="max-width:100px">
-          <button id="addRowHome">+ Add row</button>
-        </div>
-        <table>
-          <thead><tr><th>Player</th><th>Pos</th><th>G</th><th>A</th><th>Rt</th><th></th></tr></thead>
-          <tbody id="homeBody"></tbody>
-        </table>
-      </div>
-      <div class="sheet">
-        <div><strong id="awayName">Away</strong></div>
-        <div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap">
-          <label class="muted" for="asInput">Score</label>
-          <input id="asInput" type="number" min="0" value="0" style="max-width:100px">
-          <button id="addRowAway">+ Add row</button>
-        </div>
-        <table>
-          <thead><tr><th>Player</th><th>Pos</th><th>G</th><th>A</th><th>Rt</th><th></th></tr></thead>
-          <tbody id="awayBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <details style="margin-top:8px">
-      <summary>Or paste JSON (advanced / admin)</summary>
-      <textarea id="jsonBox" placeholder='{"details":{"home":[{"player":"Name","goals":2,"assists":1,"rating":8.7}],"away":[]}}' style="width:100%;height:120px;margin-top:6px"></textarea>
-    </details>
-
-    <div class="actions">
-      <button id="resCancel">Cancel</button>
-      <button id="resSubmit">Submit result</button>
-    </div>
-  </div>
-</div>
-
 <!-- Manager Sign-In Modal -->
 <div class="modal" id="mgrModal" aria-hidden="true">
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="mgrTitle">
     <h3 id="mgrTitle">Manager sign in</h3>
-    <div class="grid2" style="grid-template-columns:140px 1fr">
-      <label for="mgrClubSel" class="muted" style="align-self:center">Club</label>
-      <select id="mgrClubSel"></select>
-      <label for="mgrName" class="muted" style="align-self:center">Your name</label>
-      <input id="mgrName" placeholder="Display name" />
-      <label for="mgrCode" class="muted" style="align-self:center">Manager code</label>
+    <div class="grid2">
+      <div>
+        <label class="muted" for="mgrClubSel">Club</label>
+        <select id="mgrClubSel"></select>
+      </div>
+      <div>
+        <label class="muted" for="mgrName">Your name</label>
+        <input id="mgrName" placeholder="Display name" />
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <label class="muted" for="mgrCode">Manager code</label>
       <input id="mgrCode" placeholder="8-char code" />
     </div>
     <div class="actions">
@@ -344,746 +346,1080 @@ h2{margin:0 0 10px}
   </div>
 </div>
 
+<!-- Result Sheet Modal -->
+<div class="modal" id="resultModal" aria-hidden="true">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="resTitle">
+    <h3 id="resTitle">Submit Result</h3>
+
+    <div id="resMeta" class="muted"></div>
+
+    <div class="grid2" style="margin-top:10px">
+      <div class="sheet">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <strong id="homeTitle">Home</strong>
+          <div class="row-btns"><button id="addHomeRow">+ Add row</button></div>
+        </div>
+        <table id="homeTable" style="margin-top:6px">
+          <thead>
+            <tr><th style="width:40%">Player</th><th>G</th><th>A</th><th>Rating</th><th>Pos</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="sheet">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <strong id="awayTitle">Away</strong>
+          <div class="row-btns"><button id="addAwayRow">+ Add row</button></div>
+        </div>
+        <table id="awayTable" style="margin-top:6px">
+          <thead>
+            <tr><th style="width:40%">Player</th><th>G</th><th>A</th><th>Rating</th><th>Pos</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:10px">
+      <div>
+        <label class="muted">Home Score</label>
+        <input id="homeScore" type="number" min="0" value="0">
+      </div>
+      <div>
+        <label class="muted">Away Score</label>
+        <input id="awayScore" type="number" min="0" value="0">
+      </div>
+    </div>
+
+    <div style="margin-top:8px">
+      <label class="muted">Notes (optional)</label>
+      <textarea id="resNotes" rows="3" placeholder="Short match notes or MVPs"></textarea>
+    </div>
+
+    <div class="actions">
+      <button id="resCancel">Cancel</button>
+      <button id="resPasteJson">Admin paste JSON</button>
+      <button id="resSubmit">Submit Result</button>
+    </div>
+  </div>
+</div>
+
 <script>
-/* =======================
-   CONFIG / TEAMS
-======================= */
+// =======================
+//   CONFIG / CONSTANTS
+// =======================
 const API_BASE = '';
-const CC_ID = 'UPCL_CC_2025_08'; // season id for Champions Cup
+const CC_ID = 'UPCL_CC_2025_08'; // current Champions Cup id
 
 const TEAM_TITLES = {
-  '3638105': [{count:1,name:'United Pro Clubs League Title'},{count:1,name:'Leagues Cup'}]
+  '3638105': [
+    { count: 1, name: 'United Pro Clubs League Title' },
+    { count: 1, name: 'Leagues Cup' }
+  ]
 };
 
+// Teams (add FC Dhizz)
 const teams = [
-  { id:'2491998', name:'Royal Republic',   logo:'/assets/logos/royal-republic-logo.png' },
-  { id:'1527486', name:'Gungan FC',        logo:'/assets/logos/gungan-fc.png' },
-  { id:'1969494', name:'Club Frijol',      logo:'/assets/logos/club-frijol.png' },
-  { id:'2086022', name:'Brehemen',         logo:'/assets/logos/brehemen.png' },
-  { id:'2462194', name:'Costa Chica FC',   logo:'/assets/logos/costa-chica-fc.png' },
-  { id:'5098824', name:'Sporting de la ma',logo:'/assets/logos/sporting-de-la-ma.png' },
-  { id:'4869810', name:'Afc Tekki',        logo:'/assets/logos/afc-tekki.png' },
-  { id:'576007',  name:'Ethabella FC',     logo:'/assets/logos/ethabella-fc.png' },
-  { id:'4933507', name:'Loss Toyz',        logo:'/assets/logos/loss-toyz.png' },
-  { id:'4824736', name:'GoldenGoals FC',   logo:'/assets/logos/goldengoals-fc.png' },
-  { id:'481847',  name:'Rooney tunes',     logo:'/assets/logos/rooney-tunes.png' },
-  { id:'3050467', name:'invincible afc',   logo:'/assets/logos/invincible-afc.png' },
-  { id:'4154835', name:'khalch Fc',        logo:'/assets/logos/khalch-fc.png' },
-  { id:'3638105', name:'Real mvc',         logo:'/assets/logos/real-mvc.png' },
-  { id:'55408',   name:'Elite VT',         logo:'/assets/logos/elite-vt.png' },
-  { id:'4819681', name:'EVERYTHING DEAD',  logo:'/assets/logos/everything-dead.png' },
-  { id:'35642',   name:'EBK FC',           logo:'/assets/logos/ebk-fc.png' },
-  /* Manual clubs */
-  { id:'afc-warriors',  name:'AFC Warriors',  logo:'/assets/logos/afc-warriors.png' },
-  { id:'jids-trivela',  name:'Jids Trivela',  logo:'/assets/logos/jids-trivela.png' },
-  { id:'razorblack-fc', name:'Razorblack FC', logo:'/assets/logos/razorblack-fc.png' },
-  { id:'fc-dhizz',      name:'FC Dhizz',      logo:'/assets/logos/fc-dhizz.png' }
+  { id: '2491998', name: 'Royal Republic',   logo: '/assets/logos/royal-republic-logo.png' },
+  { id: '1527486', name: 'Gungan FC',         logo: '/assets/logos/gungan-fc.png' },
+  { id: '1969494', name: 'Club Frijol',       logo: '/assets/logos/club-frijol.png' },
+  { id: '2086022', name: 'Brehemen',          logo: '/assets/logos/brehemen.png' },
+  { id: '2462194', name: 'Costa Chica FC',    logo: '/assets/logos/costa-chica-fc.png' },
+  { id: '5098824', name: 'Sporting de la ma', logo: '/assets/logos/sporting-de-la-ma.png' },
+  { id: '4869810', name: 'Afc Tekki',         logo: '/assets/logos/afc-tekki.png' },
+  { id: '576007',  name: 'Ethabella FC',      logo: '/assets/logos/ethabella-fc.png' },
+  { id: '4933507', name: 'Loss Toyz',         logo: '/assets/logos/loss-toyz.png' },
+  { id: '4824736', name: 'GoldenGoals FC',    logo: '/assets/logos/goldengoals-fc.png' },
+  { id: '481847',  name: 'Rooney tunes',      logo: '/assets/logos/rooney-tunes.png' },
+  { id: '3050467', name: 'invincible afc',    logo: '/assets/logos/invincible-afc.png' },
+  { id: '4154835', name: 'khalch Fc',         logo: '/assets/logos/khalch-fc.png' },
+  { id: '3638105', name: 'Real mvc',          logo: '/assets/logos/real-mvc.png' },
+  { id: '55408',   name: 'Elite VT',          logo: '/assets/logos/elite-vt.png' },
+  { id: '4819681', name: 'EVERYTHING DEAD',   logo: '/assets/logos/everything-dead.png' },
+  { id: '35642',   name: 'EBK FC',            logo: '/assets/logos/ebk-fc.png' },
+  // Manual clubs
+  { id: 'afc-warriors',  name: 'AFC Warriors',  logo: '/assets/logos/afc-warriors.png' },
+  { id: 'jids-trivela',  name: 'Jids Trivela',  logo: '/assets/logos/jids-trivela.png' },
+  { id: 'razorblack-fc', name: 'Razorblack FC', logo: '/assets/logos/razorblack-fc.png' },
+  { id: 'fc-dhizz',      name: 'FC Dhizz',      logo: '/assets/logos/fc-dhizz.png' }
 ];
 
+// helpers
 const byId = id => teams.find(t=>String(t.id)===String(id));
-function teamLogoUrl(team){ return team?.logo || `https://via.placeholder.com/800x400.png?text=${encodeURIComponent(team?.name||'Club')}`; }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-function fmtMoney(n){ return '₵'+Number(n||0).toLocaleString(); }
-function fmtDate(ms){ try{return new Date(ms).toLocaleString();}catch{return '';} }
+function teamLogoUrl(team){ return team?.logo || `https://via.placeholder.com/800x480.png?text=${encodeURIComponent(team?.name||'Club')}`; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
+function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
 function getFixtureBanner(){ return '/assets/ui/fixture-banner.png'; }
 
-/* =======================
-   STATE / API
-======================= */
-let isAdmin=false, meUser=null, isMgr=false;
-let fixturesPublicCache=[], fixturesSchedCache=[];
+let isAdmin = false;
+let meUser  = null;
+let isMgr   = false;
+let rankings = {};
+let payouts  = { elite:0, mid:0, bottom:0 };
+let fixturesPublicCache = [];
+let fixturesSchedCache  = [];
 
+// api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
-/* =======================
-   NAV
-======================= */
-const navTeams=document.getElementById('navTeams');
-const navNews=document.getElementById('navNews');
-const navMarket=document.getElementById('navMarket');
-const navFxPublic=document.getElementById('navFixturesPublic');
-const navFxSched=document.getElementById('navFixturesSched');
-const navChampions=document.getElementById('navChampions');
+// nav elements
+const navTeams    = document.getElementById('navTeams');
+const navNews     = document.getElementById('navNews');
+const navMarket   = document.getElementById('navMarket');
+const navFxPublic = document.getElementById('navFixturesPublic');
+const navFxSched  = document.getElementById('navFixturesSched');
+const navChampions= document.getElementById('navChampions');
 
-const teamsViewEl=document.getElementById('teams-view');
-const newsView=document.getElementById('news-view');
-const marketView=document.getElementById('market-view');
-const fxPublic=document.getElementById('fixtures-public');
-const fxSched=document.getElementById('fixtures-sched');
-const cupView=document.getElementById('champions-view');
+const teamsViewEl = document.getElementById('teams-view');
+const newsView    = document.getElementById('news-view');
+const marketView  = document.getElementById('market-view');
+const fxPublic    = document.getElementById('fixtures-public');
+const fxSched     = document.getElementById('fixtures-sched');
+const cupView     = document.getElementById('champions-view');
 
 function setNav(active){
   if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
-  const map={
-    teams:[teamsViewEl,navTeams],
-    news:[newsView,navNews],
-    market:[marketView,navMarket],
-    fixturesPublic:[fxPublic,navFxPublic],
-    fixturesSched:[fxSched,navFxSched],
-    champions:[cupView,navChampions]
+  const s = {
+    teams:[teamsViewEl, navTeams],
+    news:[newsView, navNews],
+    market:[marketView, navMarket],
+    fixturesPublic:[fxPublic, navFxPublic],
+    fixturesSched:[fxSched, navFxSched],
+    champions:[cupView, navChampions]
   };
-  for (const key of Object.keys(map)){
-    const [view,btn]=map[key];
+  for (const key of Object.keys(s)){
+    const [view,btn] = s[key];
     const is = key===active;
-    view.style.display = is ? 'block':'none';
+    view.style.display = is ? 'block' : 'none';
     btn.setAttribute('aria-pressed', String(is));
   }
 }
-navTeams.onclick=()=>setNav('teams');
-navNews.onclick =()=>{ setNav('news'); loadNews(); };
-navMarket.onclick=()=>setNav('market');
-navFxPublic.onclick=()=>{ setNav('fixturesPublic'); renderFixturesPublic(); };
-navFxSched.onclick =()=>{ setNav('fixturesSched'); renderFixturesSched(); };
-navChampions.onclick=async()=>{ setNav('champions'); await loadChampions(); };
+navTeams.onclick       = ()=> setNav('teams');
+navNews.onclick        = async ()=>{ setNav('news'); await loadNews(); };
+navMarket.onclick      = ()=> setNav('market');
+navFxPublic.onclick    = ()=> setNav('fixturesPublic');
+navFxSched.onclick     = ()=> setNav('fixturesSched');
+navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
 
-/* =======================
-   AUTH
-======================= */
-const btnAdminLogin=document.getElementById('btnAdminLogin');
-const btnAdminLogout=document.getElementById('btnAdminLogout');
-const btnManagerLogin=document.getElementById('btnManagerLogin');
+// auth / admin / manager
+const btnAdminLogin = document.getElementById('btnAdminLogin');
+const btnAdminLogout= document.getElementById('btnAdminLogout');
+const btnManagerLogin= document.getElementById('btnManagerLogin');
 
-btnAdminLogin.onclick=async()=>{
-  const pw=prompt('Admin password'); if(!pw) return;
-  try{ await apiPost('/api/admin/login',{password:pw}); await checkAdmin(); await checkMe(); alert('Admin signed in'); }
-  catch(e){ alert('Login failed: '+e.message); }
+btnAdminLogin.onclick = async ()=>{
+  const pw = prompt('Admin password');
+  if (!pw) return;
+  try{
+    await apiPost('/api/admin/login',{ password: pw });
+    await checkAdmin(); await checkMe();
+    alert('Admin signed in');
+  }catch(e){ alert('Login failed: '+e.message); }
 };
-btnAdminLogout.onclick=async()=>{
-  try{ await apiPost('/api/admin/logout',{});}catch{}
-  await checkAdmin(); await checkMe(); alert('Signed out');
+btnAdminLogout.onclick = async ()=>{
+  try{ await apiPost('/api/admin/logout',{}); }catch{}
+  await checkAdmin(); await checkMe();
+  alert('Signed out');
 };
+
 async function checkAdmin(){
-  try{ const d=await apiGet('/api/admin/me'); isAdmin=!!d.admin; }catch{ isAdmin=false; }
-  btnAdminLogout.style.display=isAdmin?'inline-block':'none';
-  navFxSched.style.display=(isMgr||isAdmin)?'inline-block':'none';
+  try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
+  btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
 }
 async function checkMe(){
-  try{ meUser=(await apiGet('/api/auth/me')).user||null; }catch{ meUser=null; }
+  try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
   isMgr = !!(meUser && meUser.role==='Manager');
-  navFxSched.style.display=(isMgr||isAdmin)?'inline-block':'none';
+  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
 }
 
-/* =======================
-   MANAGER modal
-======================= */
-const mgrModal=document.getElementById('mgrModal');
-const mgrClubSel=document.getElementById('mgrClubSel');
-const mgrName=document.getElementById('mgrName');
-const mgrCode=document.getElementById('mgrCode');
-const mgrCancel=document.getElementById('mgrCancel');
-const mgrSubmit=document.getElementById('mgrSubmit');
-
-btnManagerLogin.onclick=()=>{
-  mgrClubSel.innerHTML=teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
-  mgrName.value=''; mgrCode.value='';
-  mgrModal.classList.add('show'); mgrModal.setAttribute('aria-hidden','false');
+// Manager modal
+const mgrModal = document.getElementById('mgrModal');
+const mgrClubSel = document.getElementById('mgrClubSel');
+const mgrName = document.getElementById('mgrName');
+const mgrCode = document.getElementById('mgrCode');
+document.getElementById('mgrCancel').onclick = ()=>{ mgrModal.classList.remove('show'); mgrModal.setAttribute('aria-hidden','true'); };
+btnManagerLogin.onclick = ()=>{
+  mgrClubSel.innerHTML = teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
+  mgrName.value=''; mgrCode.value=''; mgrModal.classList.add('show'); mgrModal.setAttribute('aria-hidden','false');
 };
-mgrCancel.onclick=()=>{ mgrModal.classList.remove('show'); mgrModal.setAttribute('aria-hidden','true'); };
-mgrSubmit.onclick=async()=>{
-  const clubId=mgrClubSel.value, name=(mgrName.value||'').trim(), code=(mgrCode.value||'').trim();
-  if(!clubId||!name||!code) return alert('Pick a club, enter your name and code.');
-  try{ await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`,{name,code}); await checkMe(); await refreshFixturesSched(); renderFixturesSched(); mgrModal.classList.remove('show'); mgrModal.setAttribute('aria-hidden','true'); alert('Manager session started.'); }
-  catch(e){ alert('Sign-in failed: '+e.message); }
+document.getElementById('mgrSubmit').onclick = async ()=>{
+  const clubId = mgrClubSel.value;
+  const name = (mgrName.value||'').trim();
+  const code = (mgrCode.value||'').trim();
+  if (!clubId || !name || !code) return alert('Pick a club, enter your name and code.');
+  try{
+    await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
+    await checkMe(); await refreshFixturesSched(); renderFixturesSched();
+    mgrModal.classList.remove('show'); mgrModal.setAttribute('aria-hidden','true');
+    alert('Manager session started.');
+  }catch(e){ alert('Sign-in failed: '+e.message); }
 };
 
-/* =======================
-   TEAMS LIST / DETAIL
-======================= */
-const teamsGrid=document.getElementById('teamsGrid');
-const teamsCount=document.getElementById('teams-count');
-const detailView=document.getElementById('detail-view');
-const detailTitle=document.getElementById('detail-title');
-const detailSub=document.getElementById('detail-sub');
-const detailTrophies=document.getElementById('detail-trophies');
-const backBtn=document.getElementById('backBtn');
+// =======================
+//   TEAMS LIST / DETAIL
+// =======================
+const teamsGrid = document.getElementById('teamsGrid');
+const teamsCount = document.getElementById('teams-count');
+const detailView = document.getElementById('detail-view');
+const detailTitle = document.getElementById('detail-title');
+const detailSub   = document.getElementById('detail-sub');
+const backBtn = document.getElementById('backBtn');
 
 function renderTeams(){
-  teamsGrid.innerHTML=''; teamsCount.textContent=teams.length;
+  teamsGrid.innerHTML='';
+  teamsCount.textContent = teams.length;
   teams.forEach(team=>{
-    const card=document.createElement('div');
-    card.className='team-card'; card.setAttribute('role','listitem');
-    card.innerHTML=`
-      <img class="team-logo" src="${teamLogoUrl(team)}"
-           onerror="this.onerror=null;this.src='https://via.placeholder.com/800x400.png?text=${encodeURIComponent(team.name)}';"
-           alt="${escapeHtml(team.name)} logo">
+    const card = document.createElement('div');
+    card.className='team-card';
+    card.setAttribute('role','listitem');
+    card.innerHTML = `
+      <img class="team-logo"
+           src="${teamLogoUrl(team)}"
+           onerror="this.onerror=null;this.src='https://via.placeholder.com/800x480.png?text=${encodeURIComponent(team.name)}';"
+           alt="${escapeHtml(team.name)} logo" />
       <div class="team-meta">
         <div class="name">${escapeHtml(team.name)}</div>
         <div class="trophy-badge">${Array.isArray(TEAM_TITLES[team.id]) ? TEAM_TITLES[team.id].map(t=>`${t.count}x ${t.name}`).join(', ') : ''}</div>
-      </div>`;
-    card.addEventListener('click',()=>showTeam(team));
+      </div>
+    `;
+    card.addEventListener('click', ()=> showTeam(team));
     teamsGrid.appendChild(card);
   });
 }
+
 async function showTeam(team){
   window.scrollTo({top:0,behavior:'smooth'});
-  teamsViewEl.style.display='none'; detailView.style.display='block';
-  detailTitle.textContent=team.name; detailSub.textContent='Loading club info…';
-  if(Array.isArray(TEAM_TITLES[team.id])) detailTrophies.innerHTML=TEAM_TITLES[team.id].map(t=>`<div>${t.count}x ${t.name}</div>`).join(''); else detailTrophies.textContent='No trophies';
+  document.getElementById('teams-view').style.display='none';
+  detailView.style.display='block';
+  detailTitle.textContent = team.name;
+  detailSub.textContent = 'Loading club info…';
+
   await renderWallet(team.id);
   await refreshFixturesPublic(); renderNextFor(team.id); renderTeamResults(team.id);
   await loadSquad(team.id);
-  detailSub.textContent='Club overview';
-}
-backBtn.addEventListener('click',()=>{ detailView.style.display='none'; teamsViewEl.style.display='block'; window.scrollTo({top:0,behavior:'smooth'}); });
 
-/* Wallet */
+  detailSub.textContent = 'Club overview';
+}
+
+backBtn.addEventListener('click', ()=>{
+  detailView.style.display='none';
+  teamsViewEl.style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+// Wallet
 async function renderWallet(clubId){
-  const body=document.getElementById('walletBody');
-  const hint=document.getElementById('walletHint');
-  const btn=document.getElementById('btnCollect');
+  const body = document.getElementById('walletBody');
+  const hint = document.getElementById('walletHint');
+  const btn = document.getElementById('btnCollect');
   try{
-    const d=await apiGet(`/api/wallets/${encodeURIComponent(clubId)}`);
-    const w=d.wallet||{}, prev=d.preview||{}, per=d.perDay||0;
-    body.innerHTML=`Balance: <strong>${fmtMoney(w.balance||0)}</strong><br>Tier payout: <strong>${fmtMoney(per)}</strong> / day<br>Pending payout: <strong>${fmtMoney(prev.amount||0)}</strong> (${prev.days||0} days)`;
-    const canCollect=meUser&&meUser.role==='Manager'&&String(meUser.teamId)===String(clubId);
-    btn.style.display=canCollect?'inline-block':'none';
-    btn.onclick=async()=>{ try{ const r=await apiPost(`/api/wallets/${encodeURIComponent(clubId)}/collect`,{}); alert(r.ok?`Collected ${fmtMoney(r.collected||0)}`:(r.message||'No payout')); await renderWallet(clubId);}catch(e){alert('Collect failed: '+e.message);} };
-    hint.textContent=canCollect?'Only the club manager can collect.':'Sign in as manager to collect.';
-  }catch(e){ body.textContent='Wallet unavailable'; hint.textContent=''; btn.style.display='none'; }
+    const d = await apiGet(`/api/wallets/${encodeURIComponent(clubId)}`);
+    const w = d.wallet||{}, prev = d.preview||{};
+    const per = d.perDay||0;
+    body.innerHTML = `
+      Balance: <strong>${fmtMoney(w.balance||0)}</strong><br>
+      Tier payout: <strong>${fmtMoney(per)}</strong> / day<br>
+      Pending payout: <strong>${fmtMoney(prev.amount||0)}</strong> (${prev.days||0} days)
+    `;
+    const canCollect = meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId);
+    btn.style.display = canCollect ? 'inline-block' : 'none';
+    btn.onclick = async ()=>{
+      try{
+        const r = await apiPost(`/api/wallets/${encodeURIComponent(clubId)}/collect`,{});
+        alert(r.ok ? `Collected ${fmtMoney(r.collected||0)}` : (r.message||'No payout'));
+        await renderWallet(clubId);
+      }catch(e){ alert('Collect failed: '+e.message); }
+    };
+    hint.textContent = canCollect ? 'Only the club manager can collect.' : 'Sign in as manager to collect.';
+  }catch(e){
+    body.textContent = 'Wallet unavailable';
+    hint.textContent = '';
+    btn.style.display='none';
+  }
 }
 
-/* Squad editor (manual) */
+// ===== Squad editor (manual only; EA disabled) =====
 async function loadSquad(clubId){
-  const panel=document.getElementById('squadPanel');
-  const body=document.getElementById('squadBody');
-  const tools=document.getElementById('squadTools');
-  panel.style.display='block'; body.textContent='Loading…';
-  tools.style.display = isAdmin ? 'flex' : 'none';
+  const panel = document.getElementById('squadPanel');
+  const body  = document.getElementById('squadBody');
+  const tools = document.getElementById('squadTools');
+  panel.style.display = 'block';
+  body.textContent = 'Loading…';
+  tools.style.display = (isAdmin ? 'flex' : 'none');
+
   try{
-    const res=await fetch(`/api/clubs/${encodeURIComponent(clubId)}/squad`,{credentials:'include'});
-    if(!res.ok){ body.textContent='Squad not available.'; return; }
-    const { slots=[] }=await res.json();
-    const canEdit = meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId);
-    if(!slots.length){
-      body.innerHTML='<div class="muted">No slots yet.</div>';
-      if(isAdmin){ tools.style.display='flex'; document.getElementById('btnBootstrapSlots').onclick=async()=>{ try{ await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/bootstrap`,{size:15}); await loadSquad(clubId);}catch(e){alert('Bootstrap failed: '+e.message);} }; }
+    const res = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/squad`, {credentials:'include'});
+    if (!res.ok){
+      body.textContent = 'Squad not available.';
       return;
     }
-    tools.style.display = isAdmin ? 'flex' : 'none';
+    const { slots=[] } = await res.json();
+    const canEdit = meUser && meUser.role==='Manager' && String(meUser.teamId)===String(clubId);
+    if (!slots.length){
+      body.innerHTML = '<div class="muted">No slots yet.</div>';
+      if (isAdmin){
+        tools.style.display = 'flex';
+        document.getElementById('btnBootstrapSlots').onclick = async ()=>{
+          try{
+            await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/bootstrap`, { size: 15 });
+            await loadSquad(clubId);
+          }catch(e){ alert('Bootstrap failed: '+e.message); }
+        };
+      }
+      return;
+    }
+
+    tools.style.display = (isAdmin ? 'flex' : 'none');
     body.innerHTML = slots.map(s=>{
-      const name=s.player?.eaName||''; const pid=s.playerId||'';
-      const can = canEdit ? '' : 'disabled';
-      return `<div class="m-card" style="margin:6px 0">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <div><strong>${escapeHtml(s.label)}</strong> ${pid?`<span class="chip">ID: ${pid}</span>`:''}</div>
-        </div>
-        <div class="muted" style="margin-top:4px">Nickname / Last name</div>
-        <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
-          <input type="text" data-slot="${s.slotId}" value="${escapeHtml(name)}" ${can}>
-          ${canEdit?`
-            <button data-assign="${s.slotId}">${pid?'Update':'Assign'}</button>
-            ${pid?`<button data-unassign="${s.slotId}">Unassign</button>`:''}
-          `:''}
-        </div>
-      </div>`;
+      const name = s.player?.eaName || '';
+      const pid  = s.playerId || '';
+      return `
+        <div class="m-card" style="margin:6px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div><strong>${escapeHtml(s.label)}</strong> ${pid ? `<span class="chip">ID: ${pid}</span>` : ''}</div>
+          </div>
+          <div class="muted" style="margin-top:4px">Nickname / Last name</div>
+          <div style="display:flex;gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap">
+            <input type="text" data-slot="${s.slotId}" value="${escapeHtml(name)}" ${canEdit?'':'disabled'}>
+            ${canEdit ? `
+              <button data-assign="${s.slotId}">${pid ? 'Update' : 'Assign'}</button>
+              ${pid ? `<button data-unassign="${s.slotId}">Unassign</button>`:''}
+            `:''}
+          </div>
+        </div>`;
     }).join('');
+
     if (canEdit){
       body.querySelectorAll('[data-assign]').forEach(btn=>{
-        btn.onclick=async()=>{
-          const slotId=btn.getAttribute('data-assign');
-          const input=body.querySelector(`input[data-slot="${slotId}"]`);
-          const displayName=(input?.value||'').trim();
-          if(!displayName) return alert('Enter a nickname/last name');
+        btn.onclick = async ()=>{
+          const slotId = btn.getAttribute('data-assign');
+          const input  = body.querySelector(`input[data-slot="${slotId}"]`);
+          const displayName = (input?.value||'').trim();
+          if (!displayName) return alert('Enter a nickname/last name');
           try{
-            await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}/assign`,{
-              eaName:displayName, platform:'manual', aliases:[displayName]
-            }); await loadSquad(clubId);
+            await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}/assign`, {
+              eaName: displayName, platform:'manual', aliases:[displayName]
+            });
+            await loadSquad(clubId);
           }catch(e){ alert('Assign failed: '+e.message); }
         };
       });
       body.querySelectorAll('[data-unassign]').forEach(btn=>{
-        btn.onclick=async()=>{
-          const slotId=btn.getAttribute('data-unassign');
-          try{ await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}/unassign`,{}); await loadSquad(clubId); }
-          catch(e){ alert('Unassign failed: '+e.message); }
+        btn.onclick = async ()=>{
+          const slotId = btn.getAttribute('data-unassign');
+          try{
+            await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/squad/slots/${encodeURIComponent(slotId)}/unassign`, {});
+            await loadSquad(clubId);
+          }catch(e){ alert('Unassign failed: '+e.message); }
         };
       });
     }
-  }catch(e){ body.textContent='Failed to load squad.'; }
+  }catch(e){
+    body.textContent = 'Failed to load squad.';
+  }
 }
 
-/* =======================
-   MARKET
-======================= */
+// =======================
+//   FREE AGENTS
+// =======================
 async function loadFA(){
   try{
-    const d=await apiGet('/api/free-agents');
-    const arr=d.agents||[];
+    const d = await apiGet('/api/free-agents');
+    const arr = d.agents || [];
     document.getElementById('faList').innerHTML = arr.length ? arr.map(a=>{
-      const pos=(a.positions||[]).join(', ');
+      const pos = (a.positions||[]).join(', ');
       return `<div class="m-card" style="margin:8px 0;padding:8px">
         <strong>${escapeHtml(a.name)}</strong> <span class="muted">(${escapeHtml(a.region||'')})</span><br>
         <span class="muted">${escapeHtml(pos)}</span>
-        ${a.discord?`<div>Discord: ${escapeHtml(a.discord)}</div>`:''}
-        ${a.bio?`<div class="muted">${escapeHtml(a.bio)}</div>`:''}
+        ${a.discord ? `<div>Discord: ${escapeHtml(a.discord)}</div>`:''}
+        ${a.bio ? `<div class="muted">${escapeHtml(a.bio)}</div>`:''}
       </div>`;
     }).join('') : 'No free agents listed.';
-  }catch{ document.getElementById('faList').textContent='Failed to load.'; }
+  }catch{ document.getElementById('faList').textContent = 'Failed to load.'; }
 }
-document.getElementById('btnListFA').onclick=async()=>{
-  const name=meUser?.name || prompt('Your display name'); if(!name) return;
-  const positions=prompt('Positions (comma separated, e.g., ST, CAM, CB)')||'';
-  const region=prompt('Region/Timezone (e.g., EST, EU)')||'';
-  const foot=prompt('Strong foot (L/R)')||'';
-  const availability=prompt('Availability (e.g., Mon-Thu 7-10pm)')||'';
-  const discord=prompt('Discord tag (optional)')||'';
-  const bio=prompt('Short bio (optional)')||'';
-  try{ await apiPost('/api/free-agents/me',{ name, positions, region, foot, availability, discord, bio }); alert('Listed!'); await loadFA(); }
-  catch(e){ alert('List failed: '+e.message); }
+
+document.getElementById('btnListFA').onclick = async ()=>{
+  const name = meUser?.name || prompt('Your display name');
+  if (!name) return;
+  const positions = prompt('Positions (comma separated, e.g., ST, CAM, CB)')||'';
+  const region = prompt('Region/Timezone (e.g., EST, EU)')||'';
+  const foot = prompt('Strong foot (L/R)')||'';
+  const availability = prompt('Availability (e.g., Mon-Thu 7-10pm)')||'';
+  const discord = prompt('Discord tag (optional)')||'';
+  const bio = prompt('Short bio (optional)')||'';
+  try{
+    await apiPost('/api/free-agents/me',{ name, positions, region, foot, availability, discord, bio });
+    alert('Listed!');
+    await loadFA();
+  }catch(e){ alert('List failed: '+e.message); }
 };
-document.getElementById('btnUnlistFA').onclick=async()=>{
-  try{ await fetch('/api/free-agents/me',{method:'DELETE',credentials:'include'}); alert('Unlisted'); await loadFA(); }
+document.getElementById('btnUnlistFA').onclick = async ()=>{
+  try{ await fetch('/api/free-agents/me',{ method:'DELETE', credentials:'include' }); alert('Unlisted'); await loadFA(); }
   catch(e){ alert('Unlist failed: '+e.message); }
 };
 
-/* =======================
-   FIXTURES — PUBLIC
-======================= */
-const fixturesPublicList=document.getElementById('fixturesPublicList');
+// =======================
+//   FIXTURES — PUBLIC
+// =======================
+const fixturesPublicList = document.getElementById('fixturesPublicList');
 async function refreshFixturesPublic(){
-  try{ const d=await apiGet('/api/cup/fixtures?cup=UPCL'); fixturesPublicCache=d.fixtures||[]; }
-  catch{ try{ const d2=await apiGet('/api/cup/fixtures/public?cup=UPCL'); fixturesPublicCache=d2.fixtures||[]; }catch{ fixturesPublicCache=[]; } }
+  try {
+    const d = await apiGet('/api/cup/fixtures?cup=UPCL');
+    fixturesPublicCache = d.fixtures || [];
+  } catch { fixturesPublicCache = []; }
 }
 function renderFixturesPublic(){
-  const list=fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
+  const list = fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
   fixturesPublicList.innerHTML = list.length ? list.map(f=>{
-    const H=byId(f.home), A=byId(f.away);
-    const hn=H?.name||f.home, an=A?.name||f.away;
-    const whenTxt=f.when?fmtDate(f.when):'TBD';
-    const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'—';
-    const banner=getFixtureBanner();
-    return `<div class="fx">
-      <div>
-        ${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}
-        <div class="fx-vs">
-          <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-          <span style="opacity:.75">${scoreTxt}</span>
-          <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
+    const banner = getFixtureBanner();
+    const H = byId(f.home), A = byId(f.away);
+    const hn = H?.name || f.home;
+    const an = A?.name || f.away;
+    const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const ccBadge = (f.cup===CC_ID) ? ' • <span class="chip">Champions Cup</span>' : '';
+    return `
+      <div class="fx">
+        <div>
+          ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
+          <div class="fx-vs">
+            <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
+            <span class="muted">${scoreTxt}</span>
+            <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
+          </div>
+          <div class="meta">${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
         </div>
-        <div class="meta">${escapeHtml(f.round||'')} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
-      </div>
-    </div>`;
+      </div>`;
   }).join('') : `<div class="muted">No fixtures yet.</div>`;
 }
 
-/* =======================
-   FIXTURES — SCHEDULING
-======================= */
-const fixturesList=document.getElementById('fixturesList');
-const btnCreateFx=document.getElementById('btnCreateFx');
+// Next & recent for team (from public cache)
+function nextFor(teamId){
+  const now = Date.now();
+  return fixturesPublicCache
+    .filter(f => (f.home===teamId||f.away===teamId) && f.status!=='final' && f.when && f.when>=now)
+    .sort((a,b)=>a.when-b.when)[0];
+}
+function finalsFor(teamId, n=5){
+  return fixturesPublicCache
+    .filter(f => f.status==='final' && (f.home===teamId||f.away===teamId))
+    .sort((a,b)=>(b.when||b.createdAt)-(a.when||a.createdAt))
+    .slice(0,n);
+}
+function renderNextFor(teamId){
+  const el = document.getElementById('nextMatchBody');
+  const f = nextFor(teamId);
+  if (!f){ el.textContent='No scheduled match yet.'; return; }
+  const hn = byId(f.home)?.name || f.home;
+  const an = byId(f.away)?.name || f.away;
+  el.innerHTML = `<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(byId(f.home))}" alt=""><span>${escapeHtml(hn)}</span></span>
+                  <span class="muted">vs</span>
+                  <span class="fx-team"><img src="${teamLogoUrl(byId(f.away))}" alt=""><span>${escapeHtml(an)}</span></span></div>
+                  <div class="muted">${fmtDate(f.when)}</div>`;
+}
+function renderTeamResults(teamId){
+  const el = document.getElementById('teamResultsBody');
+  const list = finalsFor(teamId);
+  el.innerHTML = list.length ? list.map(f=>{
+    const hn = byId(f.home)?.name || f.home;
+    const an = byId(f.away)?.name || f.away;
+    return `<div>FT ${f.score.hs}-${f.score.as}: <strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong> • ${fmtDate(f.when||f.createdAt)}</div>`;
+  }).join('') : 'No finals yet.';
+}
 
-btnCreateFx.onclick=async()=>{
-  const home=prompt('Home club ID'); const away=prompt('Away club ID'); const round=prompt('Round (e.g., League MD1 or Cup QF)');
-  if(!home||!away) return;
-  try{ await apiPost('/api/cup/fixtures',{home,away,round,cup:'UPCL'}); alert('Created fixture'); await refreshFixturesSched(); renderFixturesSched(); }
-  catch(e){ alert('Create failed: '+e.message); }
+// =======================
+//   FIXTURES — SCHEDULING
+// =======================
+const fixturesList = document.getElementById('fixturesList');
+const btnCreateFx  = document.getElementById('btnCreateFx');
+
+btnCreateFx.onclick = async ()=>{
+  const home = prompt('Home club ID');
+  const away = prompt('Away club ID');
+  const round= prompt('Round (e.g., League MD1 or Cup QF)');
+  if (!home || !away) return;
+  try{
+    const d = await apiPost('/api/cup/fixtures', { home, away, round, cup:'UPCL' });
+    alert('Created fixture'); await refreshFixturesSched(); renderFixturesSched();
+  }catch(e){ alert('Create failed: '+e.message); }
 };
+
 document.querySelectorAll('[data-fxf]').forEach(btn=>{
-  btn.onclick=()=>{ document.querySelectorAll('[data-fxf]').forEach(b=>b.setAttribute('aria-pressed','false')); btn.setAttribute('aria-pressed','true'); renderFixturesSched(); };
+  btn.onclick = ()=>{
+    document.querySelectorAll('[data-fxf]').forEach(b=>b.setAttribute('aria-pressed','false'));
+    btn.setAttribute('aria-pressed','true');
+    renderFixturesSched();
+  };
 });
 
 async function refreshFixturesSched(){
-  if(!(isMgr||isAdmin)){ fixturesSchedCache=[]; return; }
-  try{ const d=await apiGet('/api/cup/fixtures/scheduling?cup=UPCL'); fixturesSchedCache=d.fixtures||[]; }
-  catch{ try{ const d2=await apiGet('/api/cup/fixtures?cup=UPCL'); fixturesSchedCache=d2.fixtures||[]; }catch{ fixturesSchedCache=[]; } }
+  if (!(isMgr || isAdmin)) { fixturesSchedCache=[]; return; }
+  try {
+    const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
+    fixturesSchedCache = d.fixtures || [];
+  } catch {
+    fixturesSchedCache = [];
+  }
 }
 function filterKey(){
-  const active=[...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
-  return active?active.getAttribute('data-fxf'):'upcoming';
+  const active = [...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
+  return active ? active.getAttribute('data-fxf') : 'upcoming';
 }
 function renderFixturesSched(){
-  const key=filterKey(); let list=fixturesSchedCache.slice(); const now=Date.now();
-  if(key==='upcoming'){ list=list.filter(f=>f.status!=='final'&&(!f.when||f.when>=now)); }
-  else if(key==='final'){ list=list.filter(f=>f.status==='final'); }
-  else if(key==='mine'&&meUser){ list=list.filter(f=>f.home===meUser.teamId||f.away===meUser.teamId); }
+  const key = filterKey();
+  let list = fixturesSchedCache.slice();
+  const now = Date.now();
+
+  if (key==='upcoming'){
+    list = list.filter(f => f.status!=='final' && (!f.when || f.when>=now));
+  } else if (key==='final'){
+    list = list.filter(f => f.status==='final');
+  } else if (key==='mine' && meUser){
+    list = list.filter(f => f.home===meUser.teamId || f.away===meUser.teamId);
+  }
+
   list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
   fixturesList.innerHTML = list.length ? list.map(renderFxSchedRow).join('') : `<div class="muted">No fixtures.</div>`;
-  list.forEach(f=>wireFxRowHandlers(f));
+
+  // wire buttons
+  list.forEach(f=>{
+    const root = document.getElementById('fx_'+f.id);
+    if (!root) return;
+    const isManagerOf = meUser && meUser.role==='Manager' && [f.home,f.away].includes(meUser.teamId);
+
+    const btnProp = root.querySelector('.act .prop');
+    if (btnProp) btnProp.onclick = async ()=>{
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      const atStr = prompt('Propose time (e.g., 2025-08-20 20:30)');
+      if (!atStr) return;
+      const at = Date.parse(atStr);
+      if (!at) return alert('Could not parse date');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/propose`, { at }); await refreshFixturesSched(); renderFixturesSched(); }
+      catch(e){ alert('Propose failed: '+e.message); }
+    };
+
+    const btnAgree = root.querySelector('.act .agree');
+    if (btnAgree) btnAgree.onclick = async ()=>{
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      const at = root.querySelector('select[name="slot"]').value;
+      if (!at) return alert('Pick a proposed slot first');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
+      catch(e){ alert('Vote failed: '+e.message); }
+    };
+
+    const btnDecl = root.querySelector('.act .decl');
+    if (btnDecl) btnDecl.onclick = async ()=>{
+      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      const at = root.querySelector('select[name="slot"]').value;
+      if (!at) return alert('Pick a proposed slot first');
+      try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixturesSched(); renderFixturesSched(); }
+      catch(e){ alert('Vote failed: '+e.message); }
+    };
+
+    const btnQuick = root.querySelector('.act .quick');
+    if (btnQuick) btnQuick.onclick = ()=> openResultEditor(f);
+
+    const btnJson = root.querySelector('.act .json');
+    if (btnJson) btnJson.onclick = async ()=>{
+      if (!isAdmin) return alert('Admin only');
+      const hs = Number(prompt('Home score (hs)')||0);
+      const as = Number(prompt('Away score (as)')||0);
+      const template = JSON.stringify({
+        details:{
+          home:[{ player:"Player A", goals:1, assists:0, rating:9.5, position:"ST" }],
+          away:[{ player:"Player B", goals:2, assists:0, rating:8.7, position:"CB" }]
+        }
+      }, null, 2);
+      const raw = prompt('Paste JSON (or edit the template):', template);
+      if (!raw) return;
+      try{
+        const obj = JSON.parse(raw);
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj });
+        document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
+        document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
+        await refreshFixturesSched(); renderFixturesSched();
+        await refreshFixturesPublic(); renderFixturesPublic();
+      }catch(e){ alert('JSON upload failed: '+e.message); }
+    };
+  });
 }
+
 function renderFxSchedRow(f){
-  const H=byId(f.home), A=byId(f.away);
-  const hn=H?.name||f.home, an=A?.name||f.away;
-  const whenTxt=f.when?fmtDate(f.when):'TBD';
-  const props=(f.proposals||[]).map(p=>{
-    const who=(teams.find(t=>String(t.id)===String(p.by))?.name)||p.by||'unknown';
+  const H = byId(f.home), A = byId(f.away);
+  const hn = H?.name || f.home;
+  const an = A?.name || f.away;
+  const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+  const props = (f.proposals||[]).map(p=>{
+    const who = (teams.find(t=>String(t.id)===String(p.by))?.name) || p.by || 'unknown';
     return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
   }).join('');
-  const status=f.status||'pending';
-  const banner=getFixtureBanner();
-  const adminBtns=isAdmin?`<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>`:'';
-  return `<div class="fx" id="fx_${f.id}">
+  const status = f.status || 'pending';
+  const adminBtns = isAdmin ? `<button class="json">Admin JSON</button>` : '';
+  const banner = getFixtureBanner();
+  return `
+  <div class="fx" id="fx_${f.id}">
     <div>
-      ${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}
+      ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
       <div class="fx-vs">
         <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-        <span style="opacity:.75">${status==='final'?`${f.score.hs}–${f.score.as}`:'—'}</span>
+        <span class="muted">vs</span>
         <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
       </div>
       <div class="meta">Round: ${escapeHtml(f.round||'')} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
     </div>
     <div class="center">
-      ${(f.proposals||[]).length?`<label>Proposals</label><br><select name="slot">${props}</select>`:`<span class="muted">No proposals</span>`}
+      ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
     </div>
     <div class="act">
       <button class="prop">Propose</button>
       <button class="agree">Agree</button>
       <button class="decl">Decline</button>
-      <button class="rep">Submit Result</button>
+      <button class="quick">Quick Edit</button>
       ${adminBtns}
     </div>
   </div>`;
 }
-function wireFxRowHandlers(f){
-  const root=document.getElementById('fx_'+f.id); if(!root) return;
-  const isManagerOf=meUser&&meUser.role==='Manager'&&[f.home,f.away].includes(meUser.teamId);
 
-  const btnProp=root.querySelector('.prop');
-  if(btnProp) btnProp.onclick=async()=>{
-    if(!(isManagerOf||isAdmin)) return alert('Managers only');
-    const atStr=prompt('Propose time (e.g., 2025-08-20 20:30)'); if(!atStr) return;
-    const at=Date.parse(atStr); if(!at) return alert('Could not parse date');
-    try{ await apiPost(`/api/cup/fixtures/${f.id}/propose`,{at}); await refreshFixturesSched(); renderFixturesSched(); }catch(e){ alert('Propose failed: '+e.message); }
-  };
-  const btnAgree=root.querySelector('.agree');
-  if(btnAgree) btnAgree.onclick=async()=>{
-    if(!(isManagerOf||isAdmin)) return alert('Managers only');
-    const at=root.querySelector('select[name="slot"]')?.value; if(!at) return alert('Pick a proposed slot first');
-    try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`,{at,agree:true}); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }catch(e){ alert('Vote failed: '+e.message); }
-  };
-  const btnDecl=root.querySelector('.decl');
-  if(btnDecl) btnDecl.onclick=async()=>{
-    if(!(isManagerOf||isAdmin)) return alert('Managers only');
-    const at=root.querySelector('select[name="slot"]')?.value; if(!at) return alert('Pick a proposed slot first');
-    try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`,{at,agree:false}); await refreshFixturesSched(); renderFixturesSched(); }catch(e){ alert('Vote failed: '+e.message); }
-  };
-  const btnRep=root.querySelector('.rep');
-  if(btnRep) btnRep.onclick=()=> openResultsModal(f);
+// =======================
+//   RESULT SHEET MODAL
+// =======================
+const resultModal = document.getElementById('resultModal');
+const resCancel = document.getElementById('resCancel');
+const resSubmit = document.getElementById('resSubmit');
+const resPasteJson = document.getElementById('resPasteJson');
+let activeFixture = null;
 
-  const btnIngest=root.querySelector('.ingest');
-  if(btnIngest) btnIngest.onclick=async()=>{
-    if(!isAdmin) return alert('Admin only');
-    const text=prompt('Paste quick result (score & player lines)'); if(!text) return;
-    try{
-      await apiPost(`/api/cup/fixtures/${f.id}/ingest-text`,{text});
-      document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false'));
-      document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
-      await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic();
-    }catch(e){ alert('Ingest failed: '+e.message); }
-  };
-  const btnJson=root.querySelector('.json');
-  if(btnJson) btnJson.onclick=async()=>{
-    if(!isAdmin) return alert('Admin only');
-    const hs=Number(prompt('Home score (hs)')||0);
-    const as=Number(prompt('Away score (as)')||0);
-    const template=JSON.stringify({details:{home:[{player:"Player A",goals:1,assists:0,position:"ST",rating:9.5}],away:[{player:"Player B",goals:2,assists:0,position:"CB",rating:8.2}]}} , null, 2);
-    const raw=prompt('Paste JSON (or edit the template):',template); if(!raw) return;
-    try{ const obj=JSON.parse(raw); await apiPost(`/api/cup/fixtures/${f.id}/report`,{hs,as,details:obj.details||obj}); document.querySelectorAll('[data-fxf]').forEach(x=>x.setAttribute('aria-pressed','false')); document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true'); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
-    catch(e){ alert('JSON upload failed: '+e.message); }
-  };
-}
+resCancel.onclick = ()=>{ resultModal.classList.remove('show'); resultModal.setAttribute('aria-hidden','true'); };
 
-/* =======================
-   RESULTS MODAL (sheet)
-======================= */
-const resModal=document.getElementById('resModal');
-const resCancel=document.getElementById('resCancel');
-const resSubmit=document.getElementById('resSubmit');
-const homeBody=document.getElementById('homeBody');
-const awayBody=document.getElementById('awayBody');
-const addRowHome=document.getElementById('addRowHome');
-const addRowAway=document.getElementById('addRowAway');
-const hsInput=document.getElementById('hsInput');
-const asInput=document.getElementById('asInput');
-const jsonBox=document.getElementById('jsonBox');
-const homeName=document.getElementById('homeName');
-const awayName=document.getElementById('awayName');
-
-let currentFixture=null, homeOpts=[], awayOpts=[];
-
-function rowHtml(side){
-  const opts=(side==='home'?homeOpts:awayOpts).map(o=>`<option value="${o.playerId}">${escapeHtml(o.label)}</option>`).join('');
+function rowHtml(playersOptions){
   return `<tr>
-    <td><select data-k="playerId"><option value="">— type name below —</option>${opts}</select><input data-k="player" placeholder="or type name" style="margin-top:6px"></td>
-    <td><input data-k="position" placeholder="ST/CB/CAM" style="max-width:80px"></td>
-    <td><input data-k="goals" type="number" min="0" value="0" style="max-width:70px"></td>
-    <td><input data-k="assists" type="number" min="0" value="0" style="max-width:70px"></td>
-    <td><input data-k="rating" type="number" step="0.1" min="0" max="10" value="" style="max-width:80px"></td>
-    <td class="row-btns"><button class="del">✕</button></td>
+    <td>
+      <select class="playerSel">
+        <option value="">— select player —</option>
+        ${playersOptions}
+      </select>
+      <input class="playerCustom" placeholder="or type a name" style="margin-top:6px">
+    </td>
+    <td><input class="g" type="number" min="0" value="0"></td>
+    <td><input class="a" type="number" min="0" value="0"></td>
+    <td><input class="r" type="number" min="0" step="0.1" value="0"></td>
+    <td><input class="pos" placeholder="e.g., ST"></td>
+    <td><button class="rm">✕</button></td>
   </tr>`;
 }
-function addRow(side){
-  const tbody=side==='home'?homeBody:awayBody;
-  const temp=document.createElement('tbody'); temp.innerHTML=rowHtml(side);
-  const row=temp.firstElementChild;
-  row.querySelector('.del').onclick=()=>row.remove();
-  tbody.appendChild(row);
+
+function toOptions(slots){
+  const pts = (slots||[]).map(s=>{
+    const p = s.player;
+    const label = p?.eaName || '';
+    const id = s.playerId || '';
+    if (!id && !label) return '';
+    return `<option value="${escapeHtml(id)}">${escapeHtml(label)}${id?` (#${id.slice(0,6)})`:''}</option>`;
+  }).join('');
+  return pts;
 }
-addRowHome.onclick=()=>addRow('home');
-addRowAway.onclick=()=>addRow('away');
 
-resCancel.onclick=()=>{ resModal.classList.remove('show'); resModal.setAttribute('aria-hidden','true'); };
+async function openResultEditor(f){
+  activeFixture = f;
+  document.getElementById('resTitle').textContent = `Submit Result — ${byId(f.home)?.name || f.home} vs ${byId(f.away)?.name || f.away}`;
+  document.getElementById('resMeta').textContent = `${fmtDate(f.when||Date.now())} • ${f.round||''}`;
 
-resSubmit.onclick=async()=>{
-  if(!currentFixture) return;
-  // JSON override
-  if(jsonBox.value.trim()){
+  const homeSlots = await fetch(`/api/clubs/${encodeURIComponent(f.home)}/squad`, {credentials:'include'}).then(r=>r.ok?r.json():{slots:[]}).catch(()=>({slots:[]}));
+  const awaySlots = await fetch(`/api/clubs/${encodeURIComponent(f.away)}/squad`, {credentials:'include'}).then(r=>r.ok?r.json():{slots:[]}).catch(()=>({slots:[]}));
+
+  const homeOpts = toOptions(homeSlots.slots);
+  const awayOpts = toOptions(awaySlots.slots);
+
+  const HT = document.querySelector('#homeTable tbody');
+  const AT = document.querySelector('#awayTable tbody');
+  HT.innerHTML=''; AT.innerHTML='';
+  // start with 3 rows each
+  for (let i=0;i<3;i++){ HT.insertAdjacentHTML('beforeend', rowHtml(homeOpts)); }
+  for (let i=0;i<3;i++){ AT.insertAdjacentHTML('beforeend', rowHtml(awayOpts)); }
+
+  document.getElementById('homeTitle').textContent = `Home — ${byId(f.home)?.name || f.home}`;
+  document.getElementById('awayTitle').textContent = `Away — ${byId(f.away)?.name || f.away}`;
+
+  document.getElementById('homeScore').value = f.score?.hs ?? 0;
+  document.getElementById('awayScore').value = f.score?.as ?? 0;
+  document.getElementById('resNotes').value = f.report?.text || '';
+
+  const wireTable = (tbody)=> tbody.querySelectorAll('.rm').forEach(btn=> btn.onclick = ()=> btn.closest('tr')?.remove());
+  wireTable(HT); wireTable(AT);
+
+  document.getElementById('addHomeRow').onclick = ()=>{ HT.insertAdjacentHTML('beforeend', rowHtml(homeOpts)); wireTable(HT); };
+  document.getElementById('addAwayRow').onclick = ()=>{ AT.insertAdjacentHTML('beforeend', rowHtml(awayOpts)); wireTable(AT); };
+
+  resPasteJson.onclick = async ()=>{
+    if (!isAdmin) return alert('Admin only');
+    const hs = Number(prompt('Home score (hs)')||0);
+    const as = Number(prompt('Away score (as)')||0);
+    const template = JSON.stringify({
+      details:{
+        home:[{ player:"Player A", goals:1, assists:0, rating:9.5, position:"ST" }],
+        away:[{ player:"Player B", goals:2, assists:0, rating:8.7, position:"CB" }]
+      }
+    }, null, 2);
+    const raw = prompt('Paste JSON (or edit the template):', template);
+    if (!raw) return;
     try{
-      const obj=JSON.parse(jsonBox.value.trim());
-      const hs=Number(hsInput.value||0), as=Number(asInput.value||0);
-      await apiPost(`/api/cup/fixtures/${currentFixture.id}/report`,{hs,as,details:obj.details||obj});
-      resCancel.click();
+      const obj = JSON.parse(raw);
+      await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj });
+      alert('Saved');
+      resultModal.classList.remove('show'); resultModal.setAttribute('aria-hidden','true');
       await refreshFixturesSched(); renderFixturesSched();
       await refreshFixturesPublic(); renderFixturesPublic();
       await loadChampions();
-      return;
-    }catch(e){ alert('JSON invalid: '+e.message); return; }
-  }
-  // Build from sheet
-  const build=(tbody)=>[...tbody.querySelectorAll('tr')].map(tr=>{
-    const get=(k)=>tr.querySelector(`[data-k="${k}"]`)?.value||'';
-    const playerId=get('playerId'); const player=get('player');
-    return { playerId, player, position:get('position'), goals:Number(get('goals')||0), assists:Number(get('assists')||0), rating:Number(get('rating')||0) };
-  }).filter(r=>r.playerId || r.player);
+    }catch(e){ alert('JSON upload failed: '+e.message); }
+  };
 
-  const details={ home:build(homeBody), away:build(awayBody) };
-  const hs=Number(hsInput.value||0), as=Number(asInput.value||0);
-  try{
-    await apiPost(`/api/cup/fixtures/${currentFixture.id}/report`,{hs,as,details});
-    resCancel.click();
-    await refreshFixturesSched(); renderFixturesSched();
-    await refreshFixturesPublic(); renderFixturesPublic();
-    await loadChampions();
-  }catch(e){ alert('Submit failed: '+e.message); }
-};
-
-async function openResultsModal(f){
-  currentFixture=f;
-  homeName.textContent = byId(f.home)?.name || f.home;
-  awayName.textContent = byId(f.away)?.name || f.away;
-  hsInput.value = f.score?.hs || 0; asInput.value = f.score?.as || 0;
-  homeBody.innerHTML=''; awayBody.innerHTML=''; jsonBox.value='';
-
-  // Fetch squads for dropdowns
-  async function fetchOpts(clubId){
+  resSubmit.onclick = async ()=>{
+    const rowsToDetails = (tbody)=> {
+      const out = [];
+      tbody.querySelectorAll('tr').forEach(tr=>{
+        const playerId = (tr.querySelector('.playerSel')?.value||'').trim();
+        const custom   = (tr.querySelector('.playerCustom')?.value||'').trim();
+        const goals = Number(tr.querySelector('.g')?.value||0);
+        const assists = Number(tr.querySelector('.a')?.value||0);
+        const rating = Number(tr.querySelector('.r')?.value||0);
+        const pos = (tr.querySelector('.pos')?.value||'').trim();
+        if (!playerId && !custom && !goals && !assists && !rating) return; // empty row
+        out.push({ playerId, player: custom, goals, assists, rating, position: pos });
+      });
+      return out;
+    };
+    const details = {
+      home: rowsToDetails(document.querySelector('#homeTable tbody')),
+      away: rowsToDetails(document.querySelector('#awayTable tbody')),
+    };
+    const hs = Number(document.getElementById('homeScore').value||0);
+    const as = Number(document.getElementById('awayScore').value||0);
+    const text = document.getElementById('resNotes').value||'';
     try{
-      const r=await apiGet(`/api/clubs/${encodeURIComponent(clubId)}/squad`);
-      const slots=r.slots||[];
-      return slots.filter(s=>s.player).map(s=>({ playerId:s.playerId, label:s.player.eaName || s.label || s.playerId }));
-    }catch{return [];}
-  }
-  homeOpts = await fetchOpts(f.home);
-  awayOpts = await fetchOpts(f.away);
-  addRow('home'); addRow('away');
+      await apiPost(`/api/cup/fixtures/${activeFixture.id}/report`, { hs, as, text, details });
+      alert('Result submitted');
+      resultModal.classList.remove('show'); resultModal.setAttribute('aria-hidden','true');
+      await refreshFixturesSched(); renderFixturesSched();
+      await refreshFixturesPublic(); renderFixturesPublic();
+      await loadChampions();
+    }catch(e){ alert('Submit failed: '+e.message); }
+  };
 
-  resModal.classList.add('show'); resModal.setAttribute('aria-hidden','false');
-}
-
-/* =======================
-   NEXT/RECENT FOR A TEAM
-======================= */
-function nextFor(teamId){
-  const now=Date.now();
-  return fixturesPublicCache.filter(f=>(f.home===teamId||f.away===teamId)&&f.status!=='final'&&f.when&&f.when>=now).sort((a,b)=>a.when-b.when)[0];
-}
-function finalsFor(teamId,n=5){
-  return fixturesPublicCache.filter(f=>f.status==='final'&&(f.home===teamId||f.away===teamId)).sort((a,b)=>(b.when||b.createdAt)-(a.when||a.createdAt)).slice(0,n);
-}
-function renderNextFor(teamId){
-  const el=document.getElementById('nextMatchBody');
-  const f=nextFor(teamId); if(!f){ el.textContent='No scheduled match yet.'; return; }
-  const hn=byId(f.home)?.name||f.home, an=byId(f.away)?.name||f.away;
-  el.innerHTML=`<div><strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong></div><div class="muted">${fmtDate(f.when)}</div>`;
-}
-function renderTeamResults(teamId){
-  const el=document.getElementById('teamResultsBody');
-  const list=finalsFor(teamId);
-  el.innerHTML = list.length ? list.map(f=>{
-    const hn=byId(f.home)?.name||f.home, an=byId(f.away)?.name||f.away;
-    return `<div>FT ${f.score.hs}-${f.score.as}: <strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong> • ${fmtDate(f.when||f.createdAt)}</div>`;
-  }).join('') : 'No finals yet.';
+  resultModal.classList.add('show'); resultModal.setAttribute('aria-hidden','false');
 }
 
-/* =======================
-   NEWS (dynamic feed)
-======================= */
-async function loadNews(){
-  const feed=document.getElementById('newsFeed');
-  feed.innerHTML='<div class="muted">Loading news…</div>';
-  try{
-    const d=await apiGet('/api/news'); // server computes/generates posts
-    const items=d.items||[];
-    feed.innerHTML = items.length ? items.map(n=>{
-      const club = byId(n.clubId);
-      const avatar = club ? teamLogoUrl(club) : '/assets/ui/news.png';
-      const when = n.createdAt ? fmtDate(n.createdAt) : '';
-      return `<article class="news-post">
-        <img class="news-avatar" src="${avatar}" alt="">
-        <div class="news-body">
-          <div class="news-title">${escapeHtml(n.title||'News')}</div>
-          <div>${escapeHtml(n.text||'')}</div>
-          ${n.extraHtml||''}
-          <div class="news-meta">${when}${n.tag?` • ${escapeHtml(n.tag)}`:''}</div>
-        </div>
-      </article>`;
-    }).join('') : '<div class="muted">No news yet.</div>';
-  }catch(e){ feed.innerHTML='<div class="muted">Failed to load news.</div>'; }
-}
-
-/* =======================
-   CHAMPIONS CUP
-======================= */
+// =======================
+//   CHAMPIONS CUP
+// =======================
 async function loadChampions(){
-  document.getElementById('ccCupId').textContent=CC_ID;
+  document.getElementById('ccCupId').textContent = CC_ID;
 
   // groups + tables
-  let cupData={cup:{groups:{A:[],B:[],C:[],D:[]}},tables:{}};
-  try{ cupData=await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}`); }catch(e){ console.warn('Champions fetch failed:',e.message); }
-  renderCcGroups(cupData.cup.groups, cupData.tables);
+  let cupData = { cup:{ groups:{A:[],B:[],C:[],D:[]} } };
+  try {
+    cupData = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}`);
+  } catch(e) {
+    console.warn('Champions fetch failed:', e.message);
+  }
+  renderCcGroups(cupData.cup.groups);
 
-  // fixtures in this cup
-  let ccList=[];
-  try{ const fx=await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`); ccList=fx.fixtures||[]; }catch{}
+  // cc fixtures
+  let ccList = [];
+  try {
+    const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`);
+    ccList = fx.fixtures || [];
+  } catch {}
   renderCcFixtures(ccList);
 
   // admin panel
   document.getElementById('ccAdmin').style.display = isAdmin ? 'block' : 'none';
-  if(isAdmin) buildManualGroupsEditor(cupData.cup.groups);
+  if (isAdmin) buildManualGroupsEditor(cupData.cup.groups);
 }
-
-/* Groups rendering: standings table only */
-function renderCcGroups(groups, tables){
-  const el=document.getElementById('ccGroups');
-  const G=['A','B','C','D'];
-  el.classList.add('group-grid');
-  el.innerHTML = G.map(g=>{
-    const baseRows = (tables?.[g] && tables[g].length)
-      ? tables[g]
-      : (groups[g]||[]).map(id=>({ clubId:String(id), P:0,W:0,D:0,L:0,GF:0,GA:0,GD:0,Pts:0 }));
-    const rows = baseRows.map(r=>{
-      const t=byId(r.clubId); const nm=t?t.name:r.clubId; const logo=t?teamLogoUrl(t):'';
-      const GD = (typeof r.GD==='number')?r.GD:(Number(r.GF||0)-Number(r.GA||0));
+function renderCcGroups(groups){
+  const el = document.getElementById('ccGroups');
+  const tables = computeGroupTablesClient(groups); // client fallback for standings
+  el.innerHTML = ['A','B','C','D'].map(g=>{
+    const rows = (tables[g]||[]).map(r=>{
+      const T = byId(r.clubId);
       return `<tr>
-        <td><span class="group-team">${logo?`<img src="${logo}" alt="">`:''}<span>${escapeHtml(nm)}</span></span></td>
-        <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td>
-        <td>${r.GF}</td><td>${r.GA}</td><td>${GD}</td><td><strong>${r.Pts}</strong></td>
+        <td><span class="group-team"><img src="${teamLogoUrl(T)}" alt=""><span>${escapeHtml(T?.name||r.clubId)}</span></span></td>
+        <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}-${r.GA}</td><td>${r.Pts}</td>
       </tr>`;
     }).join('');
-    return `<div class="m-card group-card">
-      <div class="group-title">Group ${g}</div>
-      <div style="overflow:auto">
+    return `
+      <div class="group-card">
+        <div class="group-title">Group ${g}</div>
         <table class="group-table">
-          <thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead>
-          <tbody>${rows || `<tr><td class="muted">No teams</td><td colspan="8"></td></tr>`}</tbody>
+          <thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF-GA</th><th>Pts</th></tr></thead>
+          <tbody>${rows||''}</tbody>
         </table>
-      </div>
-    </div>`;
+      </div>`;
   }).join('');
 }
+function computeGroupTablesClient(groups){
+  // derive from fixturesPublicCache + CC fixtures if present
+  const table = { A:{}, B:{}, C:{}, D:{} };
+  const touch = (g,id)=> table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
+  ['A','B','C','D'].forEach(g=> (groups[g]||[]).forEach(id=> touch(g,id)));
+
+  const all = fixturesPublicCache.filter(f=>f.cup===CC_ID && f.status==='final');
+  all.forEach(f=>{
+    const g = f.group || null; if(!g || !table[g]) return;
+    touch(g, f.home); touch(g, f.away);
+    const H = table[g][f.home], A = table[g][f.away];
+    const hs = Number(f.score?.hs||0), as = Number(f.score?.as||0);
+    H.P++; A.P++;
+    H.GF+=hs; H.GA+=as; H.GD=H.GF-H.GA;
+    A.GF+=as; A.GA+=hs; A.GD=A.GF-A.GA;
+    if(hs>as){ H.W++; H.Pts+=3; A.L++; }
+    else if(hs<as){ A.W++; A.Pts+=3; H.L++; }
+    else { H.D++; A.D++; H.Pts++; A.Pts++; }
+  });
+  const sorted = {};
+  ['A','B','C','D'].forEach(g=>{
+    sorted[g] = Object.values(table[g]).sort((x,y)=>(y.Pts-x.Pts)||(y.GD-x.GD)||(y.GF-x.GF));
+  });
+  return sorted;
+}
 function renderCcFixtures(list){
-  const el=document.getElementById('ccFixtures');
+  const el = document.getElementById('ccFixtures');
   list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
   el.innerHTML = list.length ? list.map(f=>{
-    const H=byId(f.home), A=byId(f.away);
-    const hn=H?.name||f.home, an=A?.name||f.away;
-    const whenTxt=f.when?fmtDate(f.when):'TBD';
-    const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'—';
-    const badge=`<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
-    const banner=getFixtureBanner();
-    const adminBtns = isAdmin ? `<div class="act"><button data-json="${f.id}">Upload JSON</button><button data-ingest="${f.id}">Admin paste</button><button data-rep="${f.id}">Submit Result</button></div>` : '';
-    return `<div class="fx">
+    const H = byId(f.home), A = byId(f.away);
+    const hn = H?.name || f.home;
+    const an = A?.name || f.away;
+    const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const banner = getFixtureBanner();
+    const editBtn = isAdmin ? `<div class="act"><button data-ccq="${f.id}">Quick Edit</button><button data-ccj="${f.id}">Admin JSON</button></div>` : '';
+    return `<div class="fx" id="ccfx_${f.id}">
       <div>
-        ${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}
+        ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
         <div class="fx-vs">
           <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-          <span style="opacity:.75">${scoreTxt}</span>
+          <span class="muted">${scoreTxt}</span>
           <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
         </div>
-        <div class="meta">${badge} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
-        ${adminBtns}
+        <div class="meta"><span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
       </div>
+      ${editBtn}
     </div>`;
   }).join('') : `<div class="muted">No Champions Cup fixtures yet.</div>`;
 
-  if(isAdmin){
-    list.forEach(f=>{
-      const root=[...el.querySelectorAll(`[data-json="${f.id}"],[data-ingest="${f.id}"],[data-rep="${f.id}"]`)];
-      root.forEach(btn=>{
-        if(btn.hasAttribute('data-json')){
-          btn.onclick=async()=>{
-            const hs=Number(prompt('Home score (hs)')||0);
-            const as=Number(prompt('Away score (as)')||0);
-            const template=JSON.stringify({details:{home:[{player:"Player A",goals:1,assists:0,position:"ST",rating:9.0}],away:[]}},null,2);
-            const raw=prompt('Paste JSON (or edit the template):',template); if(!raw) return;
-            try{ const obj=JSON.parse(raw); await apiPost(`/api/cup/fixtures/${f.id}/report`,{hs,as,details:obj.details||obj}); await loadChampions(); await refreshFixturesPublic(); renderFixturesPublic(); }
-            catch(e){ alert('JSON upload failed: '+e.message); }
-          };
-        }else if(btn.hasAttribute('data-ingest')){
-          btn.onclick=async()=>{
-            const text=prompt('Paste quick result (score & player lines)'); if(!text) return;
-            try{ await apiPost(`/api/cup/fixtures/${f.id}/ingest-text`,{text}); await loadChampions(); await refreshFixturesPublic(); renderFixturesPublic(); }
-            catch(e){ alert('Ingest failed: '+e.message); }
-          };
-        }else if(btn.hasAttribute('data-rep')){
-          btn.onclick=()=>openResultsModal(f);
-        }
-      });
-    });
-  }
+  // wire CC quick edit / JSON
+  list.forEach(f=>{
+    const q = document.querySelector(`[data-ccq="${f.id}"]`);
+    const j = document.querySelector(`[data-ccj="${f.id}"]`);
+    if (q) q.onclick = ()=> openResultEditor(f);
+    if (j) j.onclick = async ()=>{
+      if (!isAdmin) return alert('Admin only');
+      const hs = Number(prompt('Home score (hs)')||0);
+      const as = Number(prompt('Away score (as)')||0);
+      const template = JSON.stringify({ details:{ home:[{ player:"Player A", goals:1, assists:0, rating:9.5 }], away:[{ player:"Player B", goals:2, assists:0, rating:8.7 }] }}, null, 2);
+      const raw = prompt('Paste JSON (or edit the template):', template);
+      if (!raw) return;
+      try{
+        const obj = JSON.parse(raw);
+        await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj });
+        await loadChampions();
+        await refreshFixturesPublic(); renderFixturesPublic();
+      }catch(e){ alert('JSON upload failed: '+e.message); }
+    };
+  });
 }
+
 function buildManualGroupsEditor(groups){
-  const root=document.getElementById('ccManualGroups');
-  const opts=teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
-  root.innerHTML=['A','B','C','D'].map(g=>{
-    const rows=(groups[g]||[]).map(v=>`<div><select>${opts}</select></div>`).join('');
+  const root = document.getElementById('ccManualGroups');
+  const opts = teams.map(t=> `<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
+  root.innerHTML = ['A','B','C','D'].map(g=>{
+    const rows = (groups[g]||[]).length
+      ? (groups[g]||[]).map(v=>`<div><select>${opts}</select></div>`).join('')
+      : '';
     return `<div class="m-card"><strong>Group ${g}</strong>
-      <div data-g="${g}" class="gbox">${rows||''}</div>
+      <div data-g="${g}" class="gbox">${rows}</div>
       <div style="margin-top:6px"><button data-add="${g}">+ Add team</button></div>
     </div>`;
   }).join('');
+
+  // add rows
   root.querySelectorAll('[data-add]').forEach(btn=>{
-    btn.onclick=()=>{ const g=btn.getAttribute('data-add'); const box=root.querySelector(`.gbox[data-g="${g}"]`); const div=document.createElement('div'); div.innerHTML=`<div><select>${opts}</select></div>`; box.appendChild(div); };
+    btn.onclick = ()=>{
+      const g = btn.getAttribute('data-add');
+      const box = root.querySelector(`.gbox[data-g="${g}"]`);
+      const div = document.createElement('div');
+      div.innerHTML = `<div><select>${opts}</select></div>`;
+      box.appendChild(div);
+    };
   });
 
-  document.getElementById('ccBtnSaveGroups').onclick=async()=>{
-    const out={A:[],B:[],C:[],D:[]};
+  // save groups (no 16-team requirement; any count allowed)
+  document.getElementById('ccBtnSaveGroups').onclick = async ()=>{
+    const out = { A:[], B:[], C:[], D:[] };
     root.querySelectorAll('.gbox').forEach(box=>{
-      const g=box.getAttribute('data-g');
-      box.querySelectorAll('select').forEach(sel=>{ const v=sel.value; if(v) out[g].push(v); });
+      const g = box.getAttribute('data-g');
+      box.querySelectorAll('select').forEach(sel=>{
+        const v = sel.value; if (v) out[g].push(v);
+      });
     });
-    const all=[...out.A,...out.B,...out.C,...out.D]; const set=new Set(all);
-    if(all.length!==set.size) return alert('Duplicate club across groups.');
-    try{ await apiPost(`/api/champions/${CC_ID}/groups`,{groups:out}); alert('Groups saved'); await loadChampions(); }
-    catch(e){ alert('Save groups failed: '+e.message); }
+    // ensure no duplicates across groups
+    const all = [...out.A, ...out.B, ...out.C, ...out.D];
+    const set = new Set(all);
+    if (all.length !== set.size) return alert('Duplicate club across groups.');
+    try{
+      await apiPost(`/api/champions/${CC_ID}/groups`, { groups: out });
+      alert('Groups saved'); await loadChampions();
+    }catch(e){ alert('Save groups failed: '+e.message); }
   };
 
-  document.getElementById('ccBtnCreateFx').onclick=async()=>{
-    const stage=prompt('Stage (e.g., Group A MD1, Semifinal, Final)','Group A MD1')||'';
-    const groupMatch=/^group\s+([ABCD])/i.exec(stage); const group=groupMatch?groupMatch[1].toUpperCase():null;
-    const home=prompt('Home clubId'); if(!home) return;
-    const away=prompt('Away clubId'); if(!away) return;
-    const whenStr=prompt('Date/time (e.g., 2025-08-20 20:30) or blank for TBD',''); const when=whenStr?Date.parse(whenStr):null;
-    try{ await apiPost('/api/cup/fixtures',{ home, away, round:stage, cup:CC_ID, group, when }); alert('Fixture created'); await loadChampions(); }
-    catch(e){ alert('Create failed: '+e.message); }
+  setupCcFixtureForm();
+}
+function setupCcFixtureForm(){
+  const homeSel = document.getElementById('ccHomeSel');
+  const awaySel = document.getElementById('ccAwaySel');
+  const groupSel = document.getElementById('ccGroupSel');
+  const roundInput = document.getElementById('ccRoundInput');
+  const whenInput = document.getElementById('ccWhenInput');
+  const createBtn = document.getElementById('ccFormCreate');
+  if (!homeSel || !awaySel || !createBtn) return;
+
+  const optionsHtml = teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
+  homeSel.innerHTML = `<option value="">— choose —</option>${optionsHtml}`;
+  awaySel.innerHTML = `<option value="">— choose —</option>${optionsHtml}`;
+
+  function ensureDifferent(){
+    if (homeSel.value && awaySel.value && homeSel.value === awaySel.value) {
+      alert('Home and away cannot be the same club.');
+      awaySel.value = '';
+    }
+  }
+  homeSel.onchange = ensureDifferent;
+  awaySel.onchange = ensureDifferent;
+
+  createBtn.onclick = async ()=>{
+    const home = homeSel.value;
+    const away = awaySel.value;
+    const group = groupSel.value || null;
+    const round = (roundInput.value || '').trim() || (group ? `Group ${group}` : 'Round');
+    const when = whenInput.value ? Date.parse(whenInput.value) : null;
+    if (!home || !away) return alert('Pick both teams');
+    try{
+      await apiPost('/api/cup/fixtures', { home, away, round, cup: CC_ID, group, when });
+      alert('Fixture created'); await loadChampions();
+    }catch(e){ alert('Create failed: '+e.message); }
   };
 }
 
-/* =======================
-   INIT
-======================= */
+// =======================
+//   NEWS (dynamic; client-side fallback from fixtures)
+// =======================
+async function loadNews(){
+  const wrap = document.getElementById('newsFeed');
+  // Try server feed first (if you implemented /api/news). Fallback to client compute.
+  try{
+    const d = await apiGet('/api/news');
+    const items = d.items || [];
+    if (items.length){
+      wrap.innerHTML = items.map(renderNewsItem).join('');
+      return;
+    }
+  }catch{}
+  // Fallback: compute from fixtures (league + CC)
+  try{
+    await refreshFixturesPublic();
+    const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
+    const computed = computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[])]);
+    wrap.innerHTML = computed.length ? computed.map(renderNewsItem).join('') : '<div class="muted">No news yet.</div>';
+  }catch{ wrap.innerHTML = '<div class="muted">Failed to load news.</div>'; }
+}
+function renderNewsItem(n){
+  const club = byId(n.clubId);
+  return `<article class="news-post">
+    <img class="news-avatar" src="${teamLogoUrl(club)}" alt="">
+    <div class="news-body">
+      <div class="news-title">${escapeHtml(n.title)}</div>
+      <div>${escapeHtml(n.body)}</div>
+      <div class="news-meta">${fmtDate(n.ts)} • ${escapeHtml(n.tag||'')}</div>
+    </div>
+  </article>`;
+}
+function computeNewsFromFixtures(list){
+  const out = [];
+  const byPlayer = new Map(); // name => { streak, lastScoredAt }
+  const tallyGoals = new Map(); // name => total goals
+  const now = Date.now();
+
+  list.filter(f=>f.status==='final').forEach(f=>{
+    ['home','away'].forEach(side=>{
+      (f.details?.[side]||[]).forEach(r=>{
+        const name = (r.player && r.player.trim()) || r.playerId || 'Unknown';
+        const g = Number(r.goals||0);
+        if (g>=3){
+          out.push({
+            tag:'Hattrick',
+            title:`${name} nets a hat-trick!`,
+            body:`${name} scored ${g} for ${(byId(side==='home'?f.home:f.away)?.name)||'their club'} in ${f.round||'League'}.`,
+            clubId: side==='home'?f.home:f.away, ts: f.when || now
+          });
+        }
+        // streaks
+        if (g>0){
+          const meta = byPlayer.get(name) || { streak:0, lastScoredAt:0 };
+          meta.streak += 1; meta.lastScoredAt = f.when||now; byPlayer.set(name, meta);
+        } else {
+          const meta = byPlayer.get(name) || { streak:0, lastScoredAt:0 };
+          meta.streak = 0; byPlayer.set(name, meta);
+        }
+        if (g>0) tallyGoals.set(name, (tallyGoals.get(name)||0)+g);
+      });
+    });
+  });
+
+  // streak news (>=3 consecutive)
+  for (const [name,meta] of byPlayer.entries()){
+    if (meta.streak>=3){
+      out.push({
+        tag:'Streak',
+        title:`${name} scoring streak`,
+        body:`${name} has scored in ${meta.streak} consecutive matches.`,
+        clubId: '', ts: meta.lastScoredAt || now
+      });
+    }
+  }
+  // leaders snapshot
+  const leaders = Array.from(tallyGoals.entries()).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  if (leaders.length){
+    const line = leaders.map(([n,c],i)=>`${i+1}. ${n} (${c})`).join('  ');
+    out.push({ tag:'Leaders', title:'Top Scorers Update', body: line, clubId:'', ts: now });
+  }
+  // sort newest first
+  out.sort((a,b)=> (b.ts||0) - (a.ts||0));
+  return out;
+}
+
+// =======================
+//   INIT
+// =======================
 async function init(){
   renderTeams();
   await checkAdmin();
   await checkMe();
+
+  // default
   setNav('teams');
 
   await refreshFixturesPublic(); renderFixturesPublic();
-  if(isMgr||isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
+  if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
   await loadFA();
 
   // hash-open team
-  try{ const m=location.hash.match(/team=([^&]+)/); if(m){ const team=byId(decodeURIComponent(m[1])); if(team) setTimeout(()=>showTeam(team),150); } }catch{}
+  try{
+    const m = location.hash.match(/team=([^&]+)/);
+    if (m){ const team = byId(decodeURIComponent(m[1])); if (team) setTimeout(()=>showTeam(team), 120); }
+  }catch{}
 }
 init();
 </script>
