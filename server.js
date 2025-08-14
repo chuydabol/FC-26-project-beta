@@ -1,4 +1,6 @@
 // server.js — Pro Clubs League backend (Firestore)
+// Updated: removed EA API dependency, added dynamic News generation (hattrick, finals, streaks),
+// kept JSON/quick-paste ingest, Champions Cup, squads, rankings, wallets, free agents.
 
 const express = require('express');
 const path = require('path');
@@ -6,7 +8,7 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
-// Optional middlewares (they'll be used if present, ignored if missing)
+// Optional middlewares (used if installed)
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
 try { compression = require('compression'); } catch {}
@@ -75,7 +77,7 @@ if (helmet) app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin'
 if (cors) app.use(cors({ origin: true, credentials: true }));
 if (compression) app.use(compression());
 app.use(express.json({ limit: '1mb' }));
-if (morgan) app.use(morgan(isProd ? 'combined' : 'dev'));
+if (morgan) app.use(morgan(isProd ? 'combined' : 'dev')));
 
 app.use(session({
   secret: SESSION_SECRET,
@@ -104,6 +106,7 @@ const COL = {
   clubSquadSlots: (clubId) => db.collection('clubSquads').doc(clubId).collection('slots'),
   playerStats : () => db.collection('playerStats'), // docId = `${season}_${playerId}`
   champions   : () => db.collection('champions'),   // docId = cupId
+  news        : () => db.collection('news'),        // docId = newsId
 };
 
 const wrap = fn => (req,res,next)=> Promise.resolve(fn(req,res,next)).catch(next);
@@ -150,13 +153,6 @@ function requireManagerOrAdmin(req, res, next) {
   if (u && u.role === 'Manager' && isManagerActive(req)) return next();
   return res.status(403).json({ error: 'Managers or Admins only' });
 }
-function requirePlayerOrActiveManager(req,res,next){
-  const u = me(req);
-  if (!u) return res.status(403).json({ error:'Players or Managers only' });
-  if (u.role==='Player') return next();
-  if (u.role==='Manager' && isManagerActive(req)) return next();
-  return res.status(403).json({ error:'Players or active Managers only' });
-}
 function managerOwnsFixture(req, f) {
   const u = me(req);
   return !!(u && u.role==='Manager' && isManagerActive(req) && [f.home, f.away].includes(u.teamId));
@@ -170,6 +166,7 @@ function genCode(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return 
 function seasonKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 function norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+const nameKey = s => norm(s);
 
 /* =========================
    AUTH (Admin + Session User)
@@ -268,7 +265,7 @@ app.get('/api/free-agents', wrap(async (_req, res) => {
   const snap = await COL.freeAgents().orderBy('listedAt', 'desc').get();
   res.json({ agents: snap.docs.map(d => d.data()) });
 }));
-app.post('/api/free-agents/me', requirePlayerOrActiveManager, wrap(async (req, res) => {
+app.post('/api/free-agents/me', requireManagerOrAdmin, wrap(async (req, res) => {
   const u = me(req);
   const {
     positions = [], foot = '', region = '', bio = '',
@@ -291,7 +288,7 @@ app.post('/api/free-agents/me', requirePlayerOrActiveManager, wrap(async (req, r
   await COL.freeAgents().doc(u.id).set(doc);
   res.json({ ok: true, agent: doc });
 }));
-app.delete('/api/free-agents/me', requirePlayerOrActiveManager, wrap(async (req, res) => {
+app.delete('/api/free-agents/me', requireManagerOrAdmin, wrap(async (req, res) => {
   const u = me(req);
   await COL.freeAgents().doc(u.id).delete();
   res.json({ ok: true });
@@ -433,42 +430,6 @@ app.get('/api/bonuses/cup', requireAdmin, wrap(async (req,res)=>{
 }));
 
 /* =========================
-   EA PASS-THROUGH (with 60s cache)
-========================= */
-const EA_CACHE = new Map(); // key: clubId, value: { ts, data }
-const EA_TTL_MS = 60 * 1000;
-
-app.get('/api/teams/:clubId/players', wrap(async (req, res) => {
-  const { clubId } = req.params;
-  if (!/^\d+$/.test(clubId)) return res.json({ members: [] }); // manual clubs are strings
-
-  const cached = EA_CACHE.get(clubId);
-  const now = Date.now();
-  if (cached && now - cached.ts < EA_TTL_MS) {
-    return res.json(cached.data);
-  }
-
-  const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 10_000);
-
-  try {
-    const response = await fetchFn(url, { headers:{'User-Agent':'Mozilla/5.0', 'Accept':'application/json'}, signal: controller.signal });
-    clearTimeout(timer);
-    if (!response.ok) return res.status(response.status).json({ error:`EA API error: ${response.statusText}` });
-    const data = await response.json();
-    const out = Array.isArray(data?.members) ? data : { members: [] };
-    EA_CACHE.set(clubId, { ts: now, data: out });
-    res.json(out);
-  } catch (err) {
-    clearTimeout(timer);
-    if (err.name === 'AbortError') return res.status(504).json({ error: 'EA API timed out' });
-    console.error('EA fetch error:', err);
-    res.status(500).json({ error: 'Failed to fetch players from EA API' });
-  }
-}));
-
-/* =========================
    SQUAD SLOTS (with batched hydration)
 ========================= */
 // Bootstrap S01..S15 (admin)
@@ -606,6 +567,7 @@ async function bumpPlayerStatsFromFixture(f){
         assists: FieldValue.increment(Number(r.assists||0)),
         ratingsSum: FieldValue.increment(Number(r.rating||0)),
         ratingsCount: FieldValue.increment(r.rating ? 1 : 0),
+        lastUpdatedAt: Date.now()
       }, { merge:true });
     }
   }
@@ -634,7 +596,6 @@ app.post('/api/cup/fixtures', requireAdmin, wrap(async (req, res) => {
     when: when ? Number(when) : null, // locked time (ms)
     lineups: {},
     score: { hs:0, as:0 },
-    pens: null,                 // { hs, as } when decided on penalties
     report: { text:'', mvpHome:'', mvpAway:'', discordMsgUrl:'' },
     details: { home: [], away: [] },
     unresolved: [],
@@ -656,7 +617,6 @@ app.get('/api/cup/fixtures/public', wrap(async (req, res) => {
       home: f.home, away: f.away,
       when: f.when || null, status: f.status,
       score: f.score || { hs: 0, as: 0 },
-      pens: f.pens || null,
       details: f.details || { home: [], away: [] },
       createdAt: f.createdAt || 0
     };
@@ -749,7 +709,97 @@ app.put('/api/cup/fixtures/:id/lineup', requireManagerOrAdmin, wrap(async (req, 
   res.json({ ok:true, fixture: f });
 }));
 
-// Report final (accepts playerId OR player name) — supports penalties
+/* ====== News helpers (dynamic posts) ====== */
+async function addNews(item){
+  const id = uuidv4();
+  const doc = { id, ts: Date.now(), ...item };
+  await COL.news().doc(id).set(doc);
+  return doc;
+}
+function playerLabel(r){ return r.player || (r.playerId ? `#${String(r.playerId).slice(0,6)}` : 'Unknown'); }
+function scoredInFixture(fx, side, pred) {
+  for (const r of (fx.details?.[side]||[])) {
+    if (pred(r)) return true;
+  }
+  return false;
+}
+async function previousFinalForClub(cupId, clubId, beforeTs){
+  // Find the latest final fixture for club strictly before this time
+  const snap = await COL.fixtures()
+    .where('cup','==', cupId)
+    .where('status','==','final')
+    .where('teams','array-contains', String(clubId))
+    .where('when','<', beforeTs)
+    .orderBy('when','desc')
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  return snap.docs[0].data();
+}
+async function generateNewsForFixture(f){
+  // Final result post
+  const hs = Number(f.score?.hs||0), as = Number(f.score?.as||0);
+  const winner = hs>as ? f.home : (as>hs ? f.away : null);
+  const title = `FT ${hs}-${as}`;
+  await addNews({
+    type: 'final_score',
+    title,
+    text: `Full time: ${f.home} vs ${f.away} — ${hs}-${as}`,
+    cup: f.cup,
+    clubId: winner || null,
+    fixtureId: f.id,
+    meta: { score: { hs, as }, home: f.home, away: f.away }
+  });
+
+  // Hattrick posts
+  for (const side of ['home','away']){
+    for (const r of (f.details?.[side]||[])){
+      if (Number(r.goals||0) >= 3){
+        await addNews({
+          type: 'hattrick',
+          title: `Hattrick: ${playerLabel(r)}`,
+          text: `${playerLabel(r)} scored ${r.goals} for ${side==='home'?f.home:f.away}`,
+          cup: f.cup,
+          clubId: side==='home'?f.home:f.away,
+          fixtureId: f.id,
+          meta: { playerId: r.playerId||'', player: r.player||'', goals: Number(r.goals||0), score: { hs, as } }
+        });
+      }
+    }
+  }
+
+  // Consecutive scoring posts (if scored in club's previous final)
+  for (const side of ['home','away']){
+    const clubId = side==='home'?f.home:f.away;
+    const prev = await previousFinalForClub(f.cup, clubId, f.when || Date.now());
+    if (!prev) continue;
+    for (const r of (f.details?.[side]||[])){
+      if (Number(r.goals||0) > 0){
+        const pid = r.playerId || '';
+        const nkey = nameKey(r.player||'');
+        const scoredPrev = scoredInFixture(prev, side, x =>
+          (pid && x.playerId && x.playerId===pid && Number(x.goals||0)>0) ||
+          (!!nkey && nameKey(x.player||'')===nkey && Number(x.goals||0)>0)
+        );
+        if (scoredPrev){
+          await addNews({
+            type: 'consecutive_goals',
+            title: `On a streak: ${playerLabel(r)}`,
+            text: `${playerLabel(r)} scored in back-to-back matches for ${clubId}`,
+            cup: f.cup,
+            clubId,
+            fixtureId: f.id,
+            meta: { playerId: pid, prevFixtureId: prev.id }
+          });
+        }
+      }
+    }
+  }
+}
+
+/* ====== End News helpers ====== */
+
+// Report final (accepts playerId OR player name)
 app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req, res) => {
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error: 'not found' });
@@ -758,26 +808,19 @@ app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req,
     return res.status(403).json({ error: 'Managers of these clubs only (or admin)' });
   }
 
-  const { hs, as, text, mvpHome, mvpAway, discordMsgUrl, details, pens } = req.body || {};
+  const { hs, as, text, mvpHome, mvpAway, discordMsgUrl, details } = req.body || {};
   f.score  = { hs: Number(hs||0), as: Number(as||0) };
-  if (pens && typeof pens === 'object') {
-    f.pens = {
-      hs: Number(pens.hs ?? pens.home ?? 0),
-      as: Number(pens.as ?? pens.away ?? 0)
-    };
-  }
   f.report = { text: String(text||''), mvpHome: String(mvpHome||''), mvpAway: String(mvpAway||''), discordMsgUrl: String(discordMsgUrl||'') };
-
   if (details && typeof details === 'object') {
     f.details = { home: [], away: [] };
     f.unresolved = [];
     for (const side of ['home','away']){
       for (const row of (details[side]||[])){
-        let { playerId, player, goals=0, assists=0, rating=0 } = row || {};
+        let { playerId, player, goals=0, assists=0, rating=0, pos='' } = row || {};
         if (!playerId && player){
           playerId = await resolvePlayerIdByName(player, side==='home' ? f.home : f.away);
         }
-        const item = { playerId: playerId||'', player: player||'', goals:Number(goals||0), assists:Number(assists||0), rating:Number(rating||0) };
+        const item = { playerId: playerId||'', player: player||'', goals:Number(goals||0), assists:Number(assists||0), rating:Number(rating||0), pos:String(pos||'') };
         f.details[side].push(item);
         if (!playerId && player) f.unresolved.push({ side, name: player });
       }
@@ -788,10 +831,14 @@ app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req,
 
   await setDoc('fixtures', f.id, f);
   await bumpPlayerStatsFromFixture(f);
+
+  // Dynamic news from this fixture
+  try { await generateNewsForFixture(f); } catch (e) { console.warn('news generation failed:', e.message); }
+
   res.json({ ok: true, fixture: f });
 }));
 
-// Admin quick paste (now can parse "penalties 4-3" style too)
+// Admin quick paste
 app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res) => {
   const f = await getDoc('fixtures', req.params.id);
   if (!f) return res.status(404).json({ error: 'not found' });
@@ -807,14 +854,13 @@ app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res
     for (const r of parsed.details[side]){
       let pid = r.playerId || null;
       if (!pid && r.player) pid = await resolvePlayerIdByName(r.player, side==='home' ? f.home : f.away);
-      const item = { playerId: pid||'', player: r.player||'', goals:Number(r.goals||0), assists:Number(r.assists||0), rating:Number(r.rating||0) };
+      const item = { playerId: pid||'', player: r.player||'', goals:Number(r.goals||0), assists:Number(r.assists||0), rating:Number(r.rating||0), pos: String(r.pos||'') };
       out[side].push(item);
       if (!pid && r.player) unresolved.push({ side, name:r.player });
     }
   }
 
   f.score = parsed.score;
-  f.pens = parsed.pens || null;
   f.details = out;
   f.unresolved = unresolved;
   f.status = 'final';
@@ -822,16 +868,19 @@ app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req, res
 
   await setDoc('fixtures', f.id, f);
   await bumpPlayerStatsFromFixture(f);
+
+  // Dynamic news from this fixture
+  try { await generateNewsForFixture(f); } catch (e) { console.warn('news generation failed:', e.message); }
+
   res.json({ ok: true, fixture: f });
 }));
 
-// Loose text parser (supports "penalties 4-3", "pens: 5-4")
+// Loose text parser (very forgiving)
 function parseLooseResultText(str) {
   const toks = String(str).replace(/\n/g, ',').split(',').map(s => s.trim()).filter(Boolean);
   let side = 'home';
   const details = { home: [], away: [] };
   const score = { hs: 0, as: 0 };
-  let pens = null;
   let cur = null;
   const commit = () => {
     if (cur && cur.player) {
@@ -854,10 +903,6 @@ function parseLooseResultText(str) {
     m = t.match(/score\s*:\s*(\d+)/i);
     if (m) { if (side==='home') score.hs = Number(m[1]); else score.as = Number(m[1]); continue; }
 
-    // penalties patterns: "pens 4-3", "penalties: 5-4", "shootout 6-5"
-    m = t.match(/(?:pen|pens|penalties|shootout)\s*[:\-]?\s*(\d+)\s*[-–]\s*(\d+)/i);
-    if (m) { pens = { hs:Number(m[1]), as:Number(m[2]) }; continue; }
-
     m = t.match(/player\s*\d*\s*:\s*(.+)/i);
     if (m) { commit(); cur = { player: m[1].trim() }; continue; }
 
@@ -865,16 +910,18 @@ function parseLooseResultText(str) {
     m = t.match(/(\d+)\s*assist/i); if (m) { cur = cur || {}; cur.assists = Number(m[1]); continue; }
     m = t.match(/rating\s*:\s*([0-9]+(?:\.[0-9]+)?)/i);
     if (m) { cur = cur || {}; cur.rating = Number(m[1]); continue; }
+    m = t.match(/pos\s*:\s*([A-Z0-9-]+)/i);
+    if (m) { cur = cur || {}; cur.pos = m[1].toUpperCase(); continue; }
 
     if (!cur || !cur.player) {
-      if (t && !/^\d+(\.\d+)?$/.test(t) && !/^(score|rating|goal|assist|pens?|penalties|shootout)\b/i.test(t)) {
+      if (t && !/^\d+(\.\d+)?$/.test(t) && !/^(score|rating|goal|assist|pos)/i.test(t)) {
         cur = cur || {};
         cur.player = (cur.player || t);
       }
     }
   }
   commit();
-  return { score, details, pens };
+  return { score, details };
 }
 
 /* =========================
@@ -901,8 +948,8 @@ app.post('/api/champions/:cupId/randomize', requireAdmin, wrap(async (req,res)=>
 }));
 
 async function computeGroupTables(cupId, groups){
-  const snap = await COL.fixtures().where('cup','==',cupId).get();
-  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const snap = await COL.fixtures().where('cup','==',cupId).where('status','==','final').get();
+  const fx = snap.docs.map(d=>d.data());
   const table = { A:{}, B:{}, C:{}, D:{} };
   const touch = (g,id)=> table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
 
@@ -942,8 +989,8 @@ app.get('/api/champions/:cupId/leaders', wrap(async (req,res)=>{
   const { cupId } = req.params;
   const limit = Math.max(1, Math.min(20, Number(req.query.limit || 5)));
 
-  const snap = await COL.fixtures().where('cup','==',cupId).get();
-  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const snap = await COL.fixtures().where('cup','==',cupId).where('status','==','final').get();
+  const fx = snap.docs.map(d=>d.data());
 
   const goals = new Map(), assists = new Map(), meta = new Map();
   const bump = (m,k,n)=>m.set(k,(m.get(k)||0)+n);
@@ -965,6 +1012,50 @@ app.get('/api/champions/:cupId/leaders', wrap(async (req,res)=>{
     .slice(0,limit);
 
   res.json({ ok:true, scorers: toRows(goals), assisters: toRows(assists) });
+}));
+
+/* =========================
+   NEWS API
+========================= */
+// Return recent news items (optionally ?limit=N)
+app.get('/api/news', wrap(async (req,res)=>{
+  const limit = Math.max(1, Math.min(100, Number(req.query.limit || 50)));
+  const snap = await COL.news().orderBy('ts','desc').limit(limit).get();
+  res.json({ ok:true, news: snap.docs.map(d=>d.data()) });
+}));
+
+// (Optional) Admin endpoint to generate a leaders news item on demand
+app.post('/api/news/generate-leaders', requireAdmin, wrap(async (req,res)=>{
+  const cup = (req.body?.cup || 'UPCL').trim();
+  const lim = Math.max(3, Math.min(20, Number(req.body?.limit || 5)));
+  const snap = await COL.fixtures().where('cup','==',cup).where('status','==','final').get();
+  const fx = snap.docs.map(d=>d.data());
+
+  const goals = new Map(), assists = new Map();
+  const bump = (m,k,n)=>m.set(k,(m.get(k)||0)+n);
+  for (const f of fx){
+    for (const side of ['home','away']){
+      for (const r of (f.details?.[side]||[])){
+        if (!r.playerId && !r.player) continue;
+        const key = r.playerId || `name:${nameKey(r.player||'')}`;
+        if(r.goals)   bump(goals,   key, Number(r.goals||0));
+        if(r.assists) bump(assists, key, Number(r.assists||0));
+      }
+    }
+  }
+  const toRows = (m)=>Array.from(m.entries())
+    .map(([pid,count])=>({ playerId: pid, count }))
+    .sort((a,b)=>b.count-a.count)
+    .slice(0,lim);
+
+  const doc = await addNews({
+    type: 'leaders_daily',
+    title: `Leaders update (${cup})`,
+    text: `Top scorers and assisters in ${cup}.`,
+    cup,
+    meta: { topScorers: toRows(goals), topAssisters: toRows(assists) }
+  });
+  res.json({ ok:true, news: doc });
 }));
 
 /* =========================
