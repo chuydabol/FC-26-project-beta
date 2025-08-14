@@ -29,7 +29,6 @@ h2{margin:0 0 8px}
 .team-meta .name{font-weight:700;font-size:16px}
 .trophy-badge{background:#e00;color:#fff;font-weight:700;padding:6px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(255,0,0,.6)}
 
-/* Views */
 #teams-view{display:block}
 #detail-view{display:none;color:#fff}
 #detail-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;color:#fff}
@@ -40,23 +39,15 @@ h2{margin:0 0 8px}
 /* Generic card */
 .m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
 
-/* Fixtures list and items */
+/* Fixtures */
 .fx-list{display:flex;flex-direction:column;gap:10px}
 .fx{background:#110000;border:1px solid #300000;border-radius:10px;padding:10px;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}
-.fx .meta{font-size:12px;color:var(--muted);margin-top:6px}
+.fx .meta{font-size:12px;color:var(--muted)}
+.fx .vs{font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fx .vs .team-name{display:inline-block;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
 .fx-banner{width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:6px 0}
-
-/* Inline logos next to names (prevents overlap) */
-.fx-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.fx-team{display:flex;align-items:center;gap:8px}
-.fx-team .name{font-weight:700;line-height:1.2;white-space:normal}
-.fx-team .logo{width:28px;height:28px;border-radius:6px;object-fit:contain;background:#1a0000;border:1px solid #3a0000;flex:0 0 28px}
-.fx-mid{font-weight:700;opacity:.85}
-@media(min-width:720px){
-  .fx-team .logo{width:32px;height:32px}
-}
 
 /* Inputs */
 input,select,textarea{background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:8px}
@@ -77,13 +68,6 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
 .leader-card ol{margin:8px 0 0 18px}
 .leader-card li{margin:2px 0}
 
-/* News cards */
-.news-card{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:12px;display:flex;gap:10px;align-items:flex-start}
-.news-card img{width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid #3a0000;background:#1a0000}
-.news-card .body{flex:1}
-.news-card .title{font-weight:700;margin-bottom:4px}
-.news-card .meta{color:var(--muted);font-size:12px;margin-top:4px}
-
 @media(max-width:720px){
   .team-logo{height:100px}
   .fx{grid-template-columns:1fr;gap:6px}
@@ -101,7 +85,6 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
     <button id="navFixturesSched"  aria-pressed="false" style="display:none">Fixtures Scheduling</button>
     <button id="navChampions" aria-pressed="false">Champions Cup</button>
     <button id="navRankings" aria-pressed="false" style="display:none">Rankings</button>
-    <button id="navNews" aria-pressed="false">News</button>
     <button id="btnManagerLogin">Manager sign in</button>
     <button id="btnAdminLogin">Admin sign in</button>
     <button id="btnAdminLogout" style="display:none">Admin sign out</button>
@@ -164,11 +147,11 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
 
     </div>
 
-    <!-- Manual/Generated squads only (EA disabled) -->
+    <!-- Manual/EA (EA returns empty; safe) -->
     <div id="squadContainer" class="squad-grid" style="margin-top:12px"></div>
 
     <div id="detail-footer" style="margin-top:18px" class="muted center">
-      <small>EA sync disabled; squads are managed manually.</small>
+      <small>Data pulled from EA when available; manual for custom clubs.</small>
     </div>
   </section>
 
@@ -198,7 +181,11 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
   <section id="fixtures-sched" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
       <h2>Fixtures Scheduling</h2>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <!-- NEW: Cup selector -->
+        <select id="cupFilter" title="Choose Cup">
+          <!-- options filled in init() -->
+        </select>
         <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
         <button data-fxf="final" aria-pressed="false">Final</button>
         <button data-fxf="all" aria-pressed="false">All</button>
@@ -261,12 +248,6 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
       <div id="ccFixtures" class="fx-list" style="margin-top:8px"></div>
     </div>
   </section>
-
-  <!-- NEWS -->
-  <section id="news-view" style="display:none">
-    <h2>News</h2>
-    <div id="newsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-top:10px"></div>
-  </section>
 </main>
 
 <!-- Manager Sign-In Modal -->
@@ -297,7 +278,7 @@ hr{border:none;border-top:1px solid #220000;margin:14px 0}
 //   CONFIG / CONSTANTS
 // =======================
 const API_BASE = '';
-const CC_ID = 'UPCL_CC_2025_08'; // change per season (keeps champions fixtures isolated)
+const CC_ID = 'UPCL_CC_2025_08'; // change per season
 
 const TEAM_TITLES = {
   '3638105': [
@@ -306,7 +287,7 @@ const TEAM_TITLES = {
   ]
 };
 
-// Teams with logos for all
+// Teams
 const teams = [
   { id: '2491998', name: 'Royal Republic',   logo: '/assets/logos/royal-republic-logo.png' },
   { id: '1527486', name: 'Gungan FC',         logo: '/assets/logos/gungan-fc.png' },
@@ -337,14 +318,7 @@ function teamLogoUrl(team){ return team.logo || `https://via.placeholder.com/800
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
 function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
-function getFixtureBanner(){ return '/assets/ui/fixture-banner.png'; } // optional background banner
-function teamLogoImg(id, size=28){
-  const t = byId(id);
-  const src = t ? teamLogoUrl(t) : 'https://via.placeholder.com/200x200?text=Logo';
-  return `<img class="logo" src="${src}" width="${size}" height="${size}" alt="${escapeHtml(t?.name||id)} logo" onerror="this.style.visibility='hidden'">`;
-}
-function logoForClub(id){ const t = byId(id); return t ? teamLogoUrl(t) : '/assets/ui/fixture-banner.png'; }
-function timeAgo(ts){ const d=Math.max(1,(Date.now()-ts)/1000); const m=Math.floor(d/60),h=Math.floor(m/60),D=Math.floor(h/24); if(D>0)return `${D}d ago`; if(h>0)return `${h}h ago`; if(m>0)return `${m}m ago`; return `just now`; }
+function getFixtureBanner(){ return '/assets/ui/fixture-banner.png'; } // set/replace your banner
 
 // state
 let isAdmin = false;
@@ -367,7 +341,6 @@ const navFxPublic = document.getElementById('navFixturesPublic');
 const navFxSched  = document.getElementById('navFixturesSched');
 const navRankings = document.getElementById('navRankings');
 const navChampions= document.getElementById('navChampions');
-const navNews     = document.getElementById('navNews');
 
 const teamsViewEl = document.getElementById('teams-view');
 const marketView  = document.getElementById('market-view');
@@ -375,7 +348,6 @@ const fxPublic    = document.getElementById('fixtures-public');
 const fxSched     = document.getElementById('fixtures-sched');
 const rankingsView= document.getElementById('rankings-view');
 const cupView     = document.getElementById('champions-view');
-const newsView    = document.getElementById('news-view');
 
 function setNav(active){
   if (active==='rankings' && !isAdmin) { alert('Admin only'); active='teams'; }
@@ -386,8 +358,7 @@ function setNav(active){
     fixturesPublic:[fxPublic, navFxPublic],
     fixturesSched:[fxSched, navFxSched],
     champions:[cupView, navChampions],
-    rankings:[rankingsView, navRankings],
-    news:[newsView, navNews]
+    rankings:[rankingsView, navRankings]
   };
   for (const key of Object.keys(map)){
     const [view,btn] = map[key];
@@ -402,7 +373,6 @@ navFxPublic.onclick    = ()=> setNav('fixturesPublic');
 navFxSched.onclick     = ()=> setNav('fixturesSched');
 navRankings.onclick    = ()=> setNav('rankings');
 navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
-navNews.onclick        = async ()=> { setNav('news'); await loadNews(); };
 
 // auth / admin / manager
 const btnAdminLogin = document.getElementById('btnAdminLogin');
@@ -446,7 +416,6 @@ const mgrCancel = document.getElementById('mgrCancel');
 const mgrSubmit = document.getElementById('mgrSubmit');
 
 btnManagerLogin.onclick = ()=>{
-  // populate options
   mgrClubSel.innerHTML = teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
   mgrName.value = '';
   mgrCode.value = '';
@@ -516,14 +485,15 @@ async function showTeam(team){
   } else detailTrophies.textContent = 'No trophies';
 
   await renderWallet(team.id);
-  // refresh public fixtures and render next/recent
   await refreshFixturesPublic();
   renderNextFor(team.id);
   renderTeamResults(team.id);
 
-  // EA disabled — always manual squads
-  renderManualPlayers(team);
-
+  if(/^\d+$/.test(team.id)){
+    await renderEAPlayers(team.id); // returns empty safely
+  }else{
+    renderManualPlayers(team);
+  }
   await loadSquad(team.id);
 
   detailSub.textContent = 'Club overview';
@@ -566,7 +536,28 @@ async function renderWallet(clubId){
   }
 }
 
-// Players (manual notice)
+// Players
+async function renderEAPlayers(clubId){
+  squadContainer.innerHTML = '<div class="m-card">Loading players…</div>';
+  try{
+    const data = await apiGet(`/api/teams/${encodeURIComponent(clubId)}/players`);
+    const members = Array.isArray(data.members) ? data.members : [];
+    if (!members.length) {
+      squadContainer.innerHTML = '<div class="m-card muted">No players returned.</div>';
+      return;
+    }
+    squadContainer.innerHTML = '';
+    members.forEach(p=>{
+      const el = document.createElement('div');
+      el.className='m-card';
+      el.innerHTML = `<strong>${escapeHtml(p.name||'Unknown')}</strong>
+        <div class="muted">Pos: ${escapeHtml(p.proPos||p.position||'—')} • Goals: ${p.goals??0} • Assists: ${p.assists??0}</div>`;
+      squadContainer.appendChild(el);
+    });
+  }catch(e){
+    squadContainer.innerHTML = '<div class="m-card muted">API unavailable.</div>';
+  }
+}
 function renderManualPlayers(team){
   squadContainer.innerHTML = `<div class="m-card muted">Manual club — managers can maintain squads below.</div>`;
 }
@@ -696,7 +687,6 @@ document.getElementById('btnUnlistFA').onclick = async ()=>{
 // =======================
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 async function refreshFixturesPublic(){
-  // Try preferred endpoint, fallback if older server
   try {
     const d = await apiGet('/api/cup/fixtures?cup=UPCL');
     fixturesPublicCache = d.fixtures || [];
@@ -710,6 +700,7 @@ async function refreshFixturesPublic(){
 function renderFixturesPublic(){
   const list = fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
   fixturesPublicList.innerHTML = list.length ? list.map(f=>{
+    const banner = getFixtureBanner();
     const hn = byId(f.home)?.name || f.home;
     const an = byId(f.away)?.name || f.away;
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
@@ -717,31 +708,18 @@ function renderFixturesPublic(){
     const ccBadge = (f.cup===CC_ID) ? ' • <span class="chip">Champions Cup</span>' : '';
     const homeSc = (f.details?.home||[]).map(p=>`<li>${escapeHtml(p.player||p.playerId||'')}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
     const awaySc = (f.details?.away||[]).map(p=>`<li>${escapeHtml(p.player||p.playerId||'')}${p.goals?` (${p.goals})`:''}${p.rating?` — ${Number(p.rating).toFixed(1)}`:''}</li>`).join('');
-
-    const banner = getFixtureBanner();
     return `
       <div class="fx">
         <div>
           ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
-
-          <div class="fx-head">
-            <div class="fx-team">
-              ${teamLogoImg(f.home)}
-              <span class="name">${escapeHtml(hn)}</span>
-            </div>
-            <div class="fx-mid">${scoreTxt}</div>
-            <div class="fx-team">
-              ${teamLogoImg(f.away)}
-              <span class="name">${escapeHtml(an)}</span>
-            </div>
+          <div class="vs">
+            <span class="team-name"><strong>${escapeHtml(hn)}</strong></span>
+            <span class="muted">${scoreTxt}</span>
+            <span class="team-name"><strong>${escapeHtml(an)}</strong></span>
           </div>
-
-          <div class="meta">
-            ${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}
-          </div>
-
+          <div class="meta">${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
           ${(f.status==='final' && (homeSc||awaySc)) ? `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">
               <div><em>${escapeHtml(hn)} scorers</em><ul>${homeSc||'<li class="muted">—</li>'}</ul></div>
               <div><em>${escapeHtml(an)} scorers</em><ul>${awaySc||'<li class="muted">—</li>'}</ul></div>
             </div>` : ''
@@ -756,6 +734,9 @@ function renderFixturesPublic(){
 // =======================
 const fixturesList = document.getElementById('fixturesList');
 const btnCreateFx  = document.getElementById('btnCreateFx');
+const cupFilter = document.getElementById('cupFilter');
+const DEFAULT_CUP = 'UPCL';
+function currentCup(){ return (cupFilter && cupFilter.value) || DEFAULT_CUP; }
 
 btnCreateFx.onclick = async ()=>{
   const home = prompt('Home club ID (use exact from Teams list)');
@@ -763,7 +744,7 @@ btnCreateFx.onclick = async ()=>{
   const round= prompt('Round (e.g., League MD1 or Cup QF)');
   if (!home || !away) return;
   try{
-    const d = await apiPost('/api/cup/fixtures', { home, away, round, cup:'UPCL' });
+    const d = await apiPost('/api/cup/fixtures', { home, away, round, cup: currentCup() });
     alert('Created fixture'); await refreshFixturesSched(); renderFixturesSched();
   }catch(e){ alert('Create failed: '+e.message); }
 };
@@ -778,13 +759,12 @@ document.querySelectorAll('[data-fxf]').forEach(btn=>{
 
 async function refreshFixturesSched(){
   if (!(isMgr || isAdmin)) { fixturesSchedCache=[]; return; }
-  // Try scheduling endpoint, fallback to general list
   try {
-    const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
+    const d = await apiGet(`/api/cup/fixtures/scheduling?cup=${encodeURIComponent(currentCup())}`);
     fixturesSchedCache = d.fixtures || [];
   } catch {
     try {
-      const d2 = await apiGet('/api/cup/fixtures?cup=UPCL');
+      const d2 = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(currentCup())}`);
       fixturesSchedCache = d2.fixtures || [];
     } catch { fixturesSchedCache = []; }
   }
@@ -792,46 +772,6 @@ async function refreshFixturesSched(){
 function filterKey(){
   const active = [...document.querySelectorAll('[data-fxf]')].find(b=>b.getAttribute('aria-pressed')==='true');
   return active ? active.getAttribute('data-fxf') : 'upcoming';
-}
-function renderFxSchedRow(f){
-  const hn = byId(f.home)?.name || f.home;
-  const an = byId(f.away)?.name || f.away;
-  const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-  const props = (f.proposals||[]).map(p=>{
-    const who = (teams.find(t=>String(t.id)===String(p.by))?.name) || p.by || 'unknown';
-    return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
-  }).join('');
-  const status = f.status || 'pending';
-  const ccBadge = (f.cup===CC_ID) ? `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}</span>` : '';
-  const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
-  return `
-  <div class="fx" id="fx_${f.id}">
-    <div>
-      <div class="fx-head">
-        <div class="fx-team">
-          ${teamLogoImg(f.home)}
-          <span class="name">${escapeHtml(hn)}</span>
-        </div>
-        <div class="fx-mid">${status==='final' ? `${f.score.hs}–${f.score.as}` : 'vs'}</div>
-        <div class="fx-team">
-          ${teamLogoImg(f.away)}
-          <span class="name">${escapeHtml(an)}</span>
-        </div>
-      </div>
-      <div class="meta">Round: ${escapeHtml(f.round||'')}${ccBadge?` • ${ccBadge}`:''} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
-    </div>
-    <div class="center">
-      ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
-    </div>
-    <div class="act">
-      <button class="prop">Propose</button>
-      <button class="agree">Agree</button>
-      <button class="decl">Decline</button>
-      <button class="line">Set Lineup</button>
-      <button class="rep">Submit Result</button>
-      ${adminBtns}
-    </div>
-  </div>`;
 }
 function renderFixturesSched(){
   const key = filterKey();
@@ -857,7 +797,7 @@ function renderFixturesSched(){
 
     const btnProp = root.querySelector('.act .prop');
     if (btnProp) btnProp.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers/Admin only');
       const atStr = prompt('Propose time (e.g., 2025-08-20 20:30)');
       if (!atStr) return;
       const at = Date.parse(atStr);
@@ -868,7 +808,7 @@ function renderFixturesSched(){
 
     const btnAgree = root.querySelector('.act .agree');
     if (btnAgree) btnAgree.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers/Admin only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
@@ -877,7 +817,7 @@ function renderFixturesSched(){
 
     const btnDecl = root.querySelector('.act .decl');
     if (btnDecl) btnDecl.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers/Admin only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixturesSched(); renderFixturesSched(); }
@@ -886,7 +826,7 @@ function renderFixturesSched(){
 
     const btnLine = root.querySelector('.act .line');
     if (btnLine) btnLine.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers/Admin only');
       const formation = prompt('Formation (e.g., 4-3-3)') || '';
       const starters = prompt('Comma-separated starters (GK,RB,CB,...) or names list') || '';
       const lineup = {};
@@ -897,7 +837,7 @@ function renderFixturesSched(){
 
     const btnReport = root.querySelector('.act .rep');
     if (btnReport) btnReport.onclick = async ()=>{
-      if (!isManagerOf) return alert('Managers only');
+      if (!isManagerOf && !isAdmin) return alert('Managers/Admin only');
       const hs = Number(prompt('Home score?')||0);
       const as = Number(prompt('Away score?')||0);
       const text = prompt('Notes (optional)')||'';
@@ -907,6 +847,7 @@ function renderFixturesSched(){
         document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
         await refreshFixturesSched(); renderFixturesSched();
         await refreshFixturesPublic(); renderFixturesPublic();
+        if (currentCup()===CC_ID) await loadChampions();
       }catch(e){ alert('Report failed: '+e.message); }
     };
 
@@ -921,6 +862,7 @@ function renderFixturesSched(){
         document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
         await refreshFixturesSched(); renderFixturesSched();
         await refreshFixturesPublic(); renderFixturesPublic();
+        if (currentCup()===CC_ID) await loadChampions();
       }catch(e){ alert('Ingest failed: '+e.message); }
     };
 
@@ -932,7 +874,7 @@ function renderFixturesSched(){
       const template = JSON.stringify({
         details:{
           home:[{ player:"Player A", goals:1, assists:0, rating:9.5, pos:"ST" }],
-          away:[{ player:"Player B", goals:2, assists:0, rating:8.7, pos:"CAM" }]
+          away:[{ player:"Player B", goals:2, assists:0, rating:8.7, pos:"CB" }]
         }
       }, null, 2);
       const raw = prompt('Paste JSON (or edit the template):', template);
@@ -944,9 +886,47 @@ function renderFixturesSched(){
         document.querySelector('[data-fxf="final"]').setAttribute('aria-pressed','true');
         await refreshFixturesSched(); renderFixturesSched();
         await refreshFixturesPublic(); renderFixturesPublic();
+        if (currentCup()===CC_ID) await loadChampions();
       }catch(e){ alert('JSON upload failed: '+e.message); }
     };
   });
+}
+
+function renderFxSchedRow(f){
+  const hn = byId(f.home)?.name || f.home;
+  const an = byId(f.away)?.name || f.away;
+  const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
+  const props = (f.proposals||[]).map(p=>{
+    const who = (teams.find(t=>String(t.id)===String(p.by))?.name) || p.by || 'unknown';
+    return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
+  }).join('');
+  const status = f.status || 'pending';
+  const ccBadge = (f.cup===CC_ID) ? `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}</span>` : '';
+  const adminBtns = isAdmin ? `<button class="ingest">Admin paste</button><button class="json">Upload JSON</button>` : '';
+  const banner = getFixtureBanner();
+  return `
+  <div class="fx" id="fx_${f.id}">
+    <div>
+      ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
+      <div class="vs">
+        <span class="team-name">${escapeHtml(hn)}</span>
+        <span class="muted">vs</span>
+        <span class="team-name">${escapeHtml(an)}</span>
+      </div>
+      <div class="meta">Round: ${escapeHtml(f.round||'')}${ccBadge?` • ${ccBadge}`:''} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
+    </div>
+    <div class="center">
+      ${(f.proposals||[]).length ? `<label>Proposals</label><br><select name="slot">${props}</select>` : `<span class="muted">No proposals</span>`}
+    </div>
+    <div class="act">
+      <button class="prop">Propose</button>
+      <button class="agree">Agree</button>
+      <button class="decl">Decline</button>
+      <button class="line">Set Lineup</button>
+      <button class="rep">Submit Result</button>
+      ${adminBtns}
+    </div>
+  </div>`;
 }
 
 // Next & recent for team (from public cache)
@@ -1052,7 +1032,7 @@ function renderRankings(){
 async function loadChampions(){
   document.getElementById('ccCupId').textContent = CC_ID;
 
-  // groups + computed tables
+  // groups + tables
   let cupData = { cup:{ groups:{A:[],B:[],C:[],D:[]} }, tables:{} };
   try {
     cupData = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}`);
@@ -1071,7 +1051,7 @@ async function loadChampions(){
     renderCcFixtures([]);
   }
 
-  // leaders (try API, else compute client-side from fixtures)
+  // leaders
   try{
     const ld = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}/leaders`);
     renderCcLeaders(ld);
@@ -1117,31 +1097,79 @@ function renderCcFixtures(list){
     const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
     const badge = `<span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span>`;
     const banner = getFixtureBanner();
-    return `<div class="fx">
+    const adminBtns = isAdmin ? `
+      <div class="act">
+        <button class="cc-rep"   data-id="${f.id}">Submit Result</button>
+        <button class="cc-ing"   data-id="${f.id}">Admin paste</button>
+        <button class="cc-json"  data-id="${f.id}">Upload JSON</button>
+      </div>` : '';
+    return `<div class="fx" id="ccfx_${f.id}">
       <div>
         ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
-
-        <div class="fx-head">
-          <div class="fx-team">
-            ${teamLogoImg(f.home)}
-            <span class="name">${escapeHtml(hn)}</span>
-          </div>
-          <div class="fx-mid">${scoreTxt}</div>
-          <div class="fx-team">
-            ${teamLogoImg(f.away)}
-            <span class="name">${escapeHtml(an)}</span>
-          </div>
+        <div class="vs">
+          <span class="team-name"><strong>${escapeHtml(hn)}</strong></span>
+          <span class="muted">${scoreTxt}</span>
+          <span class="team-name"><strong>${escapeHtml(an)}</strong></span>
         </div>
         <div class="meta">${badge} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
+        ${adminBtns}
       </div>
     </div>`;
   }).join('') : `<div class="muted">No Champions Cup fixtures yet.</div>`;
+
+  // wire admin actions for CC fixtures
+  if (isAdmin){
+    list.forEach(f=>{
+      const root = document.getElementById('ccfx_'+f.id);
+      if (!root) return;
+
+      const rep = root.querySelector('.cc-rep');
+      if (rep) rep.onclick = async ()=>{
+        const hs = Number(prompt('Home score?')||0);
+        const as = Number(prompt('Away score?')||0);
+        const text = prompt('Notes (optional)')||'';
+        try{
+          await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, text });
+          await loadChampions();
+        }catch(e){ alert('Report failed: '+e.message); }
+      };
+
+      const ing = root.querySelector('.cc-ing');
+      if (ing) ing.onclick = async ()=>{
+        const text = prompt('Paste quick result (score & player lines)');
+        if (!text) return;
+        try{
+          await apiPost(`/api/cup/fixtures/${f.id}/ingest-text`, { text });
+          await loadChampions();
+        }catch(e){ alert('Ingest failed: '+e.message); }
+      };
+
+      const jsn = root.querySelector('.cc-json');
+      if (jsn) jsn.onclick = async ()=>{
+        const hs = Number(prompt('Home score (hs)')||0);
+        const as = Number(prompt('Away score (as)')||0);
+        const template = JSON.stringify({
+          details:{
+            home:[{ player:"Player A", goals:1, assists:0, rating:9.5, pos:"ST" }],
+            away:[{ player:"Player B", goals:2, assists:0, rating:8.7, pos:"CB" }]
+          }
+        }, null, 2);
+        const raw = prompt('Paste JSON (or edit the template):', template);
+        if (!raw) return;
+        try{
+          const obj = JSON.parse(raw);
+          await apiPost(`/api/cup/fixtures/${f.id}/report`, { hs, as, details: obj.details || obj });
+          await loadChampions();
+        }catch(e){ alert('JSON upload failed: '+e.message); }
+      };
+    });
+  }
 }
 
 // Leaders (client-side fallback)
 function computeLeadersFromFixtures(list){
-  const goalMap = new Map(); // name => goals
-  const astMap  = new Map(); // name => assists
+  const goalMap = new Map();
+  const astMap  = new Map();
   const nameOf = (row)=> (row.player && row.player.trim()) || row.playerId || 'Unknown';
   list.filter(f=>f.status==='final').forEach(f=>{
     ['home','away'].forEach(side=>{
@@ -1158,15 +1186,16 @@ function computeLeadersFromFixtures(list){
 }
 function renderCcLeaders(data){
   const el = document.getElementById('ccLeaders');
-  const s = data?.topScorers||[], a = data?.topAssisters||[];
+  const s = data?.scorers || data?.topScorers || [];
+  const a = data?.assisters || data?.topAssisters || [];
   el.innerHTML = `
     <div class="leader-card">
       <strong>Top Scorers</strong>
-      ${s.length ? `<ol>${s.map(x=>`<li><strong>${escapeHtml(x.name)}</strong> — ${x.stat} goals</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
+      ${s.length ? `<ol>${s.map(x=>`<li><strong>${escapeHtml(x.name||x.playerId)}</strong> — ${x.count||x.stat} goals</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
     </div>
     <div class="leader-card">
       <strong>Top Assisters</strong>
-      ${a.length ? `<ol>${a.map(x=>`<li><strong>${escapeHtml(x.name)}</strong> — ${x.stat} assists</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
+      ${a.length ? `<ol>${a.map(x=>`<li><strong>${escapeHtml(x.name||x.playerId)}</strong> — ${x.count||x.stat} assists</li>`).join('')}</ol>`:'<div class="muted">No data yet.</div>'}
     </div>
   `;
 }
@@ -1240,44 +1269,6 @@ function buildManualGroupsEditor(groups){
 }
 
 // =======================
-//   NEWS
-// =======================
-async function loadNews(){
-  const newsList = document.getElementById('newsList');
-  try{
-    const d = await apiGet('/api/news?limit=50');
-    const items = d.news || [];
-    if (!items.length){ newsList.innerHTML = '<div class="muted">No news yet.</div>'; return; }
-
-    newsList.innerHTML = items.map(n=>{
-      const logo = n.clubId ? logoForClub(n.clubId) : '/assets/ui/fixture-banner.png';
-      const title = escapeHtml(n.title||'News');
-      let text = escapeHtml(n.text||'');
-      if (n.type==='hattrick' && n.meta?.score){
-        text += ` Final: ${n.meta.score.hs}-${n.meta.score.as}`;
-      }
-      if (n.type==='leaders_daily' && n.meta){
-        const s = (n.meta.topScorers||[]).map(x=>`${x.count} • ${escapeHtml(x.playerId)}`).join(' · ');
-        const a = (n.meta.topAssisters||[]).map(x=>`${x.count} • ${escapeHtml(x.playerId)}`).join(' · ');
-        text += `<br><em>Scorers:</em> ${s || '—'}<br><em>Assisters:</em> ${a || '—'}`;
-      }
-      const sub = [ n.cup || 'UPCL', fmtDate(n.ts), (n.type||'').replace(/_/g,' ') ].filter(Boolean).join(' • ');
-      return `
-        <div class="news-card">
-          <img src="${logo}" alt="logo">
-          <div class="body">
-            <div class="title">${title}</div>
-            <div class="muted">${text}</div>
-            <div class="meta">${sub} • ${timeAgo(n.ts)}</div>
-          </div>
-        </div>`;
-    }).join('');
-  }catch{
-    newsList.innerHTML = '<div class="muted">Failed to load news.</div>';
-  }
-}
-
-// =======================
 //   INIT
 // =======================
 async function init(){
@@ -1285,14 +1276,21 @@ async function init(){
   await checkAdmin();
   await checkMe();
 
-  // Default to Teams
+  // Cup selector for Scheduling
+  if (cupFilter){
+    cupFilter.innerHTML = `
+      <option value="UPCL">League (UPCL)</option>
+      <option value="${CC_ID}">Champions Cup</option>
+    `;
+    cupFilter.value = 'UPCL';
+    cupFilter.onchange = async ()=>{ await refreshFixturesSched(); renderFixturesSched(); };
+  }
+
   setNav('teams');
 
-  // Load data sets
   await refreshFixturesPublic(); renderFixturesPublic();
   if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
   await loadFA();
-  await loadNews();
 
   // hash-open team
   try{
