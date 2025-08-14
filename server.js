@@ -78,7 +78,7 @@ if (helmet) app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin'
 if (cors) app.use(cors({ origin: true, credentials: true }));
 if (compression) app.use(compression());
 app.use(express.json({ limit: '1mb' }));
-if (morgan) app.use(morgan(isProd ? 'combined' : 'dev')));
+if (morgan) app.use(morgan(isProd ? 'combined' : 'dev'));
 
 app.use(session({
   secret: SESSION_SECRET,
