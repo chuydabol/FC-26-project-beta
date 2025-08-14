@@ -2,19 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Pro Club — League Hub</title>
 <style>
-:root{--accent:#e00;--muted:#bb7777}
+:root{
+  --accent:#e00; --muted:#bb7777;
+  --pad:12px; --radius:12px;
+}
 *{box-sizing:border-box}
-body{background:#000;color:#fff;font-family:Arial,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;min-height:100vh}
-a{color:#fff}
+html,body{height:100%}
+body{
+  background:#000;color:#fff;font-family:Arial,system-ui,-apple-system,Segoe UI,sans-serif;
+  margin:0; min-height:100vh; -webkit-text-size-adjust:100%;
+}
+a{color:#fff; text-decoration:none}
+img{max-width:100%; display:block}
 
 /* Header / Nav */
-header{background:linear-gradient(90deg,#a00000,#d50000);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header{
+  position:sticky; top:0; z-index:50;
+  background:linear-gradient(90deg,#a00000,#d50000);
+  color:#fff; padding:14px 18px; display:flex; align-items:center; gap:12px; flex-wrap:wrap
+}
 h1{margin:0;font-size:20px;letter-spacing:.2px}
-.navbar{display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap}
-.navbar button{background:#330000;color:#fff;border:1px solid #551111;border-radius:10px;padding:8px 10px;cursor:pointer}
+.navbar{
+  display:flex; gap:8px; align-items:center; margin-left:auto; flex-wrap:nowrap;
+  overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  padding-bottom:2px;
+}
+.navbar::-webkit-scrollbar{display:none}
+.navbar button{
+  background:#330000;color:#fff;border:1px solid #551111;border-radius:10px;
+  padding:10px 12px; cursor:pointer; white-space:nowrap
+}
 .navbar button[aria-pressed="true"]{background:#550000;border-color:#aa1111}
 
 /* Layout */
@@ -25,10 +45,22 @@ h2{margin:0 0 10px}
 .chip{background:#220000;border:1px solid #440000;border-radius:999px;padding:4px 8px;font-size:12px}
 
 /* Teams grid/cards */
-.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:18px}
-.team-card{background:#110000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.30);overflow:hidden;cursor:pointer;transition:transform .14s,box-shadow .14s;display:flex;flex-direction:column;color:#fff;padding:14px}
+.teams-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  gap:16px;margin-top:18px
+}
+.team-card{
+  background:#110000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.30);
+  overflow:hidden;cursor:pointer;transition:transform .14s,box-shadow .14s;
+  display:flex;flex-direction:column;color:#fff;padding:14px
+}
 .team-card:hover{transform:translateY(-6px);box-shadow:0 12px 28px rgba(255,0,0,.5)}
-.team-logo{width:100%;height:160px;object-fit:cover;border-radius:10px;background:#330000;display:block}
+/* Taller, responsive logos — desktop = taller; mobile = slightly shorter */
+.team-logo{
+  width:100%;
+  aspect-ratio:5/3;               /* taller than 16:9 for desktop */
+  height:auto; object-fit:cover; border-radius:10px; background:#330000
+}
 .team-meta{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
 .team-meta .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .trophy-badge{background:#e00;color:#fff;font-weight:700;padding:6px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(255,0,0,.6)}
@@ -41,33 +73,37 @@ h2{margin:0 0 10px}
 
 /* Fixtures list */
 .fx-list{display:flex;flex-direction:column;gap:12px}
-.fx{background:#110000;border:1px solid #300000;border-radius:12px;padding:12px;display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.fx{
+  background:#110000;border:1px solid #300000;border-radius:12px;padding:12px;
+  display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center
+}
 .fx .meta{font-size:12px;color:var(--muted)}
 .fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:6px 8px;cursor:pointer}
+.fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:8px 10px;cursor:pointer}
 .fx-banner{width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:6px 0}
 .fx-vs{display:flex;align-items:center;gap:10px;font-weight:800}
-.fx-team{display:inline-flex;align-items:center;gap:8px}
+.fx-team{display:inline-flex;align-items:center;gap:8px;min-width:0}
 .fx-team img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#300}
+.fx-team span{display:inline-block;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Results modal (sheet editor) */
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000}
 .modal.show{display:flex}
-.dialog{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:16px;width:min(960px,96vw);box-shadow:0 6px 18px rgba(255,0,0,.25)}
+.dialog{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:16px;width:min(960px,96vw);max-height:96vh;overflow:auto;box-shadow:0 6px 18px rgba(255,0,0,.25)}
 .dialog h3{margin:0 0 8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .sheet{border:1px solid #2a0000;border-radius:10px;padding:8px}
 .sheet table{width:100%;border-collapse:collapse}
 .sheet th,.sheet td{border-bottom:1px solid #220000;padding:6px}
 .sheet th{font-size:12px;color:var(--muted);text-align:left}
-.sheet select,.sheet input{width:100%;background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:6px}
+.sheet select,.sheet input, .dialog textarea{width:100%;background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:10px}
 .sheet .row-btns{display:flex;gap:6px}
 .dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 
 /* News feed (social style) */
 .news-wrap{display:grid;grid-template-columns:1fr;gap:14px}
 .news-post{background:#110000;border:1px solid #2a0000;border-radius:14px;padding:14px;display:flex;gap:12px}
-.news-avatar{width:44px;height:44px;border-radius:8px;object-fit:cover;background:#300;flex:0 0 auto}
+.news-avatar{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#300;flex:0 0 auto}
 .news-body{flex:1}
 .news-title{font-weight:800;margin-bottom:6px}
 .news-meta{font-size:12px;color:var(--muted);margin-top:6px}
@@ -83,22 +119,36 @@ h2{margin:0 0 10px}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
-@media(max-width:720px){
+/* Mobile & small tablets */
+@media (max-width: 900px){
+  .teams-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  .fx-team span{max-width:120px}
+}
+@media (max-width: 640px){
+  main{padding:14px}
+  .team-logo{aspect-ratio:16/9}       /* slightly shorter on phones */
+  .teams-grid{gap:14px}
+  .news-post{gap:10px}
+  .news-avatar{width:42px;height:42px}
+  .grid2{grid-template-columns:1fr}   /* modals stack */
   .fx{grid-template-columns:1fr;gap:8px}
   .fx .act{justify-content:flex-start}
-  .team-logo{height:140px}
+}
+/* Motion-safe */
+@media (prefers-reduced-motion: reduce){
+  .team-card,.navbar button{transition:none}
 }
 </style>
 </head>
 <body>
 <header>
   <h1>Pro Club — League Hub</h1>
-  <div class="navbar">
+  <div class="navbar" aria-label="Primary">
     <button id="navTeams"    aria-pressed="true">Teams</button>
     <button id="navNews"     aria-pressed="false">News</button>
     <button id="navMarket"   aria-pressed="false">Market</button>
     <button id="navFixturesPublic" aria-pressed="false">Fixtures</button>
-    <button id="navFixturesSched"  aria-pressed="false" style="display:none">Fixtures Scheduling</button>
+    <button id="navFixturesSched"  aria-pressed="false" style="display:none">Scheduling</button>
     <button id="navChampions" aria-pressed="false">Champions Cup</button>
     <button id="btnManagerLogin">Manager sign in</button>
     <button id="btnAdminLogin">Admin sign in</button>
@@ -139,7 +189,7 @@ h2{margin:0 0 10px}
       <div class="m-card">
         <strong>Club Wallet</strong>
         <div id="walletBody" class="muted" style="margin-top:6px">Loading…</div>
-        <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+        <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button id="btnCollect" style="display:none">Collect daily payout</button>
           <small class="muted" id="walletHint"></small>
         </div>
@@ -174,7 +224,7 @@ h2{margin:0 0 10px}
   <section id="market-view" style="display:none">
     <h2>Transfer Market</h2>
     <div class="m-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <strong>Free Agents</strong>
         <div><button id="btnListFA">List me</button><button id="btnUnlistFA">Unlist</button></div>
       </div>
@@ -188,11 +238,11 @@ h2{margin:0 0 10px}
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
-  <!-- FIXTURES SCHEDULING (Managers/Admins) -->
+  <!-- FIXTURES SCHEDULING -->
   <section id="fixtures-sched" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
       <h2>Fixtures Scheduling</h2>
-      <div style="display:flex;gap:6px;align-items:center">
+      <div style="display:flex;gap:6px;align-items:center;overflow:auto">
         <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
         <button data-fxf="final" aria-pressed="false">Final</button>
         <button data-fxf="all" aria-pressed="false">All</button>
@@ -217,7 +267,7 @@ h2{margin:0 0 10px}
 
     <div class="m-card" id="ccAdmin" style="display:none;margin-top:10px">
       <strong>Admin tools</strong>
-      <div class="muted">Assign teams to groups, save groups, and create fixtures (group stage/knockouts).</div>
+      <div class="muted">Assign teams to groups, save groups, and create fixtures.</div>
       <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
         <button id="ccBtnSaveGroups">Save groups</button>
         <button id="ccBtnCreateFx">Create fixture</button>
@@ -239,9 +289,9 @@ h2{margin:0 0 10px}
     <div class="grid2">
       <div class="sheet">
         <div><strong id="homeName">Home</strong></div>
-        <div style="display:flex;gap:8px;margin:6px 0">
-          <label class="muted">Score</label>
-          <input id="hsInput" type="number" min="0" value="0" style="max-width:90px">
+        <div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap">
+          <label class="muted" for="hsInput">Score</label>
+          <input id="hsInput" type="number" min="0" value="0" style="max-width:100px">
           <button id="addRowHome">+ Add row</button>
         </div>
         <table>
@@ -251,9 +301,9 @@ h2{margin:0 0 10px}
       </div>
       <div class="sheet">
         <div><strong id="awayName">Away</strong></div>
-        <div style="display:flex;gap:8px;margin:6px 0">
-          <label class="muted">Score</label>
-          <input id="asInput" type="number" min="0" value="0" style="max-width:90px">
+        <div style="display:flex;gap:8px;margin:6px 0;flex-wrap:wrap">
+          <label class="muted" for="asInput">Score</label>
+          <input id="asInput" type="number" min="0" value="0" style="max-width:100px">
           <button id="addRowAway">+ Add row</button>
         </div>
         <table>
@@ -265,7 +315,7 @@ h2{margin:0 0 10px}
 
     <details style="margin-top:8px">
       <summary>Or paste JSON (advanced / admin)</summary>
-      <textarea id="jsonBox" style="width:100%;height:120px;margin-top:6px;background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:8px" placeholder='{"details":{"home":[{"player":"Name","goals":2,"assists":1,"rating":8.7}],"away":[]}}'></textarea>
+      <textarea id="jsonBox" placeholder='{"details":{"home":[{"player":"Name","goals":2,"assists":1,"rating":8.7}],"away":[]}}' style="width:100%;height:120px;margin-top:6px"></textarea>
     </details>
 
     <div class="actions">
@@ -602,14 +652,14 @@ function renderFixturesPublic(){
     const H=byId(f.home), A=byId(f.away);
     const hn=H?.name||f.home, an=A?.name||f.away;
     const whenTxt=f.when?fmtDate(f.when):'TBD';
-    const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'-';
+    const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'—';
     const banner=getFixtureBanner();
     return `<div class="fx">
       <div>
         ${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}
         <div class="fx-vs">
           <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-          <span style="opacity:.75"> ${scoreTxt==='-'?'—':scoreTxt} </span>
+          <span style="opacity:.75">${scoreTxt}</span>
           <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
         </div>
         <div class="meta">${escapeHtml(f.round||'')} • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
@@ -902,7 +952,7 @@ async function loadChampions(){
   if(isAdmin) buildManualGroupsEditor(cupData.cup.groups);
 }
 
-/* Groups rendering: standings table only (no duplicate names list) */
+/* Groups rendering: standings table only */
 function renderCcGroups(groups, tables){
   const el=document.getElementById('ccGroups');
   const G=['A','B','C','D'];
@@ -931,7 +981,6 @@ function renderCcGroups(groups, tables){
     </div>`;
   }).join('');
 }
-
 function renderCcFixtures(list){
   const el=document.getElementById('ccFixtures');
   list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
@@ -983,7 +1032,6 @@ function renderCcFixtures(list){
     });
   }
 }
-
 function buildManualGroupsEditor(groups){
   const root=document.getElementById('ccManualGroups');
   const opts=teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
