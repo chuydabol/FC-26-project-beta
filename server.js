@@ -108,6 +108,7 @@ const COL = {
   clubSquadSlots: (clubId) => db.collection('clubSquads').doc(clubId).collection('slots'),
   playerStats : () => db.collection('playerStats'), // docId = `${season}_${playerId}`
   champions   : () => db.collection('champions'),   // docId = cupId
+  leagues     : () => db.collection('leagues'),     // docId = leagueId
   news        : () => db.collection('news'),        // docId = newsId
 };
 
@@ -750,6 +751,70 @@ function parseLooseResultText(str){
   commit();
   return { score, details };
 }
+
+// -----------------------------
+// UPCL League
+// -----------------------------
+async function computeLeagueTable(leagueId, teamIds){
+  const snap = await COL.fixtures().where('cup','==',leagueId).get();
+  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const table = {};
+  const touch = id => table[id] = table[id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, AG:0, AW:0, Pts:0 };
+  teamIds.forEach(id=> touch(id));
+  for (const f of fx){
+    if (!teamIds.includes(f.home) || !teamIds.includes(f.away)) continue;
+    const hs = Number(f.score?.hs||0), as = Number(f.score?.as||0);
+    const H = touch(f.home), A = touch(f.away);
+    H.P++; A.P++;
+    H.GF+=hs; H.GA+=as; H.GD=H.GF-H.GA;
+    A.GF+=as; A.GA+=hs; A.GD=A.GF-A.GA; A.AG+=as;
+    if (hs>as){ H.W++; H.Pts+=3; A.L++; }
+    else if (hs<as){ A.W++; A.Pts+=3; A.AW++; H.L++; }
+    else { H.D++; A.D++; H.Pts++; A.Pts++; }
+  }
+  return Object.values(table).sort((a,b)=>(b.Pts-a.Pts)||(b.GD-a.GD)||(b.GF-a.GF)||(b.AG-a.AG)||(b.W-a.W)||(b.AW-a.AW));
+}
+
+app.post('/api/leagues/:leagueId/teams', requireAdmin, wrap(async (req,res)=>{
+  const { leagueId } = req.params;
+  const teams = Array.isArray(req.body?.teams) ? req.body.teams.map(String) : [];
+  const doc = { leagueId, teams, createdAt: Date.now() };
+  await COL.leagues().doc(leagueId).set(doc);
+  res.json({ ok:true, league: doc });
+}));
+
+app.get('/api/leagues/:leagueId', wrap(async (req,res)=>{
+  const { leagueId } = req.params;
+  const snap = await COL.leagues().doc(leagueId).get();
+  const league = snap.exists ? snap.data() : { leagueId, teams:[], createdAt: Date.now() };
+  const standings = await computeLeagueTable(leagueId, league.teams);
+  res.json({ ok:true, league, standings });
+}));
+
+app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
+  const { leagueId } = req.params;
+  const limit = Math.max(1, Math.min(20, Number(req.query.limit || 5)));
+  const snap = await COL.fixtures().where('cup','==',leagueId).get();
+  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const goals = new Map(), assists = new Map(), meta = new Map();
+  const bump = (m,k,n)=> m.set(k,(m.get(k)||0)+n);
+  for (const f of fx){
+    for (const side of ['home','away']){
+      const clubId = side==='home' ? f.home : f.away;
+      for (const r of (f.details?.[side]||[])){
+        if (!r.playerId) continue;
+        meta.set(r.playerId,{ name: r.player || `#${String(r.playerId).slice(0,6)}`, clubId });
+        if (r.goals)   bump(goals,   r.playerId, Number(r.goals||0));
+        if (r.assists) bump(assists, r.playerId, Number(r.assists||0));
+      }
+    }
+  }
+  const toRows = (m)=> Array.from(m.entries())
+    .map(([playerId,count])=>({ playerId, count, ...meta.get(playerId) }))
+    .sort((a,b)=>(b.count-a.count)||String(a.name).localeCompare(String(b.name)))
+    .slice(0,limit);
+  res.json({ ok:true, scorers: toRows(goals), assisters: toRows(assists) });
+}));
 
 // -----------------------------
 // Champions Cup
