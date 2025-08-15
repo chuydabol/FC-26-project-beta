@@ -1543,54 +1543,73 @@ function renderNewsItem(n){
 }
 function computeNewsFromFixtures(list){
   const out = [];
-  const byPlayer = new Map(); // name => { streak, lastScoredAt }
-  const tallyGoals = new Map(); // name => total goals
+  const byPlayer = new Map(); // name => { goalStreak, assistStreak, contribStreak, lastAt }
+  const tallyGoals = new Map();
+  const tallyAssists = new Map();
+  const goalTotals = new Map();
+  const assistTotals = new Map();
   const now = Date.now();
 
-  list.filter(f=>f.status==='final').forEach(f=>{
+  const finals = list.filter(f=>f.status==='final').sort((a,b)=> (a.when||0)-(b.when||0));
+  finals.forEach(f=>{
+    const total = Number(f.score?.hs||0)+Number(f.score?.as||0);
+    const diff = Math.abs(Number(f.score?.hs||0)-Number(f.score?.as||0));
+    if (Number(f.score?.as||0)===0){ out.push({ tag:'Clean Sheet', title:`${byId(f.home)?.name||f.home} clean sheet`, body:`${byId(f.home)?.name||f.home} keep ${Number(f.score.hs||0)}-${Number(f.score.as||0)} shutout`, clubId:f.home, ts:f.when||now }); }
+    if (Number(f.score?.hs||0)===0){ out.push({ tag:'Clean Sheet', title:`${byId(f.away)?.name||f.away} clean sheet`, body:`${byId(f.away)?.name||f.away} keep ${Number(f.score.hs||0)}-${Number(f.score.as||0)} shutout`, clubId:f.away, ts:f.when||now }); }
+    if (total>=8){ out.push({ tag:'High Scoring', title:'High scoring match', body:`${byId(f.home)?.name||f.home} ${Number(f.score.hs||0)}-${Number(f.score.as||0)} ${byId(f.away)?.name||f.away}`, clubId:'', ts:f.when||now }); }
+    if (diff>=5){ const winner = Number(f.score.hs||0)>Number(f.score.as||0) ? f.home : f.away; out.push({ tag:'Blowout', title:`${byId(winner)?.name||winner} blowout win`, body:`${Number(f.score.hs||0)}-${Number(f.score.as||0)} victory`, clubId:winner, ts:f.when||now }); }
+
     ['home','away'].forEach(side=>{
       (f.details?.[side]||[]).forEach(r=>{
         const name = (r.player && r.player.trim()) || r.playerId || 'Unknown';
         const g = Number(r.goals||0);
-        if (g>=3){
-          out.push({
-            tag:'Hattrick',
-            title:`${name} nets a hat-trick!`,
-            body:`${name} scored ${g} for ${(byId(side==='home'?f.home:f.away)?.name)||'their club'} in ${f.round||'League'}.`,
-            clubId: side==='home'?f.home:f.away, ts: f.when || now
-          });
-        }
-        // streaks
-        if (g>0){
-          const meta = byPlayer.get(name) || { streak:0, lastScoredAt:0 };
-          meta.streak += 1; meta.lastScoredAt = f.when||now; byPlayer.set(name, meta);
-        } else {
-          const meta = byPlayer.get(name) || { streak:0, lastScoredAt:0 };
-          meta.streak = 0; byPlayer.set(name, meta);
-        }
+        const a = Number(r.assists||0);
+        const rating = Number(r.rating||0);
+        const clubId = side==='home'?f.home:f.away;
+
+        if (g===2){ out.push({ tag:'Brace', title:`${name} scores a brace`, body:`${name} struck twice for ${(byId(clubId)?.name)||'their club'} in ${f.round||'League'}.`, clubId, ts:f.when||now }); }
+        else if (g===3){ out.push({ tag:'Hattrick', title:`${name} nets a hat-trick!`, body:`${name} scored ${g} for ${(byId(clubId)?.name)||'their club'} in ${f.round||'League'}.`, clubId, ts:f.when||now }); }
+        else if (g>=4){ out.push({ tag:'Haul', title:`${name} scores ${g}!`, body:`${name} recorded ${g} goals for ${(byId(clubId)?.name)||'their club'} in ${f.round||'League'}.`, clubId, ts:f.when||now }); }
+
+        if (a===2){ out.push({ tag:'Assist Brace', title:`${name} with two assists`, body:`${name} set up two goals for ${(byId(clubId)?.name)||'their club'} in ${f.round||'League'}.`, clubId, ts:f.when||now }); }
+        else if (a>=3){ out.push({ tag:'Assist Hat-trick', title:`${name} assists ${a}`, body:`${name} tallied ${a} assists for ${(byId(clubId)?.name)||'their club'} in ${f.round||'League'}.`, clubId, ts:f.when||now }); }
+
+        if (g>=2 && a>=2){ out.push({ tag:'Big Game', title:`${name} stars with ${g}G/${a}A`, body:`${name} contributed ${g} goals and ${a} assists for ${(byId(clubId)?.name)||'their club'} in ${f.round||'League'}.`, clubId, ts:f.when||now }); }
+
+        if (rating>=9){ out.push({ tag:'High Rating', title:`${name} shines with ${rating}`, body:`${name} earned a ${rating} rating for ${(byId(clubId)?.name)||'their club'}.`, clubId, ts:f.when||now }); }
+
+        const meta = byPlayer.get(name) || { goalStreak:0, assistStreak:0, contribStreak:0, lastAt:0 };
+        meta.goalStreak = g>0 ? meta.goalStreak+1 : 0;
+        meta.assistStreak = a>0 ? meta.assistStreak+1 : 0;
+        meta.contribStreak = (g>0||a>0) ? meta.contribStreak+1 : 0;
+        meta.lastAt = f.when||now;
+        byPlayer.set(name, meta);
+
+        const goalTotal = (goalTotals.get(name)||0) + g;
+        goalTotals.set(name, goalTotal);
+        if (g>0 && [1,10,50].includes(goalTotal)){ out.push({ tag:'Milestone', title:`${name} reaches ${goalTotal} goals`, body:`${name} has now scored ${goalTotal} career goals.`, clubId, ts:f.when||now }); }
+
+        const assistTotal = (assistTotals.get(name)||0) + a;
+        assistTotals.set(name, assistTotal);
+        if (a>0 && [1,10,50].includes(assistTotal)){ out.push({ tag:'Milestone', title:`${name} reaches ${assistTotal} assists`, body:`${name} has now provided ${assistTotal} career assists.`, clubId, ts:f.when||now }); }
+
         if (g>0) tallyGoals.set(name, (tallyGoals.get(name)||0)+g);
+        if (a>0) tallyAssists.set(name, (tallyAssists.get(name)||0)+a);
       });
     });
   });
 
-  // streak news (>=3 consecutive)
   for (const [name,meta] of byPlayer.entries()){
-    if (meta.streak>=3){
-      out.push({
-        tag:'Streak',
-        title:`${name} scoring streak`,
-        body:`${name} has scored in ${meta.streak} consecutive matches.`,
-        clubId: '', ts: meta.lastScoredAt || now
-      });
-    }
+    if (meta.goalStreak>=3){ out.push({ tag:'Streak', title:`${name} scoring streak`, body:`${name} has scored in ${meta.goalStreak} consecutive matches.`, clubId:'', ts:meta.lastAt||now }); }
+    if (meta.assistStreak>=3){ out.push({ tag:'Streak', title:`${name} assist streak`, body:`${name} has assisted in ${meta.assistStreak} straight matches.`, clubId:'', ts:meta.lastAt||now }); }
+    if (meta.contribStreak>=3){ out.push({ tag:'Streak', title:`${name} contribution streak`, body:`${name} has contributed in ${meta.contribStreak} consecutive matches.`, clubId:'', ts:meta.lastAt||now }); }
   }
-  // leaders snapshot
+
   const leaders = Array.from(tallyGoals.entries()).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  if (leaders.length){
-    const line = leaders.map(([n,c],i)=>`${i+1}. ${n} (${c})`).join('  ');
-    out.push({ tag:'Leaders', title:'Top Scorers Update', body: line, clubId:'', ts: now });
-  }
-  // sort newest first
+  if (leaders.length){ const line = leaders.map(([n,c],i)=>`${i+1}. ${n} (${c})`).join('  '); out.push({ tag:'Leaders', title:'Top Scorers Update', body: line, clubId:'', ts: now }); }
+  const assistsLead = Array.from(tallyAssists.entries()).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  if (assistsLead.length){ const line = assistsLead.map(([n,c],i)=>`${i+1}. ${n} (${c})`).join('  '); out.push({ tag:'Leaders', title:'Top Assists Update', body: line, clubId:'', ts: now }); }
+
   out.sort((a,b)=> (b.ts||0) - (a.ts||0));
   return out;
 }

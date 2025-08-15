@@ -473,20 +473,36 @@ async function resolvePlayerIdByName(name, clubId){
 // -----------------------------
 async function bumpPlayerStatsFromFixture(f){
   const season = seasonKey();
+  const updated = new Map();
   for (const side of ['home','away']){
     for (const r of (f.details?.[side]||[])){
       if (!r.playerId) continue;
       const id = `${season}_${r.playerId}`;
       const ref = COL.playerStats().doc(id);
-      await ref.set({
-        season, playerId:r.playerId,
-        goals: FieldValue.increment(Number(r.goals||0)),
-        assists: FieldValue.increment(Number(r.assists||0)),
-        ratingsSum: FieldValue.increment(Number(r.rating||0)),
-        ratingsCount: FieldValue.increment(r.rating ? 1 : 0),
-      }, { merge:true });
+      const snap = await ref.get();
+      const prev = snap.exists ? snap.data() : {};
+      const goals = Number(r.goals||0);
+      const assists = Number(r.assists||0);
+      const rating = Number(r.rating||0);
+      const scored = goals>0;
+      const assisted = assists>0;
+      const contributed = scored || assisted;
+      const next = {
+        season,
+        playerId: r.playerId,
+        goals: (prev.goals||0) + goals,
+        assists: (prev.assists||0) + assists,
+        ratingsSum: (prev.ratingsSum||0) + rating,
+        ratingsCount: (prev.ratingsCount||0) + (rating ? 1 : 0),
+        goalStreak: scored ? (prev.goalStreak||0) + 1 : 0,
+        assistStreak: assisted ? (prev.assistStreak||0) + 1 : 0,
+        contribStreak: contributed ? (prev.contribStreak||0) + 1 : 0,
+      };
+      await ref.set(next, { merge:true });
+      updated.set(r.playerId, next);
     }
   }
+  return updated;
 }
 
 // -----------------------------
@@ -618,7 +634,7 @@ app.put('/api/cup/fixtures/:id/lineup', requireManagerOrAdmin, wrap(async (req,r
 }));
 
 // ---- Result submission (creates News) ----
-async function newsFromFinal(f){
+async function newsFromFinal(f, statsMap=new Map()){
   // Final result news
   const id = `final_${f.id}`;
   const base = {
@@ -628,18 +644,98 @@ async function newsFromFinal(f){
   };
   await COL.news().doc(id).set(base);
 
-  // Hat-tricks
+  const goalMilestones = [1,10,50];
+  const assistMilestones = [1,10,50];
+
   for (const side of ['home','away']){
     for (const r of (f.details?.[side]||[])){
-      if (Number(r.goals||0) >= 3){
+      const g = Number(r.goals||0);
+      const a = Number(r.assists||0);
+      const rating = Number(r.rating||0);
+      const clubId = side==='home'?f.home:f.away;
+
+      // Multi-goal feats
+      if (g===2){
+        const nid = `brace_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+        await COL.news().doc(nid).set({ id:nid, type:'brace', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g });
+      } else if (g===3){
         const nid = `hat_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await COL.news().doc(nid).set({
-          id:nid, type:'hattrick', ts: Date.now(),
-          cup:f.cup, group:f.group||null, round:f.round||'',
-          club: side==='home'?f.home:f.away, playerId:r.playerId||'', player:r.player||'', goals:Number(r.goals||0)
-        });
+        await COL.news().doc(nid).set({ id:nid, type:'hattrick', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g });
+      } else if (g>=4){
+        const nid = `haul_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+        await COL.news().doc(nid).set({ id:nid, type:'haul', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g });
+      }
+
+      // Assist milestones
+      if (a===2){
+        const nid = `assist_brace_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+        await COL.news().doc(nid).set({ id:nid, type:'assist_brace', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', assists:a });
+      } else if (a>=3){
+        const nid = `assist_hat_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+        await COL.news().doc(nid).set({ id:nid, type:'assist_hat', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', assists:a });
+      }
+
+      // Combined contributions
+      if (g>=2 && a>=2){
+        const nid = `combo_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+        await COL.news().doc(nid).set({ id:nid, type:'combo', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g, assists:a });
+      }
+
+      // High rating
+      if (rating>=9){
+        const nid = `rating_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+        await COL.news().doc(nid).set({ id:nid, type:'high_rating', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', rating });
+      }
+
+      const stats = statsMap.get(r.playerId) || null;
+      if (stats){
+        // Cumulative milestones
+        if (g>0 && goalMilestones.includes(stats.goals)){
+          const nid = `goal_ms_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+          await COL.news().doc(nid).set({ id:nid, type:'goal_milestone', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goalsTotal:stats.goals });
+        }
+        if (a>0 && assistMilestones.includes(stats.assists)){
+          const nid = `assist_ms_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+          await COL.news().doc(nid).set({ id:nid, type:'assist_milestone', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', assistsTotal:stats.assists });
+        }
+        // Streaks
+        if (g>0 && stats.goalStreak>=3){
+          const nid = `goal_streak_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+          await COL.news().doc(nid).set({ id:nid, type:'goal_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', streak:stats.goalStreak });
+        }
+        if (a>0 && stats.assistStreak>=3){
+          const nid = `assist_streak_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+          await COL.news().doc(nid).set({ id:nid, type:'assist_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', streak:stats.assistStreak });
+        }
+        if ((g>0||a>0) && stats.contribStreak>=3){
+          const nid = `contrib_streak_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
+          await COL.news().doc(nid).set({ id:nid, type:'contrib_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', streak:stats.contribStreak });
+        }
       }
     }
+  }
+
+  // Team-centric news
+  const hs = Number(f.score?.hs||0);
+  const as = Number(f.score?.as||0);
+  const total = hs + as;
+  const diff = Math.abs(hs - as);
+  if (as===0){
+    const nid = `cs_${f.id}_home`;
+    await COL.news().doc(nid).set({ id:nid, type:'clean_sheet', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId:f.home, score:f.score });
+  }
+  if (hs===0){
+    const nid = `cs_${f.id}_away`;
+    await COL.news().doc(nid).set({ id:nid, type:'clean_sheet', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId:f.away, score:f.score });
+  }
+  if (total>=8){
+    const nid = `high_scoring_${f.id}`;
+    await COL.news().doc(nid).set({ id:nid, type:'high_scoring', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', home:f.home, away:f.away, score:f.score });
+  }
+  if (diff>=5){
+    const winner = hs>as?f.home:f.away;
+    const nid = `blowout_${f.id}`;
+    await COL.news().doc(nid).set({ id:nid, type:'blowout', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId:winner, score:f.score });
   }
 }
 
@@ -669,8 +765,8 @@ app.post('/api/cup/fixtures/:id/report', requireManagerOrAdmin, wrap(async (req,
   if (!f.when) f.when = Date.now();
 
   await setDoc('fixtures', f.id, f);
-  await bumpPlayerStatsFromFixture(f);
-  await newsFromFinal(f);
+  const statsMap = await bumpPlayerStatsFromFixture(f);
+  await newsFromFinal(f, statsMap);
   res.json({ ok:true, fixture: f });
 }));
 
@@ -701,8 +797,8 @@ app.post('/api/cup/fixtures/:id/ingest-text', requireAdmin, wrap(async (req,res)
   if (!f.when) f.when = Date.now();
 
   await setDoc('fixtures', f.id, f);
-  await bumpPlayerStatsFromFixture(f);
-  await newsFromFinal(f);
+  const statsMap = await bumpPlayerStatsFromFixture(f);
+  await newsFromFinal(f, statsMap);
   res.json({ ok:true, fixture: f });
 }));
 
