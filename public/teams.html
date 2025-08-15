@@ -265,6 +265,12 @@ h2{margin:0 0 10px}
       <div id="ccGroups" class="group-grid" style="margin-top:8px"></div>
     </div>
 
+    <!-- Leaders -->
+    <div class="m-card" style="margin-top:10px">
+      <strong>Leaders</strong>
+      <div id="ccLeaders" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"></div>
+    </div>
+
     <!-- Admin tools (group editor + easy create fixture) -->
     <div class="m-card" id="ccAdmin" style="display:none;margin-top:10px">
       <strong>Admin tools</strong>
@@ -1128,6 +1134,12 @@ async function loadChampions(){
   }
   renderCcGroups(cupData.cup.groups);
 
+  // leaders
+  try {
+    const leaders = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}/leaders`);
+    renderCcLeaders(leaders);
+  } catch {}
+
   // cc fixtures
   let ccList = [];
   try {
@@ -1161,7 +1173,7 @@ function renderCcGroups(groups){
       </div>`;
   }).join('');
 }
-function computeGroupTablesClient(groups){
+  function computeGroupTablesClient(groups){
   // derive from fixturesPublicCache + CC fixtures if present
   const table = { A:{}, B:{}, C:{}, D:{} };
   const touch = (g,id)=> table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
@@ -1181,11 +1193,38 @@ function computeGroupTablesClient(groups){
     else { H.D++; A.D++; H.Pts++; A.Pts++; }
   });
   const sorted = {};
-  ['A','B','C','D'].forEach(g=>{
-    sorted[g] = Object.values(table[g]).sort((x,y)=>(y.Pts-x.Pts)||(y.GD-x.GD)||(y.GF-x.GF));
-  });
-  return sorted;
-}
+    ['A','B','C','D'].forEach(g=>{
+      sorted[g] = Object.values(table[g]).sort((x,y)=>(y.Pts-x.Pts)||(y.GD-x.GD)||(y.GF-x.GF));
+    });
+    return sorted;
+  }
+
+  function renderCcLeaders(data){
+    const wrap = document.getElementById('ccLeaders');
+    const scorers = (data?.scorers||[]).map((r,i)=>{
+      const T = byId(r.clubId);
+      const club = T?.shortName || T?.name || r.clubId;
+      return `<li>${escapeHtml(r.name)} <span class="muted">(${r.count}) - ${escapeHtml(club)}</span></li>`;
+    }).join('');
+    const assisters = (data?.assisters||[]).map((r,i)=>{
+      const T = byId(r.clubId);
+      const club = T?.shortName || T?.name || r.clubId;
+      return `<li>${escapeHtml(r.name)} <span class="muted">(${r.count}) - ${escapeHtml(club)}</span></li>`;
+    }).join('');
+    if (!scorers && !assisters){
+      wrap.innerHTML = '<div class="muted">No stats yet.</div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <div>
+        <div class="muted">Top Scorers</div>
+        <ol style="margin-top:6px;padding-left:18px">${scorers||''}</ol>
+      </div>
+      <div>
+        <div class="muted">Top Assisters</div>
+        <ol style="margin-top:6px;padding-left:18px">${assisters||''}</ol>
+      </div>`;
+  }
 function renderCcFixtures(list){
   const el = document.getElementById('ccFixtures');
   list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
