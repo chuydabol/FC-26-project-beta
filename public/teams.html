@@ -138,9 +138,26 @@ h2{margin:0 0 10px}
 @media (prefers-reduced-motion: reduce){
   .team-card,.navbar button{transition:none}
 }
+
+/* Intro splash */
+#intro{
+  position:fixed;
+  inset:0;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:9999;
+  transition:opacity 1s ease;
+}
+#intro.hidden{opacity:0;pointer-events:none;}
+#intro img{max-width:80vw;max-height:80vh;}
 </style>
 </head>
 <body>
+<div id="intro">
+  <img src="/assets/logos/royal-republic-logo.png" alt="League logo">
+</div>
 <header>
   <h1>Pro Club — League Hub</h1>
   <div class="navbar" aria-label="Primary">
@@ -1599,6 +1616,16 @@ async function init(){
   }catch{}
 }
 init();
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    const intro = document.getElementById('intro');
+    if (intro) {
+      intro.classList.add('hidden');
+      intro.addEventListener('transitionend', () => intro.remove());
+    }
+  }, 3000);
+});
 </script>
 </body>
 </html>
