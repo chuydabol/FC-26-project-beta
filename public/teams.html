@@ -59,7 +59,7 @@ h2{margin:0 0 10px}
 .team-logo{
   width:100%;
   aspect-ratio:5/3;               /* taller than 16:9 for desktop */
-  height:auto; object-fit:cover; border-radius:10px; background:#330000
+  height:auto; object-fit:contain; border-radius:10px; background:#330000; padding:8px
 }
 .team-meta{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
 .team-meta .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -156,7 +156,8 @@ h2{margin:0 0 10px}
 </head>
 <body>
 <div id="intro">
-  <img src="/assets/logos/royal-republic-logo.png" alt="League logo">
+    <img src="/assets/logos/royal-republic-logo.png" alt="League logo">
+  <audio id="introAudio" src="/assets/intro.wav"></audio>
 </div>
 <header>
   <h1>Pro Club — League Hub</h1>
@@ -1618,11 +1619,25 @@ async function init(){
 init();
 
 window.addEventListener('load', () => {
+  const introAudio = document.getElementById('introAudio');
+  const intro = document.getElementById('intro');
+
+  if (introAudio) {
+    const tryPlay = () => introAudio.play().catch(() => {});
+    tryPlay();
+    document.addEventListener('click', tryPlay, { once: true });
+  }
+
   setTimeout(() => {
-    const intro = document.getElementById('intro');
     if (intro) {
       intro.classList.add('hidden');
-      intro.addEventListener('transitionend', () => intro.remove());
+      intro.addEventListener('transitionend', () => {
+        intro.remove();
+        if (introAudio) {
+          introAudio.pause();
+          introAudio.remove();
+        }
+      });
     }
   }, 3000);
 });
