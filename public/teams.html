@@ -101,11 +101,11 @@ h2{margin:0 0 10px}
 .dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 
 /* News feed (social style) */
-.news-wrap{display:grid;grid-template-columns:1fr;gap:14px}
-.news-post{background:#110000;border:1px solid #2a0000;border-radius:14px;padding:14px;display:flex;gap:12px}
+.news-wrap{display:flex;flex-direction:column;gap:20px;max-width:700px;margin:0 auto}
+.news-post{background:#110000;border:1px solid #2a0000;border-radius:14px;padding:20px;display:flex;gap:12px;font-size:18px;width:100%}
 .news-avatar{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#300;flex:0 0 auto}
-.news-body{flex:1}
-.news-title{font-weight:800;margin-bottom:6px}
+.news-body{flex:1;text-align:center}
+.news-title{font-weight:800;margin-bottom:8px;font-size:20px}
 .news-meta{font-size:12px;color:var(--muted);margin-top:6px}
 
 /* Champions Cup groups — compact standings only */
@@ -1619,26 +1619,49 @@ async function loadNews(){
   try{
     const d = await apiGet('/api/news');
     const items = d.items || [];
-    if (items.length){
+    const complete = items.every(n=>n.title && n.body);
+    if (complete && items.length){
       wrap.innerHTML = items.map(renderNewsItem).join('');
       return;
     }
   }catch{}
-  // Fallback: compute from fixtures (league + CC)
+  // Fallback: compute from fixtures (league + CC + friendlies)
   try{
     await refreshFixturesPublic();
     const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
-    const computed = computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[])]);
+    const fr = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`).catch(()=>({fixtures:[]}));
+    const computed = computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[]), ...(fr.fixtures||[])]);
     wrap.innerHTML = computed.length ? computed.map(renderNewsItem).join('') : '<div class="muted">No news yet.</div>';
   }catch{ wrap.innerHTML = '<div class="muted">Failed to load news.</div>'; }
 }
 function renderNewsItem(n){
   const club = byId(n.clubId);
+  let title = n.title;
+  let body  = n.body;
+  if (!title || title===n.clubId){
+    if (n.type==='clean_sheet' && club){
+      title = `${club.name} clean sheet`;
+      body  = `${club.name} keep ${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} shutout`;
+    } else if (n.type==='high_scoring'){
+      const hn = byId(n.home)?.name || n.home;
+      const an = byId(n.away)?.name || n.away;
+      title = 'High scoring match';
+      body  = `${hn} ${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} ${an}`;
+    } else if (n.type==='blowout' && club){
+      title = `${club.name} blowout win`;
+      body  = `${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} victory`;
+    } else if (n.type==='final'){
+      const hn = byId(n.home)?.name || n.home;
+      const an = byId(n.away)?.name || n.away;
+      title = `${hn} ${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} ${an}`;
+      body  = 'Full time score';
+    }
+  }
   return `<article class="news-post">
     <img class="news-avatar" src="${teamLogoUrl(club)}" alt="">
     <div class="news-body">
-      <div class="news-title">${escapeHtml(n.title)}</div>
-      <div>${escapeHtml(n.body)}</div>
+      <div class="news-title">${escapeHtml(title||'')}</div>
+      <div>${escapeHtml(body||'')}</div>
       <div class="news-meta">${fmtDate(n.ts)} • ${escapeHtml(n.tag||'')}</div>
     </div>
   </article>`;
