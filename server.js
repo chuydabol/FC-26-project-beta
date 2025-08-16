@@ -147,6 +147,15 @@ function requireManagerOfClubParam(param='clubId'){
     next();
   };
 }
+function requireManagerOrAdminOfClubParam(param='clubId'){
+  return (req,res,next)=>{
+    if (isAdminSession(req)) return next();
+    const u = me(req);
+    if (!(u && u.role==='Manager' && isManagerActive(req) && String(u.teamId)===String(req.params[param])))
+      return res.status(403).json({ error:'Manager of this club or Admin only' });
+    next();
+  };
+}
 function requireManagerOrAdmin(req,res,next){
   if (isAdminSession(req)) return next();
   const u = me(req);
@@ -391,7 +400,7 @@ app.get('/api/clubs/:clubId/squad', wrap(async (req,res)=>{
   res.json({ clubId, slots: hydrated });
 }));
 
-app.post('/api/clubs/:clubId/squad/slots/:slotId/assign', requireManagerOfClubParam('clubId'), wrap(async (req,res)=>{
+app.post('/api/clubs/:clubId/squad/slots/:slotId/assign', requireManagerOrAdminOfClubParam('clubId'), wrap(async (req,res)=>{
   const { clubId, slotId } = req.params;
   let { playerId, eaName='', platform='manual', aliases=[] } = req.body || {};
   if (!playerId && !eaName) return res.status(400).json({ error:'playerId or eaName required' });
@@ -408,13 +417,13 @@ app.post('/api/clubs/:clubId/squad/slots/:slotId/assign', requireManagerOfClubPa
   res.json({ ok:true, slot });
 }));
 
-app.post('/api/clubs/:clubId/squad/slots/:slotId/unassign', requireManagerOfClubParam('clubId'), wrap(async (req,res)=>{
+app.post('/api/clubs/:clubId/squad/slots/:slotId/unassign', requireManagerOrAdminOfClubParam('clubId'), wrap(async (req,res)=>{
   const { clubId, slotId } = req.params;
   await COL.clubSquadSlots(clubId).doc(slotId).set({ playerId:'' }, { merge:true });
   res.json({ ok:true });
 }));
 
-app.patch('/api/clubs/:clubId/squad/slots/:slotId', requireManagerOfClubParam('clubId'), wrap(async (req,res)=>{
+app.patch('/api/clubs/:clubId/squad/slots/:slotId', requireManagerOrAdminOfClubParam('clubId'), wrap(async (req,res)=>{
   const { clubId, slotId } = req.params;
   const patch = {};
   if (req.body?.label) patch.label = String(req.body.label);
