@@ -563,6 +563,13 @@ const teams = [
 
 // helpers
 const byId = id => teams.find(t=>String(t.id)===String(id));
+function replaceClubIds(str){
+  if(!str) return str;
+  return String(str).replace(/[A-Za-z0-9_-]+/g, token => {
+    const club = byId(token);
+    return club ? club.name : token;
+  });
+}
 function teamLogoUrl(team){ return team?.logo || `https://via.placeholder.com/800x480.png?text=${encodeURIComponent(team?.name||'Club')}`; }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
@@ -1657,11 +1664,8 @@ function renderNewsItem(n){
       body  = 'Full time score';
     }
   }
-  if (club && n.clubId){
-    const cid = String(n.clubId);
-    if (title && title.includes(cid)){ title = title.replaceAll(cid, club.name); }
-    if (body  && body.includes(cid)){ body  = body.replaceAll(cid, club.name); }
-  }
+  title = replaceClubIds(title);
+  body  = replaceClubIds(body);
   return `<article class="news-post">
     <img class="news-avatar" src="${teamLogoUrl(club)}" alt="">
     <div class="news-body">
