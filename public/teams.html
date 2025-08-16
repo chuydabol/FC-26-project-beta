@@ -610,6 +610,21 @@ async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
+const playerNameCache = new Map();
+async function resolvePlayerName(id){
+  if(!id) return '';
+  if(playerNameCache.has(id)) return playerNameCache.get(id);
+  try{
+    const d = await apiGet(`/api/players/${encodeURIComponent(id)}`);
+    const name = d.player?.eaName || d.player?.name || '';
+    playerNameCache.set(id, name || id);
+    return name || id;
+  }catch{
+    playerNameCache.set(id, id);
+    return id;
+  }
+}
+
 // nav elements
 const navTeams    = document.getElementById('navTeams');
 const navNews     = document.getElementById('navNews');
@@ -1695,7 +1710,7 @@ async function loadNews(){
     await refreshFixturesPublic();
     const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
     const fr = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`).catch(()=>({fixtures:[]}));
-    const computed = computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[]), ...(fr.fixtures||[])]);
+    const computed = await computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[]), ...(fr.fixtures||[])]);
     wrap.innerHTML = computed.length ? computed.map(renderNewsItem).join('') : '<div class="muted">No news yet.</div>';
   }catch{ wrap.innerHTML = '<div class="muted">Failed to load news.</div>'; }
 }
@@ -1733,7 +1748,7 @@ function renderNewsItem(n){
     </div>
   </article>`;
 }
-function computeNewsFromFixtures(list){
+async function computeNewsFromFixtures(list){
   const out = [];
   const byPlayer = new Map(); // name => { goalStreak, assistStreak, contribStreak, lastAt }
   const tallyGoals = new Map();
@@ -1741,6 +1756,14 @@ function computeNewsFromFixtures(list){
   const goalTotals = new Map();
   const assistTotals = new Map();
   const now = Date.now();
+
+  const ids = new Set();
+  list.forEach(f=>{
+    ['home','away'].forEach(side=>{
+      (f.details?.[side]||[]).forEach(r=>{ if(!r.player && r.playerId) ids.add(r.playerId); });
+    });
+  });
+  await Promise.all(Array.from(ids).map(id=>resolvePlayerName(id)));
 
   const finals = list.filter(f=>f.status==='final').sort((a,b)=> (a.when||0)-(b.when||0));
   finals.forEach(f=>{
@@ -1753,7 +1776,7 @@ function computeNewsFromFixtures(list){
 
     ['home','away'].forEach(side=>{
       (f.details?.[side]||[]).forEach(r=>{
-        const name = (r.player && r.player.trim()) || r.playerId || 'Unknown';
+        const name = (r.player && r.player.trim()) || playerNameCache.get(r.playerId) || r.playerId || 'Unknown';
         const g = Number(r.goals||0);
         const a = Number(r.assists||0);
         const rating = Number(r.rating||0);
