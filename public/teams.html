@@ -126,6 +126,12 @@ h2{margin:0 0 10px}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
+/* Champions Cup bracket */
+.bracket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.bracket-card{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:12px;text-align:center}
+.bracket-match{display:flex;flex-direction:column;gap:4px}
+.bracket-vs{font-size:12px;color:var(--muted)}
+
 /* Mobile & small tablets */
 @media (max-width: 900px){
   .teams-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
@@ -290,6 +296,12 @@ h2{margin:0 0 10px}
     <div class="m-card" style="margin-top:10px">
       <strong>Groups</strong>
       <div id="ccGroups" class="group-grid" style="margin-top:8px"></div>
+    </div>
+
+    <!-- Bracket -->
+    <div class="m-card" style="margin-top:10px">
+      <strong>Bracket</strong>
+      <div id="ccBracket" class="bracket-grid" style="margin-top:8px"></div>
     </div>
 
     <!-- Leaders -->
@@ -1281,6 +1293,9 @@ async function loadChampions(){
   } catch {}
   renderCcFixtures(ccList);
 
+  // bracket
+  renderCcBracket(cupData.cup.groups, ccList);
+
   // admin panel
   document.getElementById('ccAdmin').style.display = isAdmin ? 'block' : 'none';
   if (isAdmin) buildManualGroupsEditor(cupData.cup.groups);
@@ -1326,10 +1341,46 @@ function renderCcGroups(groups){
     else { H.D++; A.D++; H.Pts++; A.Pts++; }
   });
   const sorted = {};
-    ['A','B','C','D'].forEach(g=>{
-      sorted[g] = Object.values(table[g]).sort((x,y)=>(y.Pts-x.Pts)||(y.GD-x.GD)||(y.GF-x.GF));
-    });
-    return sorted;
+  ['A','B','C','D'].forEach(g=>{
+    sorted[g] = Object.values(table[g]).sort((x,y)=>(y.Pts-x.Pts)||(y.GD-x.GD)||(y.GF-x.GF));
+  });
+  return sorted;
+  }
+
+  function renderCcBracket(groups, fixtures){
+    const el = document.getElementById('ccBracket');
+    if (!el) return;
+    const tables = computeGroupTablesClient(groups);
+    const top = g => (tables[g] && tables[g][0]) ? tables[g][0].clubId : '';
+    const winners = { A: top('A'), B: top('B'), C: top('C'), D: top('D') };
+
+    const semiList = fixtures.filter(f => String(f.round || '').toLowerCase().includes('semi'));
+    const finalFx = fixtures.find(f => {
+      const r = String(f.round || '').toLowerCase();
+      return r === 'final' || (r.includes('final') && !r.includes('semi'));
+    }) || null;
+
+    const makeSemi = (home, away) => ({ home, away, status:'pending', score:{ hs:0, as:0 } });
+    const semi1 = semiList[0] || makeSemi(winners.A, winners.B);
+    const semi2 = semiList[1] || makeSemi(winners.C, winners.D);
+    const finalMatch = finalFx || { home:'Winner SF1', away:'Winner SF2', status:'pending', score:{ hs:0, as:0 } };
+
+    const teamHtml = id => {
+      const T = byId(id);
+      const name = T?.name || id;
+      const logo = T ? `<img src="${teamLogoUrl(T)}" alt="">` : '';
+      return `<span class="group-team">${logo}<span>${escapeHtml(name)}</span></span>`;
+    };
+    const matchHtml = f => {
+      const scoreTxt = (f.status === 'final') ? `${f.score.hs}-${f.score.as}` : 'vs';
+      return `<div class="bracket-match">${teamHtml(f.home)}<span class="bracket-vs">${scoreTxt}</span>${teamHtml(f.away)}</div>`;
+    };
+
+    el.innerHTML = `
+      <div class="bracket-card"><strong>Semifinal 1</strong>${matchHtml(semi1)}</div>
+      <div class="bracket-card"><strong>Final</strong>${matchHtml(finalMatch)}</div>
+      <div class="bracket-card"><strong>Semifinal 2</strong>${matchHtml(semi2)}</div>
+    `;
   }
 
   function renderCcLeaders(data){
