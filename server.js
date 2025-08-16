@@ -469,6 +469,18 @@ async function resolvePlayerIdByName(name, clubId){
   return null;
 }
 
+// Helper to fetch player name by id
+const _playerNameCache = new Map();
+async function lookupPlayerName(playerId){
+  if (!playerId) return '';
+  if (_playerNameCache.has(playerId)) return _playerNameCache.get(playerId);
+  const snap = await COL.players().doc(playerId).get();
+  const data = snap.exists ? snap.data() : null;
+  const name = data?.eaName || data?.name || '';
+  _playerNameCache.set(playerId, name);
+  return name;
+}
+
 // -----------------------------
 // Player stats
 // -----------------------------
@@ -731,38 +743,39 @@ async function newsFromFinal(f, statsMap=new Map()){
       const a = Number(r.assists||0);
       const rating = Number(r.rating||0);
       const clubId = side==='home'?f.home:f.away;
+      const playerName = r.player || await lookupPlayerName(r.playerId);
 
       // Multi-goal feats
       if (g===2){
         const nid = `brace_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await save({ id:nid, type:'brace', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g });
+        await save({ id:nid, type:'brace', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, goals:g });
       } else if (g===3){
         const nid = `hat_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await save({ id:nid, type:'hattrick', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g });
+        await save({ id:nid, type:'hattrick', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, goals:g });
       } else if (g>=4){
         const nid = `haul_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await save({ id:nid, type:'haul', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g });
+        await save({ id:nid, type:'haul', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, goals:g });
       }
 
       // Assist milestones
       if (a===2){
         const nid = `assist_brace_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await save({ id:nid, type:'assist_brace', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', assists:a });
+        await save({ id:nid, type:'assist_brace', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, assists:a });
       } else if (a>=3){
         const nid = `assist_hat_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await save({ id:nid, type:'assist_hat', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', assists:a });
+        await save({ id:nid, type:'assist_hat', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, assists:a });
       }
 
       // Combined contributions
       if (g>=2 && a>=2){
         const nid = `combo_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await save({ id:nid, type:'combo', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goals:g, assists:a });
+        await save({ id:nid, type:'combo', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, goals:g, assists:a });
       }
 
       // High rating
       if (rating>=9){
         const nid = `rating_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-        await save({ id:nid, type:'high_rating', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', rating });
+        await save({ id:nid, type:'high_rating', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, rating });
       }
 
       const stats = statsMap.get(r.playerId) || null;
@@ -770,24 +783,24 @@ async function newsFromFinal(f, statsMap=new Map()){
         // Cumulative milestones
         if (g>0 && goalMilestones.includes(stats.goals)){
           const nid = `goal_ms_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-          await save({ id:nid, type:'goal_milestone', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', goalsTotal:stats.goals });
+          await save({ id:nid, type:'goal_milestone', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, goalsTotal:stats.goals });
         }
         if (a>0 && assistMilestones.includes(stats.assists)){
           const nid = `assist_ms_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-          await save({ id:nid, type:'assist_milestone', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', assistsTotal:stats.assists });
+          await save({ id:nid, type:'assist_milestone', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, assistsTotal:stats.assists });
         }
         // Streaks
         if (g>0 && stats.goalStreak>=3){
           const nid = `goal_streak_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-          await save({ id:nid, type:'goal_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', streak:stats.goalStreak });
+          await save({ id:nid, type:'goal_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, streak:stats.goalStreak });
         }
         if (a>0 && stats.assistStreak>=3){
           const nid = `assist_streak_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-          await save({ id:nid, type:'assist_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', streak:stats.assistStreak });
+          await save({ id:nid, type:'assist_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, streak:stats.assistStreak });
         }
         if ((g>0||a>0) && stats.contribStreak>=3){
           const nid = `contrib_streak_${f.id}_${side}_${norm(r.player||r.playerId||'x')}`;
-          await save({ id:nid, type:'contrib_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:r.player||'', streak:stats.contribStreak });
+          await save({ id:nid, type:'contrib_streak', ts:Date.now(), cup:f.cup, group:f.group||null, round:f.round||'', clubId, playerId:r.playerId||'', player:playerName, streak:stats.contribStreak });
         }
       }
     }
