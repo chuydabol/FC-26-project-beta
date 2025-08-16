@@ -27,3 +27,9 @@ test('duplicate ids across groups are detected', () => {
   const all = [...docGroups.A, ...docGroups.B, ...docGroups.C, ...docGroups.D];
   assert.strictEqual(hasDuplicates(all), true);
 });
+
+test('formatted ids normalize to detect duplicates', () => {
+  const variants = ['Elite-xi', 'elite xi'];
+  assert.strictEqual(hasDuplicates(variants), true);
+  assert.deepStrictEqual(uniqueStrings(variants), ['elitexi']);
+});

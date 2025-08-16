@@ -11,7 +11,7 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const { hasDuplicates, uniqueStrings } = require('./utils');
+const { hasDuplicates, uniqueStrings, normalizeId } = require('./utils');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -1083,14 +1083,20 @@ app.post('/api/friendlies/:frId/generate', requireAdmin, wrap(async (req,res)=>{
 app.post('/api/champions/:cupId/groups', requireAdmin, wrap(async (req,res)=>{
   const { cupId } = req.params;
   const groups = req.body?.groups || {};
-  const docGroups = {
-    A: uniqueStrings(groups.A || []),
-    B: uniqueStrings(groups.B || []),
-    C: uniqueStrings(groups.C || []),
-    D: uniqueStrings(groups.D || []),
+  const rawGroups = {
+    A: Array.isArray(groups.A) ? groups.A : [],
+    B: Array.isArray(groups.B) ? groups.B : [],
+    C: Array.isArray(groups.C) ? groups.C : [],
+    D: Array.isArray(groups.D) ? groups.D : [],
   };
-  const allIds = [...docGroups.A, ...docGroups.B, ...docGroups.C, ...docGroups.D];
+  const allIds = [...rawGroups.A, ...rawGroups.B, ...rawGroups.C, ...rawGroups.D];
   if (hasDuplicates(allIds)) return res.status(400).json({ error:'Duplicate clubIds are not allowed' });
+  const docGroups = {
+    A: uniqueStrings(rawGroups.A),
+    B: uniqueStrings(rawGroups.B),
+    C: uniqueStrings(rawGroups.C),
+    D: uniqueStrings(rawGroups.D),
+  };
   const doc = { cupId, groups: docGroups, createdAt: Date.now() };
   await COL.champions().doc(cupId).set(doc);
   res.json({ ok:true, cup:doc });
@@ -1105,7 +1111,7 @@ app.post('/api/champions/:cupId/randomize', requireAdmin, wrap(async (req,res)=>
   shuffle(clubs);
   const groups = { A:[], B:[], C:[], D:[] };
   // Distribute round-robin into A-D; supports any multiple, not only 16
-  clubs.forEach((id,i)=> groups[['A','B','C','D'][i%4]].push(String(id)));
+  clubs.forEach((id,i)=> groups[['A','B','C','D'][i%4]].push(normalizeId(id)));
   const doc = { cupId, groups, createdAt: Date.now() };
   await COL.champions().doc(cupId).set(doc);
   res.json({ ok:true, cup:doc });
