@@ -448,6 +448,13 @@ app.post('/api/players/:playerId/update', requireAdmin, wrap(async (req,res)=>{
   res.json({ ok:true, player: doc.data() });
 }));
 
+app.get('/api/players/:playerId', wrap(async (req,res)=>{
+  const { playerId } = req.params;
+  const snap = await COL.players().doc(playerId).get();
+  if (!snap.exists) return res.status(404).json({ error:'not found' });
+  res.json({ ok:true, player: snap.data() });
+}));
+
 // -----------------------------
 // Name → playerId resolution
 // -----------------------------
