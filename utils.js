@@ -3,7 +3,16 @@ function normalizeId(id){
 }
 
 function uniqueStrings(arr){
-  return Array.from(new Set((arr || []).map(normalizeId)));
+  const seen = new Set();
+  const result = [];
+  for (const id of arr || []) {
+    const norm = normalizeId(id);
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      result.push(id);
+    }
+  }
+  return result;
 }
 
 function hasDuplicates(arr){
