@@ -109,6 +109,7 @@ const COL = {
   playerStats : () => db.collection('playerStats'), // docId = `${season}_${playerId}`
   champions   : () => db.collection('champions'),   // docId = cupId
   leagues     : () => db.collection('leagues'),     // docId = leagueId
+  friendlies  : () => db.collection('friendlies'),  // docId = friendlyId
   news        : () => db.collection('news'),        // docId = newsId
 };
 
@@ -910,6 +911,57 @@ app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
     .sort((a,b)=>(b.count-a.count)||String(a.name).localeCompare(String(b.name)))
     .slice(0,limit);
   res.json({ ok:true, scorers: toRows(goals), assisters: toRows(assists) });
+}));
+
+// -----------------------------
+// Friendlies / Exhibition Matches
+// -----------------------------
+app.post('/api/friendlies/:frId/teams', requireAdmin, wrap(async (req,res)=>{
+  const { frId } = req.params;
+  const teams = Array.isArray(req.body?.teams) ? req.body.teams.map(String) : [];
+  const doc = { frId, teams, createdAt: Date.now() };
+  await COL.friendlies().doc(frId).set(doc);
+  res.json({ ok:true, friendly: doc });
+}));
+
+app.get('/api/friendlies/:frId', wrap(async (req,res)=>{
+  const { frId } = req.params;
+  const snap = await COL.friendlies().doc(frId).get();
+  const friendly = snap.exists ? snap.data() : { frId, teams:[], createdAt: Date.now() };
+  res.json({ ok:true, friendly });
+}));
+
+app.post('/api/friendlies/:frId/generate', requireAdmin, wrap(async (req,res)=>{
+  const { frId } = req.params;
+  const snap = await COL.friendlies().doc(frId).get();
+  const teams = snap.exists ? (snap.data().teams||[]) : [];
+  if (teams.length < 2) return res.status(400).json({ error:'Need at least 2 teams' });
+  const created = [];
+  for (let i=0;i<teams.length;i++){
+    for (let j=i+1;j<teams.length;j++){
+      const id = uuidv4();
+      const fixture = {
+        id, cup: frId,
+        group: null,
+        round: 'Friendly',
+        home: teams[i], away: teams[j],
+        teams: [teams[i], teams[j]],
+        status: 'pending',
+        timeLockedAt: null,
+        proposals: [], votes: {},
+        when: null,
+        lineups: {},
+        score: { hs:0, as:0 },
+        report: { text:'', mvpHome:'', mvpAway:'', discordMsgUrl:'' },
+        details: { home:[], away:[] },
+        unresolved: [],
+        createdAt: Date.now()
+      };
+      await setDoc('fixtures', id, fixture);
+      created.push(fixture);
+    }
+  }
+  res.json({ ok:true, created: created.length });
 }));
 
 // -----------------------------
