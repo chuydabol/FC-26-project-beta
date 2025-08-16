@@ -101,11 +101,11 @@ h2{margin:0 0 10px}
 .dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 
 /* News feed (social style) */
-.news-wrap{display:grid;grid-template-columns:1fr;gap:14px}
-.news-post{background:#110000;border:1px solid #2a0000;border-radius:14px;padding:14px;display:flex;gap:12px}
+.news-wrap{display:flex;flex-direction:column;gap:20px;max-width:700px;margin:0 auto}
+.news-post{background:#110000;border:1px solid #2a0000;border-radius:14px;padding:20px;display:flex;gap:12px;font-size:18px;width:100%}
 .news-avatar{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#300;flex:0 0 auto}
-.news-body{flex:1}
-.news-title{font-weight:800;margin-bottom:6px}
+.news-body{flex:1;text-align:center}
+.news-title{font-weight:800;margin-bottom:8px;font-size:20px}
 .news-meta{font-size:12px;color:var(--muted);margin-top:6px}
 
 /* Champions Cup groups — compact standings only */
@@ -169,6 +169,7 @@ h2{margin:0 0 10px}
     <button id="navFixturesSched"  aria-pressed="false" style="display:none">Scheduling</button>
     <button id="navChampions" aria-pressed="false">Champions Cup</button>
     <button id="navLeague" aria-pressed="false">UPCL League</button>
+    <button id="navFriendlies" aria-pressed="false">Friendlies</button>
     <button id="btnManagerLogin">Manager sign in</button>
     <button id="btnAdminLogin">Admin sign in</button>
     <button id="btnAdminLogout" style="display:none">Admin sign out</button>
@@ -405,6 +406,32 @@ h2{margin:0 0 10px}
     </div>
   </section>
 
+  <!-- FRIENDLIES -->
+  <section id="friendlies-view" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <h2>Friendlies</h2>
+      <div class="chip">Cup ID: <span id="frCupId"></span></div>
+    </div>
+
+    <div class="m-card" style="margin-top:10px">
+      <strong>Fixtures</strong>
+      <div id="friendliesFixtures" class="fx-list" style="margin-top:8px"></div>
+    </div>
+
+    <div class="m-card" id="friendliesAdmin" style="display:none;margin-top:10px">
+      <strong>Admin tools</strong>
+      <div class="muted">Manage friendly teams and generate fixtures.</div>
+      <div id="frTeamList" style="margin-top:8px"></div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <select id="frAddSel"></select>
+        <button id="frAddBtn">Add team</button>
+      </div>
+      <div style="margin-top:8px">
+        <button id="frGenBtn">Generate fixtures</button>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <!-- Manager Sign-In Modal -->
@@ -498,6 +525,7 @@ h2{margin:0 0 10px}
 const API_BASE = '';
 const CC_ID = 'UPCL_CC_2025_08'; // current Champions Cup id
 const LEAGUE_ID = 'UPCL_LEAGUE_2025'; // current League id
+const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
 
 const TEAM_TITLES = {
   '3638105': [
@@ -548,6 +576,8 @@ let rankings = {};
 let payouts  = { elite:0, mid:0, bottom:0 };
 let fixturesPublicCache = [];
 let fixturesSchedCache  = [];
+let friendliesFxCache  = [];
+let friendliesTeams    = [];
 
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -562,6 +592,7 @@ const navFxPublic = document.getElementById('navFixturesPublic');
 const navFxSched  = document.getElementById('navFixturesSched');
 const navChampions= document.getElementById('navChampions');
 const navLeague   = document.getElementById('navLeague');
+const navFriendlies = document.getElementById('navFriendlies');
 
 const teamsViewEl = document.getElementById('teams-view');
 const newsView    = document.getElementById('news-view');
@@ -570,6 +601,7 @@ const fxPublic    = document.getElementById('fixtures-public');
 const fxSched     = document.getElementById('fixtures-sched');
 const cupView     = document.getElementById('champions-view');
 const leagueView  = document.getElementById('league-view');
+const friendliesView = document.getElementById('friendlies-view');
 
 function setNav(active){
   if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
@@ -580,7 +612,8 @@ function setNav(active){
     fixturesPublic:[fxPublic, navFxPublic],
     fixturesSched:[fxSched, navFxSched],
     champions:[cupView, navChampions],
-    league:[leagueView, navLeague]
+    league:[leagueView, navLeague],
+    friendlies:[friendliesView, navFriendlies]
   };
   for (const key of Object.keys(s)){
     const [view,btn] = s[key];
@@ -596,6 +629,7 @@ navFxPublic.onclick    = ()=> setNav('fixturesPublic');
 navFxSched.onclick     = ()=> setNav('fixturesSched');
 navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
 navLeague.onclick      = async ()=> { setNav('league'); await loadLeague(); };
+navFriendlies.onclick  = async ()=> { setNav('friendlies'); await loadFriendlies(); };
 
 // auth / admin / manager
 const btnAdminLogin = document.getElementById('btnAdminLogin');
@@ -1509,6 +1543,74 @@ function setupLeagueFixtureForm(teamIds){
 }
 
 // =======================
+//   FRIENDLIES
+// =======================
+async function loadFriendlies(){
+  document.getElementById('frCupId').textContent = FRIENDLIES_ID;
+
+  let fr = { friendly:{ teams:[] } };
+  try { fr = await apiGet(`/api/friendlies/${encodeURIComponent(FRIENDLIES_ID)}`); }
+  catch {}
+  friendliesTeams = fr.friendly?.teams || [];
+
+  try {
+    const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`);
+    friendliesFxCache = fx.fixtures || [];
+  } catch { friendliesFxCache = []; }
+  renderFriendliesFixtures(friendliesFxCache);
+
+  document.getElementById('friendliesAdmin').style.display = isAdmin ? 'block' : 'none';
+  if (isAdmin) buildFriendliesAdmin(friendliesTeams);
+}
+
+function renderFriendliesFixtures(list){
+  const el = document.getElementById('friendliesFixtures');
+  list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
+  el.innerHTML = list.length ? list.map(f=>{
+    const H=byId(f.home), A=byId(f.away);
+    const hn=H?.name||f.home; const an=A?.name||f.away;
+    const whenTxt=f.when?fmtDate(f.when):'TBD';
+    const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'vs';
+    const banner=getFixtureBanner();
+    const editBtn = isAdmin ? `<div class="act"><button data-frq="${f.id}">Quick Edit</button></div>` : '';
+    return `<div class="fx" id="frfx_${f.id}"><div>${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span><span class="muted">${scoreTxt}</span><span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span></div><div class="meta"><span class="chip">Friendly${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div></div>${editBtn}</div>`;
+  }).join('') : `<div class="muted">No friendly fixtures yet.</div>`;
+  list.forEach(f=>{ const q=document.querySelector(`[data-frq="${f.id}"]`); if(q) q.onclick=()=> openResultEditor(f); });
+}
+
+function buildFriendliesAdmin(teamIds){
+  const listEl = document.getElementById('frTeamList');
+  listEl.innerHTML = teamIds.length ? teamIds.map(id=>{ const T=byId(id); return `<div style="margin-top:4px"><span>${escapeHtml(T?.name||id)}</span> <button data-remove="${id}">Remove</button></div>`; }).join('') : '<div class="muted">No teams.</div>';
+  listEl.querySelectorAll('[data-remove]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.getAttribute('data-remove');
+      const next = teamIds.filter(t=>t!==id);
+      try { await apiPost(`/api/friendlies/${FRIENDLIES_ID}/teams`, { teams: next }); await loadFriendlies(); }
+      catch(e){ alert('Update failed: '+e.message); }
+    };
+  });
+
+  const addSel = document.getElementById('frAddSel');
+  const addBtn = document.getElementById('frAddBtn');
+  const options = teams.filter(t=>!teamIds.includes(t.id)).map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
+  addSel.innerHTML = `<option value="">— choose —</option>${options}`;
+  addBtn.onclick = async ()=>{
+    const id = addSel.value; if(!id) return alert('Pick a team');
+    const next=[...teamIds,id];
+    try{ await apiPost(`/api/friendlies/${FRIENDLIES_ID}/teams`, { teams: next }); await loadFriendlies(); }
+    catch(e){ alert('Update failed: '+e.message); }
+  };
+
+  const genBtn = document.getElementById('frGenBtn');
+  genBtn.onclick = async ()=>{
+    if (!confirm('Generate fixtures for all selected teams?')) return;
+    try{ await apiPost(`/api/friendlies/${FRIENDLIES_ID}/generate`, {}); alert('Fixtures generated'); await loadFriendlies(); }
+    catch(e){ alert('Generate failed: '+e.message); }
+  };
+}
+
+
+// =======================
 //   NEWS (dynamic; client-side fallback from fixtures)
 // =======================
 async function loadNews(){
@@ -1517,26 +1619,49 @@ async function loadNews(){
   try{
     const d = await apiGet('/api/news');
     const items = d.items || [];
-    if (items.length){
+    const complete = items.every(n=>n.title && n.body);
+    if (complete && items.length){
       wrap.innerHTML = items.map(renderNewsItem).join('');
       return;
     }
   }catch{}
-  // Fallback: compute from fixtures (league + CC)
+  // Fallback: compute from fixtures (league + CC + friendlies)
   try{
     await refreshFixturesPublic();
     const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
-    const computed = computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[])]);
+    const fr = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`).catch(()=>({fixtures:[]}));
+    const computed = computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[]), ...(fr.fixtures||[])]);
     wrap.innerHTML = computed.length ? computed.map(renderNewsItem).join('') : '<div class="muted">No news yet.</div>';
   }catch{ wrap.innerHTML = '<div class="muted">Failed to load news.</div>'; }
 }
 function renderNewsItem(n){
   const club = byId(n.clubId);
+  let title = n.title;
+  let body  = n.body;
+  if (!title || title===n.clubId){
+    if (n.type==='clean_sheet' && club){
+      title = `${club.name} clean sheet`;
+      body  = `${club.name} keep ${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} shutout`;
+    } else if (n.type==='high_scoring'){
+      const hn = byId(n.home)?.name || n.home;
+      const an = byId(n.away)?.name || n.away;
+      title = 'High scoring match';
+      body  = `${hn} ${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} ${an}`;
+    } else if (n.type==='blowout' && club){
+      title = `${club.name} blowout win`;
+      body  = `${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} victory`;
+    } else if (n.type==='final'){
+      const hn = byId(n.home)?.name || n.home;
+      const an = byId(n.away)?.name || n.away;
+      title = `${hn} ${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} ${an}`;
+      body  = 'Full time score';
+    }
+  }
   return `<article class="news-post">
     <img class="news-avatar" src="${teamLogoUrl(club)}" alt="">
     <div class="news-body">
-      <div class="news-title">${escapeHtml(n.title)}</div>
-      <div>${escapeHtml(n.body)}</div>
+      <div class="news-title">${escapeHtml(title||'')}</div>
+      <div>${escapeHtml(body||'')}</div>
       <div class="news-meta">${fmtDate(n.ts)} • ${escapeHtml(n.tag||'')}</div>
     </div>
   </article>`;
