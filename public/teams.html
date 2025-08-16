@@ -1285,20 +1285,13 @@ async function openResultEditor(f){
 async function loadChampions(){
   document.getElementById('ccCupId').textContent = CC_ID;
 
-  // groups + tables
+  // groups
   let cupData = { cup:{ groups:{A:[],B:[],C:[],D:[]} } };
   try {
     cupData = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}`);
   } catch(e) {
     console.warn('Champions fetch failed:', e.message);
   }
-  renderCcGroups(cupData.cup.groups);
-
-  // leaders
-  try {
-    const leaders = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}/leaders`);
-    renderCcLeaders(leaders);
-  } catch {}
 
   // cc fixtures
   let ccList = [];
@@ -1306,7 +1299,15 @@ async function loadChampions(){
     const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`);
     ccList = fx.fixtures || [];
   } catch {}
+
+  renderCcGroups(cupData.cup.groups, ccList);
   renderCcFixtures(ccList);
+
+  // leaders
+  try {
+    const leaders = await apiGet(`/api/champions/${encodeURIComponent(CC_ID)}/leaders`);
+    renderCcLeaders(leaders);
+  } catch {}
 
   // bracket
   renderCcBracket(cupData.cup.groups, ccList);
@@ -1315,9 +1316,9 @@ async function loadChampions(){
   document.getElementById('ccAdmin').style.display = isAdmin ? 'block' : 'none';
   if (isAdmin) buildManualGroupsEditor(cupData.cup.groups);
 }
-function renderCcGroups(groups){
+function renderCcGroups(groups, fixtures){
   const el = document.getElementById('ccGroups');
-  const tables = computeGroupTablesClient(groups); // client fallback for standings
+  const tables = computeGroupTablesClient(groups, fixtures); // client fallback for standings
   el.innerHTML = ['A','B','C','D'].map(g=>{
     const rows = (tables[g]||[]).map(r=>{
       const T = byId(r.clubId);
@@ -1334,16 +1335,20 @@ function renderCcGroups(groups){
           <tbody>${rows||''}</tbody>
         </table>
       </div>`;
-  }).join('');
-}
-  function computeGroupTablesClient(groups){
-  // derive from fixturesPublicCache + CC fixtures if present
+    }).join('');
+  }
+function computeGroupTablesClient(groups, fixtures){
+  // derive from provided fixtures + public cache
   const table = { A:{}, B:{}, C:{}, D:{} };
   const touch = (g,id)=> table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
   ['A','B','C','D'].forEach(g=> (groups[g]||[]).forEach(id=> touch(g,id)));
 
-  const all = fixturesPublicCache.filter(f=>f.cup===CC_ID && f.status==='final');
-  all.forEach(f=>{
+  const merged = []
+    .concat(Array.isArray(fixtures) ? fixtures : [])
+    .concat(fixturesPublicCache || [])
+    .filter(f=>f.cup===CC_ID && f.status==='final');
+
+  merged.forEach(f=>{
     const g = f.group || null; if(!g || !table[g]) return;
     touch(g, f.home); touch(g, f.away);
     const H = table[g][f.home], A = table[g][f.away];
@@ -1365,7 +1370,7 @@ function renderCcGroups(groups){
   function renderCcBracket(groups, fixtures){
     const el = document.getElementById('ccBracket');
     if (!el) return;
-    const tables = computeGroupTablesClient(groups);
+    const tables = computeGroupTablesClient(groups, fixtures);
     const top = g => (tables[g] && tables[g][0]) ? tables[g][0].clubId : '';
     const winners = { A: top('A'), B: top('B'), C: top('C'), D: top('D') };
 
