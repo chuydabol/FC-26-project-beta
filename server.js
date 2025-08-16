@@ -11,7 +11,7 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const { hasDuplicates, uniqueStrings, normalizeId } = require('./utils');
+const { hasDuplicates, uniqueStrings } = require('./utils');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -1111,7 +1111,7 @@ app.post('/api/champions/:cupId/randomize', requireAdmin, wrap(async (req,res)=>
   shuffle(clubs);
   const groups = { A:[], B:[], C:[], D:[] };
   // Distribute round-robin into A-D; supports any multiple, not only 16
-  clubs.forEach((id,i)=> groups[['A','B','C','D'][i%4]].push(normalizeId(id)));
+  clubs.forEach((id,i)=> groups[['A','B','C','D'][i%4]].push(id));
   const doc = { cupId, groups, createdAt: Date.now() };
   await COL.champions().doc(cupId).set(doc);
   res.json({ ok:true, cup:doc });
