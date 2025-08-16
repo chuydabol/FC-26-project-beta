@@ -1480,14 +1480,24 @@ function buildManualGroupsEditor(groups){
   const root = document.getElementById('ccManualGroups');
   const opts = teams.map(t=> `<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
   root.innerHTML = ['A','B','C','D'].map(g=>{
-    const rows = (groups[g]||[]).length
-      ? (groups[g]||[]).map(v=>`<div><select>${opts}</select></div>`).join('')
-      : '';
+    const rows = (groups[g]||[]).map(v=>
+      `<div class="grow"><select data-val="${v}">${opts}</select> <button data-rm>X</button></div>`
+    ).join('');
     return `<div class="m-card"><strong>Group ${g}</strong>
       <div data-g="${g}" class="gbox">${rows}</div>
       <div style="margin-top:6px"><button data-add="${g}">+ Add team</button></div>
     </div>`;
   }).join('');
+
+  root.querySelectorAll('select[data-val]').forEach(sel=>{
+    sel.value = sel.getAttribute('data-val');
+  });
+
+  function attachRemove(btn){
+    if(!btn) return;
+    btn.onclick = ()=> btn.parentElement.remove();
+  }
+  root.querySelectorAll('[data-rm]').forEach(attachRemove);
 
   // add rows
   root.querySelectorAll('[data-add]').forEach(btn=>{
@@ -1495,8 +1505,10 @@ function buildManualGroupsEditor(groups){
       const g = btn.getAttribute('data-add');
       const box = root.querySelector(`.gbox[data-g="${g}"]`);
       const div = document.createElement('div');
-      div.innerHTML = `<div><select>${opts}</select></div>`;
+      div.className = 'grow';
+      div.innerHTML = `<select>${opts}</select> <button data-rm>X</button>`;
       box.appendChild(div);
+      attachRemove(div.querySelector('[data-rm]'));
     };
   });
 

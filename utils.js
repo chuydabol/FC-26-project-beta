@@ -4,15 +4,15 @@ function normalizeId(id){
 
 function uniqueStrings(arr){
   const seen = new Set();
-  const result = [];
+  const out = [];
   for (const id of arr || []) {
     const norm = normalizeId(id);
     if (!seen.has(norm)) {
       seen.add(norm);
-      result.push(id);
+      out.push(id);
     }
   }
-  return result;
+  return out;
 }
 
 function hasDuplicates(arr){

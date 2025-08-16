@@ -7,7 +7,7 @@ test('hasDuplicates detects duplicates', () => {
   assert.strictEqual(hasDuplicates(['1','2','3']), false);
 });
 
-test('uniqueStrings strips duplicates and preserves originals', () => {
+test('uniqueStrings strips duplicates and retains original values', () => {
   assert.deepStrictEqual(uniqueStrings([1,'1',2]), [1,2]);
 });
 
