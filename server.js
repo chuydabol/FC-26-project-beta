@@ -1003,14 +1003,23 @@ app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
       const clubId = side==='home' ? f.home : f.away;
       for (const r of (f.details?.[side]||[])){
         if (!r.playerId) continue;
-        meta.set(r.playerId,{ name: r.player || `#${String(r.playerId).slice(0,6)}`, clubId });
+        meta.set(r.playerId,{ name: r.player || '', clubId });
         if (r.goals)   bump(goals,   r.playerId, Number(r.goals||0));
         if (r.assists) bump(assists, r.playerId, Number(r.assists||0));
       }
     }
   }
+
+  const ids = Array.from(meta.keys()).filter(id => !meta.get(id)?.name);
+  const chunks = [];
+  for (let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i, i+10));
+  for (const ch of chunks){
+    const q = await COL.players().where(FieldPath.documentId(), 'in', ch).get();
+    q.docs.forEach(p=>{ const m = meta.get(p.id); if (m) m.name = p.data()?.eaName || m.name; });
+  }
+
   const toRows = (m)=> Array.from(m.entries())
-    .map(([playerId,count])=>({ playerId, count, ...meta.get(playerId) }))
+    .map(([playerId,count])=>({ playerId, count, name: meta.get(playerId)?.name || 'Unknown', clubId: meta.get(playerId)?.clubId || '' }))
     .sort((a,b)=>(b.count-a.count)||String(a.name).localeCompare(String(b.name)))
     .slice(0,limit);
   res.json({ ok:true, scorers: toRows(goals), assisters: toRows(assists) });
@@ -1142,14 +1151,23 @@ app.get('/api/champions/:cupId/leaders', wrap(async (req,res)=>{
       const clubId = side==='home' ? f.home : f.away;
       for (const r of (f.details?.[side]||[])){
         if (!r.playerId) continue;
-        meta.set(r.playerId,{ name: r.player || `#${String(r.playerId).slice(0,6)}`, clubId });
+        meta.set(r.playerId,{ name: r.player || '', clubId });
         if (r.goals)   bump(goals,   r.playerId, Number(r.goals||0));
         if (r.assists) bump(assists, r.playerId, Number(r.assists||0));
       }
     }
   }
+
+  const ids = Array.from(meta.keys()).filter(id => !meta.get(id)?.name);
+  const chunks = [];
+  for (let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i, i+10));
+  for (const ch of chunks){
+    const q = await COL.players().where(FieldPath.documentId(), 'in', ch).get();
+    q.docs.forEach(p=>{ const m = meta.get(p.id); if (m) m.name = p.data()?.eaName || m.name; });
+  }
+
   const toRows = (m)=> Array.from(m.entries())
-    .map(([playerId,count])=>({ playerId, count, ...meta.get(playerId) }))
+    .map(([playerId,count])=>({ playerId, count, name: meta.get(playerId)?.name || 'Unknown', clubId: meta.get(playerId)?.clubId || '' }))
     .sort((a,b)=>(b.count-a.count)||String(a.name).localeCompare(String(b.name)))
     .slice(0,limit);
 
