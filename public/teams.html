@@ -1308,14 +1308,14 @@ function renderCcGroups(groups){
       const T = byId(r.clubId);
       return `<tr>
         <td><span class="group-team"><img src="${teamLogoUrl(T)}" alt=""><span>${escapeHtml(T?.name||r.clubId)}</span></span></td>
-        <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}-${r.GA}</td><td>${r.Pts}</td>
+        <td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD}</td><td>${r.Pts}</td>
       </tr>`;
     }).join('');
     return `
       <div class="group-card">
         <div class="group-title">Group ${g}</div>
         <table class="group-table">
-          <thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF-GA</th><th>Pts</th></tr></thead>
+          <thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
           <tbody>${rows||''}</tbody>
         </table>
       </div>`;
