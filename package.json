@@ -2,7 +2,7 @@
   "name": "fc-26-project-beta",
   "private": true,
   "engines": { "node": ">=18" },
-  "scripts": { "start": "node server.js" },
+  "scripts": { "start": "node server.js", "test": "node --test" },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.19.2",

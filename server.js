@@ -11,6 +11,7 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const { hasDuplicates, uniqueStrings } = require('./utils');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -1082,7 +1083,15 @@ app.post('/api/friendlies/:frId/generate', requireAdmin, wrap(async (req,res)=>{
 app.post('/api/champions/:cupId/groups', requireAdmin, wrap(async (req,res)=>{
   const { cupId } = req.params;
   const groups = req.body?.groups || {};
-  const doc = { cupId, groups:{ A:groups.A||[], B:groups.B||[], C:groups.C||[], D:groups.D||[] }, createdAt: Date.now() };
+  const docGroups = {
+    A: uniqueStrings(groups.A || []),
+    B: uniqueStrings(groups.B || []),
+    C: uniqueStrings(groups.C || []),
+    D: uniqueStrings(groups.D || []),
+  };
+  const allIds = [...docGroups.A, ...docGroups.B, ...docGroups.C, ...docGroups.D];
+  if (hasDuplicates(allIds)) return res.status(400).json({ error:'Duplicate clubIds are not allowed' });
+  const doc = { cupId, groups: docGroups, createdAt: Date.now() };
   await COL.champions().doc(cupId).set(doc);
   res.json({ ok:true, cup:doc });
 }));
@@ -1091,6 +1100,8 @@ app.post('/api/champions/:cupId/randomize', requireAdmin, wrap(async (req,res)=>
   const { cupId } = req.params;
   let clubs = Array.isArray(req.body?.clubs) ? req.body.clubs.slice() : [];
   if (!clubs.length) return res.status(400).json({ error:'Provide an array of clubIds in body.clubs' });
+  if (hasDuplicates(clubs)) return res.status(400).json({ error:'Duplicate clubIds are not allowed' });
+  clubs = uniqueStrings(clubs);
   shuffle(clubs);
   const groups = { A:[], B:[], C:[], D:[] };
   // Distribute round-robin into A-D; supports any multiple, not only 16
