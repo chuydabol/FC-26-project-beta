@@ -1657,6 +1657,11 @@ function renderNewsItem(n){
       body  = 'Full time score';
     }
   }
+  if (club && n.clubId){
+    const cid = String(n.clubId);
+    if (title && title.includes(cid)){ title = title.replaceAll(cid, club.name); }
+    if (body  && body.includes(cid)){ body  = body.replaceAll(cid, club.name); }
+  }
   return `<article class="news-post">
     <img class="news-avatar" src="${teamLogoUrl(club)}" alt="">
     <div class="news-body">
