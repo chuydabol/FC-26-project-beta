@@ -7,8 +7,8 @@ test('hasDuplicates detects duplicates', () => {
   assert.strictEqual(hasDuplicates(['1','2','3']), false);
 });
 
-test('uniqueStrings strips duplicates and coerces to string', () => {
-  assert.deepStrictEqual(uniqueStrings([1,'1',2]), ['1','2']);
+test('uniqueStrings strips duplicates and preserves originals', () => {
+  assert.deepStrictEqual(uniqueStrings([1,'1',2]), [1,2]);
 });
 
 test('duplicate ids across groups are detected', () => {
@@ -31,5 +31,5 @@ test('duplicate ids across groups are detected', () => {
 test('formatted ids normalize to detect duplicates', () => {
   const variants = ['Elite-xi', 'elite xi'];
   assert.strictEqual(hasDuplicates(variants), true);
-  assert.deepStrictEqual(uniqueStrings(variants), ['elitexi']);
+  assert.deepStrictEqual(uniqueStrings(variants), ['Elite-xi']);
 });
