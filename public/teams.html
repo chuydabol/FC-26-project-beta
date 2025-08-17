@@ -104,6 +104,12 @@ h2{margin:0 0 10px}
 .sheet th,.sheet td{border-bottom:1px solid #220000;padding:6px}
 .sheet th{font-size:12px;color:var(--muted);text-align:left}
 .sheet select,.sheet input, .dialog textarea{width:100%;background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:10px}
+/* Ensure numeric inputs in result sheet are wide enough to show values */
+.sheet td input[type=number]{
+  padding:4px;
+  min-width:36px;
+  text-align:center;
+}
 .sheet .row-btns{display:flex;gap:6px}
 .dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 
