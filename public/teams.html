@@ -390,15 +390,6 @@ h2{margin:0 0 10px}
 
     <div class="m-card" id="leagueAdmin" style="display:none;margin-top:10px">
       <strong>Admin tools</strong>
-      <div class="muted">Manage league teams and create fixtures.</div>
-      <div id="leagueTeamList" style="margin-top:8px"></div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-        <select id="leagueAddSel"></select>
-        <button id="leagueAddBtn">Add team</button>
-      </div>
-
-      <hr style="border:none;border-top:1px solid #220000;margin:12px 0">
-
       <div>
         <strong>Create League fixture</strong>
         <div class="grid2" style="margin-top:8px">
@@ -1578,7 +1569,7 @@ function setupCcFixtureForm(){
 async function loadLeague(){
   document.getElementById('leagueCupId').textContent = LEAGUE_ID;
 
-  let leagueData = { league:{ teams:[] }, standings:[] };
+  let leagueData = { teams:[], standings:[] };
   try { leagueData = await apiGet(`/api/leagues/${encodeURIComponent(LEAGUE_ID)}`); } catch {}
   renderLeagueTable(leagueData.standings);
 
@@ -1588,8 +1579,9 @@ async function loadLeague(){
   try { const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(LEAGUE_ID)}`); fxList = fx.fixtures || []; } catch {}
   renderLeagueFixtures(fxList);
 
-  document.getElementById('leagueAdmin').style.display = isAdmin ? 'block' : 'none';
-  if (isAdmin) buildLeagueAdmin(leagueData.league.teams);
+  const adminEl = document.getElementById('leagueAdmin');
+  if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
+  if (isAdmin) setupLeagueFixtureForm(leagueData.teams);
 }
 
 function renderLeagueTable(rows){
@@ -1613,16 +1605,6 @@ function renderLeagueFixtures(list){
   list.forEach(f=>{ const q=document.querySelector(`[data-lq="${f.id}"]`); if(q) q.onclick=()=> openResultEditor(f); });
 }
 
-function buildLeagueAdmin(teamIds){
-  const listEl = document.getElementById('leagueTeamList');
-  listEl.innerHTML = teamIds.length ? teamIds.map(id=>{ const T=byId(id); return `<div style="margin-top:4px"><span>${escapeHtml(T?.name||id)}</span> <button data-remove="${id}">Remove</button></div>`; }).join('') : '<div class="muted">No teams.</div>';
-  listEl.querySelectorAll('[data-remove]').forEach(btn=>{ btn.onclick = async ()=>{ const id = btn.getAttribute('data-remove'); const next = teamIds.filter(t=>t!==id); try{ await apiPost(`/api/leagues/${LEAGUE_ID}/teams`, { teams: next }); await loadLeague(); }catch(e){ alert('Update failed: '+e.message); } }; });
-  const addSel = document.getElementById('leagueAddSel'); const addBtn = document.getElementById('leagueAddBtn');
-  const options = teams.filter(t=>!teamIds.includes(t.id)).map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
-  addSel.innerHTML = `<option value="">— choose —</option>${options}`;
-  addBtn.onclick = async ()=>{ const id = addSel.value; if(!id) return alert('Pick a team'); const next=[...teamIds,id]; try{ await apiPost(`/api/leagues/${LEAGUE_ID}/teams`, { teams: next }); await loadLeague(); }catch(e){ alert('Update failed: '+e.message); } };
-  setupLeagueFixtureForm(teamIds);
-}
 
 function setupLeagueFixtureForm(teamIds){
   const homeSel=document.getElementById('leagueHomeSel');
