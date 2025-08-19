@@ -995,20 +995,66 @@ function parseLooseResultText(str){
 // UPCL League
 // -----------------------------
 async function computeLeagueTable(leagueId, teamIds){
-  const fx = (await fixturesByCup(leagueId)).filter(f=>f.status==='final');
+  if (!Array.isArray(teamIds) || !teamIds.length) return [];
+
+  const { rows } = await pool.query(`
+    WITH f AS (
+      SELECT home, away,
+             (score->>'hs')::int AS hs,
+             (score->>'as')::int AS as
+      FROM fixtures
+      WHERE league_id = $1
+        AND status = 'final'
+        AND COALESCE(details->>'matchType','league') = 'league'
+        AND home = ANY($2) AND away = ANY($2)
+    ),
+    r AS (
+      SELECT home AS clubid, hs AS gf, as AS ga,
+             CASE WHEN hs>as THEN 1 ELSE 0 END AS w,
+             CASE WHEN hs=as THEN 1 ELSE 0 END AS d,
+             CASE WHEN hs<as THEN 1 ELSE 0 END AS l,
+             0 AS ag,
+             0 AS aw
+      FROM f
+      UNION ALL
+      SELECT away AS clubid, as AS gf, hs AS ga,
+             CASE WHEN as>hs THEN 1 ELSE 0 END AS w,
+             CASE WHEN as=hs THEN 1 ELSE 0 END AS d,
+             CASE WHEN as<hs THEN 1 ELSE 0 END AS l,
+             as AS ag,
+             CASE WHEN as>hs THEN 1 ELSE 0 END AS aw
+      FROM f
+    )
+    SELECT clubid,
+           COUNT(*) AS p,
+           SUM(w) AS w,
+           SUM(d) AS d,
+           SUM(l) AS l,
+           SUM(gf) AS gf,
+           SUM(ga) AS ga,
+           SUM(gf) - SUM(ga) AS gd,
+           SUM(ag) AS ag,
+           SUM(aw) AS aw,
+           SUM(w)*3 + SUM(d) AS pts
+    FROM r
+    GROUP BY clubid
+  `, [leagueId, teamIds]);
+
   const table = {};
   const touch = id => table[id] = table[id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, AG:0, AW:0, Pts:0 };
   teamIds.forEach(id=> touch(id));
-  for (const f of fx){
-    if (!teamIds.includes(f.home) || !teamIds.includes(f.away)) continue;
-    const hs = Number(f.score?.hs||0), as = Number(f.score?.as||0);
-    const H = touch(f.home), A = touch(f.away);
-    H.P++; A.P++;
-    H.GF+=hs; H.GA+=as; H.GD=H.GF-H.GA;
-    A.GF+=as; A.GA+=hs; A.GD=A.GF-A.GA; A.AG+=as;
-    if (hs>as){ H.W++; H.Pts+=3; A.L++; }
-    else if (hs<as){ A.W++; A.Pts+=3; A.AW++; H.L++; }
-    else { H.D++; A.D++; H.Pts++; A.Pts++; }
+  for (const r of rows){
+    const t = touch(r.clubid);
+    t.P   = Number(r.p);
+    t.W   = Number(r.w);
+    t.D   = Number(r.d);
+    t.L   = Number(r.l);
+    t.GF  = Number(r.gf);
+    t.GA  = Number(r.ga);
+    t.GD  = Number(r.gd);
+    t.AG  = Number(r.ag);
+    t.AW  = Number(r.aw);
+    t.Pts = Number(r.pts);
   }
   return Object.values(table).sort((a,b)=>(b.Pts-a.Pts)||(b.GD-a.GD)||(b.GF-a.GF)||(b.AG-a.AG)||(b.W-a.W)||(b.AW-a.AW));
 }
@@ -1032,34 +1078,51 @@ app.get('/api/leagues/:leagueId', wrap(async (req,res)=>{
 app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
   const { leagueId } = req.params;
   const limit = Math.max(1, Math.min(20, Number(req.query.limit || 5)));
-  const fx = (await fixturesByCup(leagueId)).filter(f=>f.status==='final');
-  const goals = new Map(), assists = new Map(), meta = new Map();
-  const bump = (m,k,n)=> m.set(k,(m.get(k)||0)+n);
-  for (const f of fx){
-    for (const side of ['home','away']){
-      const clubId = side==='home' ? f.home : f.away;
-      for (const r of (f.details?.[side]||[])){
-        if (!r.playerId) continue;
-        meta.set(r.playerId,{ name: r.player || '', clubId });
-        if (r.goals)   bump(goals,   r.playerId, Number(r.goals||0));
-        if (r.assists) bump(assists, r.playerId, Number(r.assists||0));
-      }
-    }
-  }
 
-  const ids = Array.from(meta.keys()).filter(id => !meta.get(id)?.name);
+  const { rows } = await pool.query(`
+    WITH stats AS (
+      SELECT (p->>'playerId') AS playerid,
+             COALESCE(p->>'player','') AS name,
+             f.home AS clubid,
+             COALESCE((p->>'goals')::int,0) AS goals,
+             COALESCE((p->>'assists')::int,0) AS assists
+      FROM fixtures f
+      CROSS JOIN LATERAL jsonb_array_elements(f.details->'home') p
+      WHERE f.league_id=$1 AND f.status='final' AND COALESCE(f.details->>'matchType','league')='league'
+      UNION ALL
+      SELECT (p->>'playerId') AS playerid,
+             COALESCE(p->>'player','') AS name,
+             f.away AS clubid,
+             COALESCE((p->>'goals')::int,0) AS goals,
+             COALESCE((p->>'assists')::int,0) AS assists
+      FROM fixtures f
+      CROSS JOIN LATERAL jsonb_array_elements(f.details->'away') p
+      WHERE f.league_id=$1 AND f.status='final' AND COALESCE(f.details->>'matchType','league')='league'
+    )
+    SELECT playerid, MAX(name) AS name, MAX(clubid) AS clubid,
+           SUM(goals) AS goals, SUM(assists) AS assists
+    FROM stats
+    GROUP BY playerid
+  `, [leagueId]);
+
+  const meta = new Map();
+  rows.forEach(r=> meta.set(r.playerid, { name:r.name || '', clubId:r.clubid || '' }));
+
+  const ids = rows.filter(r=>!(r.name)).map(r=>r.playerid);
   const chunks = [];
-  for (let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i, i+10));
+  for (let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i,i+10));
   for (const ch of chunks){
     const q = await COL.players().where(FieldPath.documentId(), 'in', ch).get();
     q.docs.forEach(p=>{ const m = meta.get(p.id); if (m) m.name = p.data()?.eaName || m.name; });
   }
 
-  const toRows = (m)=> Array.from(m.entries())
-    .map(([playerId,count])=>({ playerId, count, name: meta.get(playerId)?.name || 'Unknown', clubId: meta.get(playerId)?.clubId || '' }))
+  const toRows = (field)=> rows
+    .filter(r=> Number(r[field])>0)
+    .map(r=>({ playerId:r.playerid, count:Number(r[field]), name: meta.get(r.playerid)?.name || 'Unknown', clubId: meta.get(r.playerid)?.clubId || '' }))
     .sort((a,b)=>(b.count-a.count)||String(a.name).localeCompare(String(b.name)))
     .slice(0,limit);
-  res.json({ ok:true, scorers: toRows(goals), assisters: toRows(assists) });
+
+  res.json({ ok:true, scorers: toRows('goals'), assisters: toRows('assists') });
 }));
 
 // Fetch latest EA league matches and upsert fixtures
