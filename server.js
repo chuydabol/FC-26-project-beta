@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { hasDuplicates, uniqueStrings } = require('./utils');
 const pool = require('./db');
-const { fetchClubLeagueMatches } = require('./services/eaApi');
+const { fetchClubLeagueMatches, fetchClubMembers } = require('./services/eaApi');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -430,6 +430,14 @@ app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), wr
   });
   const preview = await collectPreview(clubId);
   res.json({ ...result, preview });
+}));
+
+// Proxy to fetch club members from EA API (avoids browser CORS)
+app.get('/api/ea/clubs/:clubId/members', wrap(async (req,res)=>{
+  const { clubId } = req.params;
+  if (!/^\d+$/.test(String(clubId))) return res.status(400).json({ error:'Invalid clubId' });
+  const data = await fetchClubMembers(clubId);
+  res.json(data);
 }));
 
 // -----------------------------

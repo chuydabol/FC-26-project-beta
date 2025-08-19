@@ -18,4 +18,15 @@ async function fetchRecentLeagueMatches(clubId) {
   return data?.[clubId] || [];
 }
 
-module.exports = { fetchClubLeagueMatches, fetchRecentLeagueMatches };
+async function fetchClubMembers(clubId) {
+  if (!clubId) throw new Error('clubId required');
+  const url =
+    `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${encodeURIComponent(clubId)}`;
+  const res = await fetchFn(url);
+  if (!res.ok) {
+    throw new Error(`EA API error ${res.status}`);
+  }
+  return res.json();
+}
+
+module.exports = { fetchClubLeagueMatches, fetchRecentLeagueMatches, fetchClubMembers };

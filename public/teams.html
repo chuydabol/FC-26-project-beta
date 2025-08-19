@@ -623,10 +623,7 @@ async function resolvePlayerName(id){
 }
 
 async function fetchClubMembers(clubId){
-  const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${encodeURIComponent(clubId)}`;
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('EA API error');
-  return res.json();
+  return apiGet(`/api/ea/clubs/${encodeURIComponent(clubId)}/members`);
 }
 
 // nav elements
