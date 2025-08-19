@@ -1330,7 +1330,9 @@ app.get('/api/champions/:cupId', wrap(async (req,res)=>{
   const snap = await COL.champions().doc(cupId).get();
   const cup = snap.exists ? snap.data() : { cupId, groups:{A:[],B:[],C:[],D:[]}, createdAt: Date.now() };
   const tables = await computeGroupTables(cupId, cup.groups);
-  res.json({ ok:true, cup, tables });
+  const { rows } = await pool.query('SELECT COUNT(*) FROM fixtures WHERE league_id = $1', [cupId]);
+  const stats = { fixtureCount: Number(rows[0]?.count || 0) };
+  res.json({ ok:true, cup, tables, stats });
 }));
 
 // Leaders (Top scorers / assisters) — limit via ?limit=5
