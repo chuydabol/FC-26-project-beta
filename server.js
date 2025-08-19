@@ -13,6 +13,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { hasDuplicates, uniqueStrings } = require('./utils');
 const pool = require('./db');
+const { fetchRecentLeagueMatches } = require('./services/eaApi');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -1060,6 +1061,67 @@ app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
     .slice(0,limit);
   res.json({ ok:true, scorers: toRows(goals), assisters: toRows(assists) });
 }));
+
+// Fetch latest EA league matches and upsert fixtures
+app.post('/api/leagues/:leagueId/fetch-ea', requireAdmin, wrap(async (req,res)=>{
+  const { leagueId } = req.params;
+  const snap = await COL.leagues().doc(leagueId).get();
+  const league = snap.exists ? snap.data() : null;
+  if (!league) return res.status(404).json({ error:'League not found' });
+
+  const teamIds = Array.isArray(league.teams) ? league.teams : [];
+  let inserted = 0;
+
+  for (const clubId of teamIds){
+    const matches = await fetchRecentLeagueMatches(clubId);
+    if (!Array.isArray(matches) || !matches.length) continue;
+
+    const newestId = matches[0]?.matchId ? String(matches[0].matchId) : null;
+    const { rows } = await pool.query('SELECT last_match_id FROM ea_last_matches WHERE club_id=$1', [clubId]);
+    const lastId = rows[0]?.last_match_id || null;
+
+    for (const m of matches){
+      if (lastId && String(m.matchId) === String(lastId)) break;
+      const f = normalizeEAMatch(m, leagueId);
+      await setDoc('fixtures', f.id, f);
+      inserted++;
+    }
+
+    if (newestId && newestId !== lastId){
+      await pool.query(
+        `INSERT INTO ea_last_matches (club_id, last_match_id) VALUES ($1,$2)
+         ON CONFLICT (club_id) DO UPDATE SET last_match_id = EXCLUDED.last_match_id`,
+        [clubId, newestId]
+      );
+    }
+  }
+
+  res.json({ ok:true, inserted });
+}));
+
+function normalizeEAMatch(m, leagueId){
+  const homeClub = String(m?.home?.clubId || m?.homeClubId || '');
+  const awayClub = String(m?.away?.clubId || m?.awayClubId || '');
+  const hs = Number(m?.home?.goals ?? m?.home?.score ?? m?.homeGoals ?? 0);
+  const as = Number(m?.away?.goals ?? m?.away?.score ?? m?.awayGoals ?? 0);
+  const playedAt = m?.timestamp ? Date.parse(m.timestamp) : (m?.matchDate ? Date.parse(m.matchDate) : null);
+  return {
+    id: String(m.matchId),
+    cup: leagueId,
+    round: String(m.round || 'League'),
+    home: homeClub,
+    away: awayClub,
+    teams: [homeClub, awayClub],
+    status: 'final',
+    when: playedAt || null,
+    played_at: playedAt ? new Date(playedAt).toISOString() : null,
+    score: { hs, as },
+    report: { text:'', mvpHome:'', mvpAway:'', discordMsgUrl:'' },
+    details: { home: [], away: [] },
+    unresolved: [],
+    createdAt: Date.now(),
+  };
+}
 
 // -----------------------------
 // Friendlies / Exhibition Matches

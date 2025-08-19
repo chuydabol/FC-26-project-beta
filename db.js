@@ -25,4 +25,14 @@ pool.query(`
   console.error('Failed to ensure fixtures table', err);
 });
 
+// Track last fetched EA match per club
+pool.query(`
+  CREATE TABLE IF NOT EXISTS ea_last_matches (
+    club_id TEXT PRIMARY KEY,
+    last_match_id TEXT
+  )
+`).catch(err => {
+  console.error('Failed to ensure ea_last_matches table', err);
+});
+
 module.exports = pool;
