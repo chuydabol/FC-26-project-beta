@@ -1023,7 +1023,7 @@ async function computeLeagueTable(leagueId, teamIds){
     WITH f AS (
       SELECT home, away,
              (score->>'hs')::int AS hs,
-             (score->>'as')::int AS as
+             (score->>'as')::int AS away_score
       FROM fixtures
       WHERE league_id = $1
         AND status = 'final'
@@ -1031,20 +1031,20 @@ async function computeLeagueTable(leagueId, teamIds){
         AND home = ANY($2) AND away = ANY($2)
     ),
     r AS (
-      SELECT home AS clubid, hs AS gf, as AS ga,
-             CASE WHEN hs>as THEN 1 ELSE 0 END AS w,
-             CASE WHEN hs=as THEN 1 ELSE 0 END AS d,
-             CASE WHEN hs<as THEN 1 ELSE 0 END AS l,
+      SELECT home AS clubid, hs AS gf, away_score AS ga,
+             CASE WHEN hs>away_score THEN 1 ELSE 0 END AS w,
+             CASE WHEN hs=away_score THEN 1 ELSE 0 END AS d,
+             CASE WHEN hs<away_score THEN 1 ELSE 0 END AS l,
              0 AS ag,
              0 AS aw
       FROM f
       UNION ALL
-      SELECT away AS clubid, as AS gf, hs AS ga,
-             CASE WHEN as>hs THEN 1 ELSE 0 END AS w,
-             CASE WHEN as=hs THEN 1 ELSE 0 END AS d,
-             CASE WHEN as<hs THEN 1 ELSE 0 END AS l,
-             as AS ag,
-             CASE WHEN as>hs THEN 1 ELSE 0 END AS aw
+      SELECT away AS clubid, away_score AS gf, hs AS ga,
+             CASE WHEN away_score>hs THEN 1 ELSE 0 END AS w,
+             CASE WHEN away_score=hs THEN 1 ELSE 0 END AS d,
+             CASE WHEN away_score<hs THEN 1 ELSE 0 END AS l,
+             away_score AS ag,
+             CASE WHEN away_score>hs THEN 1 ELSE 0 END AS aw
       FROM f
     )
     SELECT clubid,
