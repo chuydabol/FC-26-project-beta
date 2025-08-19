@@ -25,6 +25,16 @@ pool.query(`
   console.error('Failed to ensure fixtures table', err);
 });
 
+// Store league metadata (teams, etc.)
+pool.query(`
+  CREATE TABLE IF NOT EXISTS leagues (
+    id TEXT PRIMARY KEY,
+    details JSONB
+  )
+`).catch(err => {
+  console.error('Failed to ensure leagues table', err);
+});
+
 // Track last fetched EA match per club
 pool.query(`
   CREATE TABLE IF NOT EXISTS ea_last_matches (
