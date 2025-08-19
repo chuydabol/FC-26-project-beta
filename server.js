@@ -436,8 +436,16 @@ app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), wr
 app.get('/api/ea/clubs/:clubId/members', wrap(async (req,res)=>{
   const { clubId } = req.params;
   if (!/^\d+$/.test(String(clubId))) return res.status(400).json({ error:'Invalid clubId' });
-  const data = await fetchClubMembers(clubId);
-  res.json(data);
+  try {
+    const data = await fetchClubMembers(clubId);
+    res.json(data);
+  } catch (err) {
+    if (err?.error === 'EA API request timed out') {
+      res.status(504).json(err);
+    } else {
+      res.status(502).json(err?.error ? err : { error: 'EA API error' });
+    }
+  }
 }));
 
 // -----------------------------

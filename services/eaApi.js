@@ -17,9 +17,15 @@ async function fetchClubLeagueMatches(clubIds) {
       signal: controller.signal
     });
     if (!res.ok) {
-      throw new Error(`EA API error ${res.status}`);
+      throw { error: 'EA API error', status: res.status };
     }
     return res.json();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw { error: 'EA API request timed out' };
+    }
+    if (err && err.error) throw err;
+    throw { error: 'EA API error' };
   } finally {
     clearTimeout(timeout);
   }
@@ -45,9 +51,15 @@ async function fetchClubMembers(clubId) {
       signal: controller.signal
     });
     if (!res.ok) {
-      throw new Error(`EA API error ${res.status}`);
+      throw { error: 'EA API error', status: res.status };
     }
     return res.json();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw { error: 'EA API request timed out' };
+    }
+    if (err && err.error) throw err;
+    throw { error: 'EA API error' };
   } finally {
     clearTimeout(timeout);
   }
