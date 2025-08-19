@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { hasDuplicates, uniqueStrings } = require('./utils');
 const pool = require('./db');
-const { fetchRecentLeagueMatches } = require('./services/eaApi');
+const { fetchClubLeagueMatches } = require('./services/eaApi');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -1135,22 +1135,23 @@ app.post('/api/leagues/:leagueId/fetch-ea', requireAdmin, wrap(async (req,res)=>
   const teamIds = Array.isArray(league.teams) ? league.teams : [];
   let inserted = 0;
 
-  for (const clubId of teamIds){
-    const matches = await fetchRecentLeagueMatches(clubId);
+  const matchesByClub = await fetchClubLeagueMatches(teamIds);
+  for (const clubId of teamIds) {
+    const matches = matchesByClub?.[clubId] || [];
     if (!Array.isArray(matches) || !matches.length) continue;
 
     const newestId = matches[0]?.matchId ? String(matches[0].matchId) : null;
     const { rows } = await pool.query('SELECT last_match_id FROM ea_last_matches WHERE club_id=$1', [clubId]);
     const lastId = rows[0]?.last_match_id || null;
 
-    for (const m of matches){
+    for (const m of matches) {
       if (lastId && String(m.matchId) === String(lastId)) break;
       const f = normalizeEAMatch(m, leagueId);
       await setDoc('fixtures', f.id, f);
       inserted++;
     }
 
-    if (newestId && newestId !== lastId){
+    if (newestId && newestId !== lastId) {
       await pool.query(
         `INSERT INTO ea_last_matches (club_id, last_match_id) VALUES ($1,$2)
          ON CONFLICT (club_id) DO UPDATE SET last_match_id = EXCLUDED.last_match_id`,
