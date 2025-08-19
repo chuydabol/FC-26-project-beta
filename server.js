@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { hasDuplicates, uniqueStrings } = require('./utils');
 const pool = require('./db');
-const { fetchRecentLeagueMatches } = require('./services/eaApi');
+const { fetchClubLeagueMatches } = require('./services/eaApi');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -110,7 +110,6 @@ const COL = {
   clubSquadSlots: (clubId) => db.collection('clubSquads').doc(clubId).collection('slots'),
   playerStats : () => db.collection('playerStats'), // docId = `${season}_${playerId}`
   champions   : () => db.collection('champions'),   // docId = cupId
-  leagues     : () => db.collection('leagues'),     // docId = leagueId
   friendlies  : () => db.collection('friendlies'),  // docId = friendlyId
   news        : () => db.collection('news'),        // docId = newsId
 };
@@ -121,6 +120,10 @@ async function getDoc(col, id){
     const { rows } = await pool.query('SELECT details FROM fixtures WHERE id=$1', [id]);
     return rows[0]?.details || null;
   }
+  if (col === 'leagues') {
+    const { rows } = await pool.query('SELECT details FROM leagues WHERE id=$1', [id]);
+    return rows[0]?.details || null;
+  }
   const s = await COL[col]().doc(id).get();
   return s.exists ? s.data() : null;
 }
@@ -129,8 +132,17 @@ async function setDoc(col, id, obj){
     await pool.query(
       `INSERT INTO fixtures (id, home, away, score, status, details, league_id, played_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-       ON CONFLICT (id) DO UPDATE SET home=EXCLUDED.home, away=EXCLUDED.away, score=EXCLUDED.score, status=EXCLUDED.status, details=EXCLUDED.details, league_id=EXCLUDED.league_id, played_at=EXCLUDED.played_at`,
+      ON CONFLICT (id) DO UPDATE SET home=EXCLUDED.home, away=EXCLUDED.away, score=EXCLUDED.score, status=EXCLUDED.status, details=EXCLUDED.details, league_id=EXCLUDED.league_id, played_at=EXCLUDED.played_at`,
       [id, obj.home, obj.away, obj.score || null, obj.status || null, obj, obj.cup || obj.league_id || null, obj.played_at || null]
+    );
+    return obj;
+  }
+  if (col === 'leagues') {
+    await pool.query(
+      `INSERT INTO leagues (id, details)
+       VALUES ($1,$2)
+       ON CONFLICT (id) DO UPDATE SET details=EXCLUDED.details`,
+      [id, obj]
     );
     return obj;
   }
@@ -144,11 +156,21 @@ async function updateDoc(col, id, patch){
     await setDoc('fixtures', id, next);
     return;
     }
+  if (col === 'leagues') {
+    const current = await getDoc('leagues', id) || {};
+    const next = { ...current, ...patch };
+    await setDoc('leagues', id, next);
+    return;
+  }
   await COL[col]().doc(id).set(patch, { merge:true });
 }
 async function listAll(col){
   if (col === 'fixtures') {
     const { rows } = await pool.query('SELECT details FROM fixtures');
+    return rows.map(r => r.details);
+  }
+  if (col === 'leagues') {
+    const { rows } = await pool.query('SELECT details FROM leagues');
     return rows.map(r => r.details);
   }
   const snap = await COL[col]().get();
@@ -1063,14 +1085,13 @@ app.post('/api/leagues/:leagueId/teams', requireAdmin, wrap(async (req,res)=>{
   const { leagueId } = req.params;
   const teams = Array.isArray(req.body?.teams) ? req.body.teams.map(String) : [];
   const doc = { leagueId, teams, createdAt: Date.now() };
-  await COL.leagues().doc(leagueId).set(doc);
+  await setDoc('leagues', leagueId, doc);
   res.json({ ok:true, league: doc });
 }));
 
 app.get('/api/leagues/:leagueId', wrap(async (req,res)=>{
   const { leagueId } = req.params;
-  const snap = await COL.leagues().doc(leagueId).get();
-  const league = snap.exists ? snap.data() : { leagueId, teams:[], createdAt: Date.now() };
+  const league = await getDoc('leagues', leagueId) || { leagueId, teams:[], createdAt: Date.now() };
   const standings = await computeLeagueTable(leagueId, league.teams);
   res.json({ ok:true, league, standings });
 }));
@@ -1128,29 +1149,29 @@ app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
 // Fetch latest EA league matches and upsert fixtures
 app.post('/api/leagues/:leagueId/fetch-ea', requireAdmin, wrap(async (req,res)=>{
   const { leagueId } = req.params;
-  const snap = await COL.leagues().doc(leagueId).get();
-  const league = snap.exists ? snap.data() : null;
+  const league = await getDoc('leagues', leagueId);
   if (!league) return res.status(404).json({ error:'League not found' });
 
   const teamIds = Array.isArray(league.teams) ? league.teams : [];
   let inserted = 0;
 
-  for (const clubId of teamIds){
-    const matches = await fetchRecentLeagueMatches(clubId);
+  const matchesByClub = await fetchClubLeagueMatches(teamIds);
+  for (const clubId of teamIds) {
+    const matches = matchesByClub?.[clubId] || [];
     if (!Array.isArray(matches) || !matches.length) continue;
 
     const newestId = matches[0]?.matchId ? String(matches[0].matchId) : null;
     const { rows } = await pool.query('SELECT last_match_id FROM ea_last_matches WHERE club_id=$1', [clubId]);
     const lastId = rows[0]?.last_match_id || null;
 
-    for (const m of matches){
+    for (const m of matches) {
       if (lastId && String(m.matchId) === String(lastId)) break;
       const f = normalizeEAMatch(m, leagueId);
       await setDoc('fixtures', f.id, f);
       inserted++;
     }
 
-    if (newestId && newestId !== lastId){
+    if (newestId && newestId !== lastId) {
       await pool.query(
         `INSERT INTO ea_last_matches (club_id, last_match_id) VALUES ($1,$2)
          ON CONFLICT (club_id) DO UPDATE SET last_match_id = EXCLUDED.last_match_id`,
