@@ -1016,8 +1016,16 @@ function parseLooseResultText(str){
 // -----------------------------
 // UPCL League
 // -----------------------------
-async function computeLeagueTable(leagueId, teamIds){
-  if (!Array.isArray(teamIds) || !teamIds.length) return [];
+async function computeLeagueTable(leagueId){
+  const { rows: teamRows } = await pool.query(`
+    SELECT clubid FROM (
+      SELECT DISTINCT home AS clubid FROM fixtures WHERE league_id = $1
+      UNION
+      SELECT DISTINCT away AS clubid FROM fixtures WHERE league_id = $1
+    ) t
+  `, [leagueId]);
+  const teamIds = teamRows.map(r => r.clubid);
+  if (!teamIds.length) return { teams: [], standings: [] };
 
   const { rows } = await pool.query(`
     WITH f AS (
@@ -1028,7 +1036,6 @@ async function computeLeagueTable(leagueId, teamIds){
       WHERE league_id = $1
         AND status = 'final'
         AND COALESCE(details->>'matchType','league') = 'league'
-        AND home = ANY($2) AND away = ANY($2)
     ),
     r AS (
       SELECT home AS clubid, hs AS gf, away_score AS ga,
@@ -1060,7 +1067,7 @@ async function computeLeagueTable(leagueId, teamIds){
            SUM(w)*3 + SUM(d) AS pts
     FROM r
     GROUP BY clubid
-  `, [leagueId, teamIds]);
+  `, [leagueId]);
 
   const table = {};
   const touch = id => table[id] = table[id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, AG:0, AW:0, Pts:0 };
@@ -1078,7 +1085,8 @@ async function computeLeagueTable(leagueId, teamIds){
     t.AW  = Number(r.aw);
     t.Pts = Number(r.pts);
   }
-  return Object.values(table).sort((a,b)=>(b.Pts-a.Pts)||(b.GD-a.GD)||(b.GF-a.GF)||(b.AG-a.AG)||(b.W-a.W)||(b.AW-a.AW));
+  const standings = Object.values(table).sort((a,b)=>(b.Pts-a.Pts)||(b.GD-a.GD)||(b.GF-a-GF)||(b.AG-a.AG)||(b.W-a.W)||(b.AW-a.AW));
+  return { teams: teamIds, standings };
 }
 
 app.post('/api/leagues/:leagueId/teams', requireAdmin, wrap(async (req,res)=>{
@@ -1091,9 +1099,8 @@ app.post('/api/leagues/:leagueId/teams', requireAdmin, wrap(async (req,res)=>{
 
 app.get('/api/leagues/:leagueId', wrap(async (req,res)=>{
   const { leagueId } = req.params;
-  const league = await getDoc('leagues', leagueId) || { leagueId, teams:[], createdAt: Date.now() };
-  const standings = await computeLeagueTable(leagueId, league.teams);
-  res.json({ ok:true, league, standings });
+  const { teams, standings } = await computeLeagueTable(leagueId);
+  res.json({ ok:true, teams, standings });
 }));
 
 app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
