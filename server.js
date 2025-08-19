@@ -12,6 +12,7 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { hasDuplicates, uniqueStrings } = require('./utils');
+const pool = require('./db');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -103,7 +104,6 @@ const COL = {
   awards      : () => db.collection('cupAwards'),   // docId = season
   users       : () => db.collection('users'),       // docId = userId (Players too)
   clubCodes   : () => db.collection('clubCodes'),   // docId = clubId { hash, rotatedAt, lastUsedAt? }
-  fixtures    : () => db.collection('fixtures'),    // docId = fixtureId
   freeAgents  : () => db.collection('freeAgents'),  // docId = userId
   players     : () => db.collection('players'),     // docId = playerId
   clubSquadSlots: (clubId) => db.collection('clubSquads').doc(clubId).collection('slots'),
@@ -115,10 +115,49 @@ const COL = {
 };
 
 const wrap = fn => (req,res,next)=> Promise.resolve(fn(req,res,next)).catch(next);
-async function getDoc(col, id){ const s = await COL[col]().doc(id).get(); return s.exists ? s.data() : null; }
-async function setDoc(col, id, obj){ await COL[col]().doc(id).set(obj, { merge:false }); return obj; }
-async function updateDoc(col, id, patch){ await COL[col]().doc(id).set(patch, { merge:true }); }
-async function listAll(col){ const snap = await COL[col]().get(); return snap.docs.map(d=>({ id:d.id, ...d.data() })); }
+async function getDoc(col, id){
+  if (col === 'fixtures') {
+    const { rows } = await pool.query('SELECT details FROM fixtures WHERE id=$1', [id]);
+    return rows[0]?.details || null;
+  }
+  const s = await COL[col]().doc(id).get();
+  return s.exists ? s.data() : null;
+}
+async function setDoc(col, id, obj){
+  if (col === 'fixtures') {
+    await pool.query(
+      `INSERT INTO fixtures (id, home, away, score, status, details, league_id, played_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (id) DO UPDATE SET home=EXCLUDED.home, away=EXCLUDED.away, score=EXCLUDED.score, status=EXCLUDED.status, details=EXCLUDED.details, league_id=EXCLUDED.league_id, played_at=EXCLUDED.played_at`,
+      [id, obj.home, obj.away, obj.score || null, obj.status || null, obj, obj.cup || obj.league_id || null, obj.played_at || null]
+    );
+    return obj;
+  }
+  await COL[col]().doc(id).set(obj, { merge:false });
+  return obj;
+}
+async function updateDoc(col, id, patch){
+  if (col === 'fixtures') {
+    const current = await getDoc('fixtures', id) || {};
+    const next = { ...current, ...patch };
+    await setDoc('fixtures', id, next);
+    return;
+    }
+  await COL[col]().doc(id).set(patch, { merge:true });
+}
+async function listAll(col){
+  if (col === 'fixtures') {
+    const { rows } = await pool.query('SELECT details FROM fixtures');
+    return rows.map(r => r.details);
+  }
+  const snap = await COL[col]().get();
+  return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+}
+
+async function fixturesByCup(cup) {
+  const { rows } = await pool.query('SELECT details FROM fixtures WHERE league_id = $1', [cup]);
+  return rows.map(r => r.details);
+}
 
 function isAdminSession(req) { return req.session?.admin === true; }
 function me(req){ return req.session.user || null; }
@@ -570,9 +609,8 @@ app.post('/api/cup/fixtures', requireAdmin, wrap(async (req,res)=>{
 app.get('/api/cup/fixtures/public', wrap(async (req,res)=>{
   const cup = (req.query.cup || 'UPCL').trim();
   const includeLineups = String(req.query.includeLineups||'0')==='1';
-  const snap = await COL.fixtures().where('cup','==',cup).get();
-  const list = snap.docs.map(d=>{
-    const f = d.data();
+  const fixtures = await fixturesByCup(cup);
+  const list = fixtures.map(f=>{
     const base = {
       id:f.id, cup:f.cup, round:f.round, group:f.group||null,
       home:f.home, away:f.away, when:f.when||null, status:f.status,
@@ -587,16 +625,15 @@ app.get('/api/cup/fixtures/public', wrap(async (req,res)=>{
 // Scheduling (Managers/Admins)
 app.get('/api/cup/fixtures/scheduling', requireManagerOrAdmin, wrap(async (req,res)=>{
   const cup = (req.query.cup || 'UPCL').trim();
-  const snap = await COL.fixtures().where('cup','==',cup).get();
-  res.json({ fixtures: snap.docs.map(d=>d.data()) });
+  const fixtures = await fixturesByCup(cup);
+  res.json({ fixtures });
 }));
 
 // List (+ optional filter by club)
 app.get('/api/cup/fixtures', wrap(async (req,res)=>{
   const cup = (req.query.cup || 'UPCL').trim();
   const clubId = (req.query.clubId || '').trim();
-  const snap = await COL.fixtures().where('cup','==',cup).get();
-  let fixtures = snap.docs.map(d=>d.data());
+  let fixtures = await fixturesByCup(cup);
   if (clubId) fixtures = fixtures.filter(f=> f.home===clubId || f.away===clubId);
   res.json({ fixtures });
 }));
@@ -957,8 +994,7 @@ function parseLooseResultText(str){
 // UPCL League
 // -----------------------------
 async function computeLeagueTable(leagueId, teamIds){
-  const snap = await COL.fixtures().where('cup','==',leagueId).get();
-  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const fx = (await fixturesByCup(leagueId)).filter(f=>f.status==='final');
   const table = {};
   const touch = id => table[id] = table[id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, AG:0, AW:0, Pts:0 };
   teamIds.forEach(id=> touch(id));
@@ -995,8 +1031,7 @@ app.get('/api/leagues/:leagueId', wrap(async (req,res)=>{
 app.get('/api/leagues/:leagueId/leaders', wrap(async (req,res)=>{
   const { leagueId } = req.params;
   const limit = Math.max(1, Math.min(20, Number(req.query.limit || 5)));
-  const snap = await COL.fixtures().where('cup','==',leagueId).get();
-  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const fx = (await fixturesByCup(leagueId)).filter(f=>f.status==='final');
   const goals = new Map(), assists = new Map(), meta = new Map();
   const bump = (m,k,n)=> m.set(k,(m.get(k)||0)+n);
   for (const f of fx){
@@ -1118,8 +1153,7 @@ app.post('/api/champions/:cupId/randomize', requireAdmin, wrap(async (req,res)=>
 }));
 
 async function computeGroupTables(cupId, groups){
-  const snap = await COL.fixtures().where('cup','==',cupId).get();
-  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const fx = (await fixturesByCup(cupId)).filter(f=>f.status==='final');
   const table = { A:{}, B:{}, C:{}, D:{} };
   const touch = (g,id)=> table[g][id] = table[g][id] || { clubId:id, P:0, W:0, D:0, L:0, GF:0, GA:0, GD:0, Pts:0 };
 
@@ -1157,8 +1191,7 @@ app.get('/api/champions/:cupId', wrap(async (req,res)=>{
 app.get('/api/champions/:cupId/leaders', wrap(async (req,res)=>{
   const { cupId } = req.params;
   const limit = Math.max(1, Math.min(20, Number(req.query.limit || 5)));
-  const snap = await COL.fixtures().where('cup','==',cupId).get();
-  const fx = snap.docs.map(d=>d.data()).filter(f=>f.status==='final');
+  const fx = (await fixturesByCup(cupId)).filter(f=>f.status==='final');
 
   const goals = new Map(), assists = new Map(), meta = new Map();
   const bump = (m,k,n)=> m.set(k,(m.get(k)||0)+n);
@@ -1252,8 +1285,7 @@ app.post('/api/discord/cc/upcoming', requireAdmin, wrap(async (req,res)=>{
   const includeTbd = String(req.query.includeTbd||'1')==='1';
   const tz = req.query.tz || 'America/Los_Angeles';
 
-  const snap = await COL.fixtures().where('cup','==',cup).get();
-  const fixtures = snap.docs.map(d=>d.data()).filter(f=> f.status!=='final');
+  const fixtures = (await fixturesByCup(cup)).filter(f=> f.status!=='final');
 
   const now = Date.now();
   const scheduled = fixtures.filter(f=> f.when && f.when>=now).sort((a,b)=>(a.when||0)-(b.when||0));
@@ -1285,8 +1317,7 @@ app.post('/api/discord/cc/snapshot', requireAdmin, wrap(async (req,res)=>{
   const groups = cupSnap.exists ? (cupSnap.data().groups || {A:[],B:[],C:[],D:[]}) : {A:[],B:[],C:[],D:[]};
   const tables = await computeGroupTables(cup, groups);
 
-  const snap = await COL.fixtures().where('cup','==',cup).get();
-  const fixtures = snap.docs.map(d=>d.data());
+  const fixtures = await fixturesByCup(cup);
   const now = Date.now();
   const upcoming = fixtures.filter(f=> f.status!=='final' && f.when && f.when>=now).sort((a,b)=>(a.when||0)-(b.when||0));
   const tbd      = fixtures.filter(f=> f.status!=='final' && !f.when);
@@ -1327,8 +1358,7 @@ app.post('/api/discord/cc/auto', wrap(async (req,res)=>{
   const includeTbd = String(req.query.tbd || '1') === '1';
   const tz = req.query.tz || 'America/Los_Angeles';
 
-  const snap = await COL.fixtures().where('cup','==',cup).get();
-  const fixtures = snap.docs.map(d=>d.data()).filter(f=> f.status!=='final');
+  const fixtures = (await fixturesByCup(cup)).filter(f=> f.status!=='final');
 
   const now = Date.now();
   const until = now + windowHours * 3600_000;
