@@ -1,5 +1,8 @@
-const fetch = (...args) =>
-  import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const fetchFn =
+  global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
+
+const USER_AGENT =
+  process.env.EA_USER_AGENT || 'UPCL/1.0 (https://your-domain.example)';
 
 async function fetchClubLeagueMatches(clubIds) {
   const ids = Array.isArray(clubIds) ? clubIds : [clubIds];
@@ -10,9 +13,9 @@ async function fetchClubLeagueMatches(clubIds) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(url, {
+    const res = await fetchFn(url, {
       headers: {
-        'User-Agent': 'fc-26-project-beta',
+        'User-Agent': USER_AGENT,
         Accept: 'application/json'
       },
       signal: controller.signal
@@ -44,9 +47,9 @@ async function fetchClubMembers(clubId) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(url, {
+    const res = await fetchFn(url, {
       headers: {
-        'User-Agent': 'fc-26-project-beta',
+        'User-Agent': USER_AGENT,
         Accept: 'application/json'
       },
       signal: controller.signal
@@ -75,9 +78,9 @@ async function fetchPlayersForClub(clubId) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch(url, {
+    const res = await fetchFn(url, {
       headers: {
-        'User-Agent': 'fc-26-project-beta',
+        'User-Agent': USER_AGENT,
         Accept: 'application/json'
       },
       signal: controller.signal

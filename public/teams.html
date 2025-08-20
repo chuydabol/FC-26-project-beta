@@ -623,7 +623,14 @@ async function resolvePlayerName(id){
 }
 
 async function fetchClubMembers(clubId){
-  return apiGet(`/api/ea/clubs/${encodeURIComponent(clubId)}/members`);
+  if (!/^\d+$/.test(String(clubId))) return { members: [] };
+  const raw = await apiGet(`/api/ea/clubs/${encodeURIComponent(clubId)}/members`);
+  if (Array.isArray(raw)) return { members: raw };
+  if (Array.isArray(raw?.members)) return raw;
+  if (raw?.members && typeof raw.members === 'object') {
+    return { members: Object.values(raw.members) };
+  }
+  return { members: [] };
 }
 
 // nav elements
@@ -823,8 +830,7 @@ async function loadSquad(clubId){
   }
 
   try{
-    const data = await fetchClubMembers(clubId);
-    const members = Object.values(data.members || {});
+    const { members } = await fetchClubMembers(clubId);
     if (!members.length){
       body.innerHTML = '<div class="muted">No players found.</div>';
       return;
