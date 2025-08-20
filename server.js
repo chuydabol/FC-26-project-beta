@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { hasDuplicates, uniqueStrings } = require('./utils');
 const pool = require('./db');
-const { fetchClubLeagueMatches, fetchClubMembers } = require('./services/eaApi');
+const { fetchClubLeagueMatches, fetchClubMembers, fetchPlayersForClub } = require('./services/eaApi');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -446,6 +446,53 @@ app.get('/api/ea/clubs/:clubId/members', wrap(async (req,res)=>{
       res.status(502).json(err?.error ? err : { error: 'EA API error' });
     }
   }
+}));
+
+// Lookup table for EA Pro Clubs position codes
+const proPos = {
+  0: 'GK', 1: 'SW', 2: 'RWB', 3: 'RB', 4: 'CB', 5: 'LB', 6: 'LWB',
+  7: 'CDM', 8: 'RM', 9: 'CM', 10: 'LM', 11: 'CAM', 12: 'RF', 13: 'CF', 14: 'LF',
+  15: 'RW', 16: 'ST', 17: 'LW'
+};
+
+// Aggregate players from multiple clubs
+app.get('/api/players', wrap(async (req,res)=>{
+  const q = req.query.clubId || req.query.clubIds || req.query.ids || '';
+  const clubIds = Array.isArray(q)
+    ? q
+    : String(q).split(',').map(s=>s.trim()).filter(Boolean);
+  if (!clubIds.length) return res.status(400).json({ error:'clubId required' });
+
+  const results = await Promise.all(clubIds.map(id =>
+    fetchPlayersForClub(id).catch(err => {
+      console.error('fetchPlayersForClub failed', id, err);
+      return null;
+    })
+  ));
+
+  const all = [];
+  for (const r of results) {
+    if (!r) continue;
+    const members = Array.isArray(r)
+      ? r
+      : Array.isArray(r.members)
+        ? r.members
+        : r.members
+          ? Object.values(r.members)
+          : [];
+    all.push(...members);
+  }
+
+  const unique = new Map();
+  for (const p of all) {
+    const name = p?.name || p?.playername || p?.personaName;
+    if (!name) continue;
+    const posCode = p?.preferredPosition ?? p?.position ?? p?.role;
+    const role = proPos[String(posCode)] || proPos[Number(posCode)] || posCode;
+    if (!unique.has(name)) unique.set(name, { ...p, name, role });
+  }
+
+  res.json(Array.from(unique.values()));
 }));
 
 // -----------------------------
