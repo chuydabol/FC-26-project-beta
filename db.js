@@ -4,14 +4,9 @@ const pool = new Pool({
   connectionString:
     process.env.DATABASE_URL ||
     "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a:5432/upcl",
-  // Accept self-signed certificates (e.g. for managed hobby instances)
   ssl: {
     require: true,
-  
-    "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a:5432/upcl?sslmode=require",
-  ssl: {
- main
-    rejectUnauthorized: false,
+    rejectUnauthorized: false, // ✅ allows self-signed certs
   },
 });
 
