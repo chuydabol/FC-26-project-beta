@@ -54,7 +54,10 @@ function limit(fn) {
 // Cache for /api/players
 let _playersCache = { at: 0, data: null };
 const PLAYERS_TTL_MS = 60_000;
-const TEAM_CACHE_MS = 15 * 60 * 1000;
+
+// Cache for /api/teams-with-players
+let _teamsCache = { at: 0, data: null };
+const TEAMS_TTL_MS = 10 * 60 * 1000;
 
 // Fetch helper with logging
 async function fetchClubPlayers(clubId) {
@@ -124,68 +127,50 @@ app.get('/api/teams', async (_req, res) => {
 // Cached teams with players
 app.get('/api/teams-with-players', async (_req, res) => {
   try {
-    const { rows: cacheRows } = await pool.query(
-      'SELECT MAX(updated_at) AS updated_at FROM teams'
-    );
-    const latest = cacheRows[0]?.updated_at;
-    let needsRefresh = true;
-    if (latest) {
-      const age = Date.now() - new Date(latest).getTime();
-      needsRefresh = age > TEAM_CACHE_MS;
+    if (_teamsCache.data && Date.now() - _teamsCache.at < TEAMS_TTL_MS) {
+      return res.json(_teamsCache.data);
     }
 
     const clubIds = DEFAULT_CLUB_IDS;
 
-    if (needsRefresh) {
-      const infoUrl =
-        'https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=' +
-        clubIds.join(',');
-      const infoRes = await fetchFn(infoUrl, { headers: EA_HEADERS });
-      const infoData = await infoRes.json();
+    const infoUrl =
+      'https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=' +
+      clubIds.join(',');
+    const infoRes = await fetchFn(infoUrl, { headers: EA_HEADERS });
+    if (!infoRes.ok) throw new Error('info fetch failed');
+    const infoData = await infoRes.json();
 
-      for (const id of clubIds) {
-        const club = infoData?.[id];
-        if (!club) continue;
-
-        const memRes = await fetchFn(
-          `https://proclubs.ea.com/api/fc/clubs/members?platform=common-gen5&clubId=${id}`,
-          { headers: EA_HEADERS }
-        );
-        const memData = await memRes.json();
-        const players = Array.isArray(memData.members) ? memData.members : [];
-
-        await pool.query(
-          `INSERT INTO teams (id, name, logo, season, updated_at)
-           VALUES ($1,$2,$3,$4,now())
-           ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, logo=EXCLUDED.logo, season=EXCLUDED.season, updated_at=now()`,
-          [id, club.name, club.customLogo, club.season]
-        );
-
-        await pool.query('DELETE FROM players WHERE club_id=$1', [id]);
-        for (const p of players) {
-          const name = p.name || p.playername || p.personaName || '';
-          const pos = p.position || p.preferredPosition || '';
-          await pool.query(
-            'INSERT INTO players (club_id, name, position, stats, updated_at) VALUES ($1,$2,$3,$4,now())',
-            [id, name, pos, p]
-          );
-        }
-      }
+    const teams = [];
+    for (const id of clubIds) {
+      const club = infoData?.[id];
+      if (!club) continue;
+      const memRes = await fetchFn(
+        `https://proclubs.ea.com/api/fc/clubs/members?platform=common-gen5&clubId=${id}`,
+        { headers: EA_HEADERS }
+      );
+      if (!memRes.ok) throw new Error('members fetch failed');
+      const memData = await memRes.json();
+      const playersRaw = Array.isArray(memData.members) ? memData.members : [];
+      const players = playersRaw.map(p => ({
+        name: p.name || p.playername || p.personaName || '',
+        position: p.position || p.preferredPosition || '',
+        stats: p
+      }));
+      teams.push({
+        id: Number(id),
+        name: club.name,
+        logo: club.customLogo,
+        season: club.season,
+        players
+      });
     }
 
-    const { rows } = await pool.query(
-      `SELECT t.id, t.name, t.logo, t.season,
-              COALESCE(json_agg(json_build_object('name', p.name, 'position', p.position, 'stats', p.stats) ORDER BY p.id) FILTER (WHERE p.id IS NOT NULL), '[]') AS players
-       FROM teams t
-       LEFT JOIN players p ON p.club_id = t.id
-       GROUP BY t.id, t.name, t.logo, t.season
-       ORDER BY t.id`
-    );
-
-    res.json({ ok: true, teams: rows });
+    const payload = { ok: true, teams };
+    _teamsCache = { at: Date.now(), data: payload };
+    res.json(payload);
   } catch (err) {
-    console.error('Failed to load teams with players', err);
-    res.status(500).json({ ok: false, error: 'Failed to load teams' });
+    console.error('Failed to load teams from EA', err);
+    res.status(502).json({ ok: false, error: 'EA API unavailable' });
   }
 });
 
