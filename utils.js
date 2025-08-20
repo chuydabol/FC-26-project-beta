@@ -20,4 +20,12 @@ function hasDuplicates(arr){
   return new Set(ids).size !== ids.length;
 }
 
-module.exports = { uniqueStrings, hasDuplicates, normalizeId };
+function isNumericId(id){
+  return /^\d+$/.test(String(id||''));
+}
+
+function isManualId(id){
+  return !isNumericId(id);
+}
+
+module.exports = { uniqueStrings, hasDuplicates, normalizeId, isNumericId, isManualId };

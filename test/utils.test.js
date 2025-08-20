@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('assert');
-const { hasDuplicates, uniqueStrings } = require('../utils');
+const { hasDuplicates, uniqueStrings, isNumericId, isManualId } = require('../utils');
 
 test('hasDuplicates detects duplicates', () => {
   assert.strictEqual(hasDuplicates(['1','2','2']), true);
@@ -32,4 +32,10 @@ test('formatted ids normalize to detect duplicates', () => {
   const variants = ['Elite-xi', 'elite xi'];
   assert.strictEqual(hasDuplicates(variants), true);
   assert.deepStrictEqual(uniqueStrings(variants), ['Elite-xi']);
+});
+
+test('numeric id classifier works', () => {
+  assert.strictEqual(isNumericId('123'), true);
+  assert.strictEqual(isNumericId('abc'), false);
+  assert.strictEqual(isManualId('abc'), true);
 });
