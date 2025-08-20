@@ -73,25 +73,36 @@ const DISCORD_WEBHOOK_CC  = process.env.DISCORD_WEBHOOK_CC || '';
 const DISCORD_CRON_SECRET = process.env.DISCORD_CRON_SECRET || ''; // for /api/discord/cc/auto
 
 // Default EA club IDs for league-wide player fetches
-const DEFAULT_CLUB_IDS = (process.env.LEAGUE_CLUB_IDS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
+// Falls back to built-in list if LEAGUE_CLUB_IDS is not provided
+const DEFAULT_CLUB_IDS = (process.env.LEAGUE_CLUB_IDS || `
+576007,4933507,2491998,1969494,2086022,2462194,5098824,4869810,1527486,
+4824736,481847,3050467,4154835,3638105,55408,4819681,35642
+`).split(',').map(s => s.trim()).filter(Boolean);
 
-// Simple concurrency limiter for EA API calls
+// Tiny concurrency limiter so we don't hammer EA
+let _inFlight = 0;
 const MAX_CONCURRENCY = Number(process.env.MAX_CONCURRENCY || 3);
-let inFlight = 0;
-const limit = fn => async (...args) => {
-  while (inFlight >= MAX_CONCURRENCY) {
-    await new Promise(r => setTimeout(r, 25));
-  }
-  inFlight++;
-  try {
-    return await fn(...args);
-  } finally {
-    inFlight--;
-  }
-};
+const _queue = [];
+function limit(fn){
+  return new Promise((resolve, reject) => {
+    const run = async () => {
+      _inFlight++;
+      try { resolve(await fn()); }
+      catch (e) { reject(e); }
+      finally {
+        _inFlight--;
+        const next = _queue.shift();
+        if (next) next();
+      }
+    };
+    if (_inFlight < MAX_CONCURRENCY) run();
+    else _queue.push(run);
+  });
+}
+
+// Simple 60s in-memory cache for /api/players
+let _playersCache = { at: 0, data: null };
+const PLAYERS_TTL_MS = 60_000;
 
 // -----------------------------
 // Express app
@@ -461,7 +472,7 @@ app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
   }
 
   try {
-    const raw = await eaApi.fetchPlayersForClub(clubId);
+    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
     let members = [];
     if (Array.isArray(raw)) {
       members = raw;
@@ -480,53 +491,53 @@ app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
   }
 });
 
-// Lookup table for EA Pro Clubs position codes
-const proPos = {
-  0: 'GK', 1: 'SW', 2: 'RWB', 3: 'RB', 4: 'CB', 5: 'LB', 6: 'LWB',
-  7: 'CDM', 8: 'RM', 9: 'CM', 10: 'LM', 11: 'CAM', 12: 'RF', 13: 'CF', 14: 'LF',
-  15: 'RW', 16: 'ST', 17: 'LW'
-};
 
-// Aggregate players from multiple clubs
-app.get('/api/players', wrap(async (req,res)=>{
+// Aggregate players from league (single call, old behavior)
+app.get('/api/players', wrap(async (req, res) => {
+  // Allow explicit override (?clubIds=1,2,3), otherwise use default league list
   const q = req.query.clubId || req.query.clubIds || req.query.ids || '';
-  const clubIds = Array.isArray(q)
-    ? q
-    : String(q).split(',').map(s=>s.trim()).filter(Boolean);
-  const ids = clubIds.length ? clubIds : DEFAULT_CLUB_IDS;
-  if (!ids.length) return res.status(400).json({ error:'clubId required' });
+  let clubIds = Array.isArray(q) ? q : String(q).split(',').map(s => s.trim()).filter(Boolean);
+  if (!clubIds.length) clubIds = DEFAULT_CLUB_IDS.slice();
 
-  const fetchClub = limit(eaApi.fetchPlayersForClub);
-  const results = await Promise.all(ids.map(id =>
-    fetchClub(id).catch(err => {
-      console.error('fetchPlayersForClub failed', id, err);
-      return null;
-    })
-  ));
+  // serve from short cache if fresh
+  if (_playersCache.data && (Date.now() - _playersCache.at) < PLAYERS_TTL_MS) {
+    return res.json(_playersCache.data);
+  }
+
+  const results = await Promise.all(
+    clubIds.map(id =>
+      limit(() => eaApi.fetchPlayersForClubWithRetry(id))
+        .then(raw => ({ id, raw }))
+        .catch(err => {
+          console.error('fetchPlayersForClub failed', id, err?.message || err);
+          return { id, raw: null };
+        })
+    )
+  );
 
   const byClub = {};
-  const unique = new Map();
-  ids.forEach((id, idx) => {
-    const r = results[idx];
-    const members = !r ? [] : Array.isArray(r)
-      ? r
-      : Array.isArray(r.members)
-        ? r.members
-        : r.members
-          ? Object.values(r.members)
-          : [];
+  const union = [];
+  const seen = new Set();
+
+  for (const { id, raw } of results) {
+    let members = [];
+    if (Array.isArray(raw)) members = raw;
+    else if (Array.isArray(raw?.members)) members = raw.members;
+    else if (raw?.members && typeof raw.members === 'object') members = Object.values(raw.members);
     byClub[id] = members;
+
     for (const p of members) {
       const name = p?.name || p?.playername || p?.personaName;
-      if (!name) continue;
-      const posCode = p?.preferredPosition ?? p?.position ?? p?.role;
-      const role = proPos[String(posCode)] || proPos[Number(posCode)] || posCode;
-      if (!unique.has(name)) unique.set(name, { ...p, name, role });
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      union.push(p);
     }
-  });
+  }
 
-  res.set('Cache-Control','public, max-age=60');
-  res.json({ members: Array.from(unique.values()), byClub });
+  const payload = { members: union, byClub };
+  _playersCache = { at: Date.now(), data: payload };
+  res.set('Cache-Control', 'public, max-age=60');
+  return res.json(payload);
 }));
 
 // -----------------------------
