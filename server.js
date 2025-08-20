@@ -11,7 +11,7 @@ const path = require('path');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const { hasDuplicates, uniqueStrings } = require('./utils');
+const { hasDuplicates, uniqueStrings, isNumericId, isManualId } = require('./utils');
 const pool = require('./db');
 const eaApi = require('./services/eaApi');
 
@@ -73,11 +73,11 @@ const DISCORD_WEBHOOK_CC  = process.env.DISCORD_WEBHOOK_CC || '';
 const DISCORD_CRON_SECRET = process.env.DISCORD_CRON_SECRET || ''; // for /api/discord/cc/auto
 
 // Default EA club IDs for league-wide player fetches
-// Falls back to built-in list if LEAGUE_CLUB_IDS is not provided
-const DEFAULT_CLUB_IDS = (process.env.LEAGUE_CLUB_IDS || `
-576007,4933507,2491998,1969494,2086022,2462194,5098824,4869810,1527486,
-4824736,481847,3050467,4154835,3638105,55408,4819681,35642
-`).split(',').map(s => s.trim()).filter(Boolean);
+// Falls back to team metadata if LEAGUE_CLUB_IDS is not provided
+const TEAM_META = require('./data/teams.json');
+const DEFAULT_CLUB_IDS = (process.env.LEAGUE_CLUB_IDS ||
+  TEAM_META.filter(t => isNumericId(t.id)).map(t => t.id).join(',')
+).split(',').map(s => s.trim()).filter(isNumericId);
 
 // Tiny concurrency limiter so we don't hammer EA
 let _inFlight = 0;
@@ -270,6 +270,12 @@ function genCode(len=8){ const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; return 
 function seasonKey(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 function norm(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+// Teams metadata
+app.get('/api/teams', wrap(async (_req, res) => {
+  const payload = TEAM_META.map(t => ({ ...t, isManual: isManualId(t.id) }));
+  res.json(payload);
+}));
 
 // -----------------------------
 // Auth (Admin + Session user)
@@ -498,6 +504,7 @@ app.get('/api/players', wrap(async (req, res) => {
   const q = req.query.clubId || req.query.clubIds || req.query.ids || '';
   let clubIds = Array.isArray(q) ? q : String(q).split(',').map(s => s.trim()).filter(Boolean);
   if (!clubIds.length) clubIds = DEFAULT_CLUB_IDS.slice();
+  clubIds = clubIds.filter(isNumericId);
 
   // serve from short cache if fresh
   if (_playersCache.data && (Date.now() - _playersCache.at) < PLAYERS_TTL_MS) {
@@ -1199,7 +1206,12 @@ async function computeLeagueTable(leagueId){
 
 app.post('/api/leagues/:leagueId/teams', requireAdmin, wrap(async (req,res)=>{
   const { leagueId } = req.params;
-  const teams = Array.isArray(req.body?.teams) ? req.body.teams.map(String) : [];
+  const raw = Array.isArray(req.body?.teams) ? req.body.teams.map(t => String(t).trim()) : [];
+  if (raw.some(id => !id) || hasDuplicates(raw)) {
+    console.warn('Invalid league team submission', { leagueId, teams: raw });
+    return res.status(400).json({ error: 'Duplicate or empty team IDs' });
+  }
+  const teams = uniqueStrings(raw);
   const doc = { leagueId, teams, createdAt: Date.now() };
   await setDoc('leagues', leagueId, doc);
   res.json({ ok:true, league: doc });
