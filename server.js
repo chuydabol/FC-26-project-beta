@@ -433,28 +433,31 @@ app.post('/api/wallets/:clubId/collect', requireManagerOfClubParam('clubId'), wr
 }));
 
 // Proxy to fetch club members from EA API (avoids browser CORS)
-app.get('/api/ea/clubs/:clubId/members', wrap(async (req,res)=>{
+app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
   const { clubId } = req.params;
-  if (!/^\d+$/.test(String(clubId))) return res.status(400).json({ error:'Invalid clubId' });
-  try {
-    const data = await eaApi.fetchClubMembers(clubId);
-    let members = [];
-    if (Array.isArray(data)) {
-      members = data;
-    } else if (Array.isArray(data?.members)) {
-      members = data.members;
-    } else if (data?.members && typeof data.members === 'object') {
-      members = Object.values(data.members);
-    }
-    res.json({ members });
-  } catch (err) {
-    if (err?.error === 'EA API request timed out') {
-      res.status(504).json(err);
-    } else {
-      res.status(502).json(err?.error ? err : { error: 'EA API error' });
-    }
+  if (!/^\d+$/.test(String(clubId))) {
+    return res.status(400).json({ error: 'Invalid clubId' });
   }
-}));
+
+  try {
+    const raw = await eaApi.fetchPlayersForClub(clubId);
+    let members = [];
+    if (Array.isArray(raw)) {
+      members = raw;
+    } else if (Array.isArray(raw?.members)) {
+      members = raw.members;
+    } else if (raw?.members && typeof raw.members === 'object') {
+      members = Object.values(raw.members);
+    }
+    return res.json({ members });
+  } catch (err) {
+    const msg = err?.error || err?.message || 'EA API error';
+    const status = /abort|timeout|timed out|ETIMEDOUT/i.test(String(msg)) ? 504 : 502;
+    return res
+      .status(status)
+      .json({ error: 'EA API request failed', details: msg });
+  }
+});
 
 // Lookup table for EA Pro Clubs position codes
 const proPos = {

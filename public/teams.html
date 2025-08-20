@@ -624,13 +624,20 @@ async function resolvePlayerName(id){
 
 async function fetchClubMembers(clubId){
   if (!/^\d+$/.test(String(clubId))) return { members: [] };
-  const raw = await apiGet(`/api/ea/clubs/${encodeURIComponent(clubId)}/members`);
-  if (Array.isArray(raw)) return { members: raw };
-  if (Array.isArray(raw?.members)) return raw;
-  if (raw?.members && typeof raw.members === 'object') {
-    return { members: Object.values(raw.members) };
+  try{
+    const raw = await apiGet(`/api/ea/clubs/${encodeURIComponent(clubId)}/members`);
+    if (Array.isArray(raw)) return { members: raw };
+    if (Array.isArray(raw?.members)) return raw;
+    if (raw?.members && typeof raw.members === 'object') {
+      return { members: Object.values(raw.members) };
+    }
+    return { members: [] };
+  }catch(e){
+    const m = String(e.message||'');
+    const match = /^HTTP (\d+)/.exec(m);
+    const status = match ? Number(match[1]) : e.status;
+    throw Object.assign(new Error(m), { status });
   }
-  return { members: [] };
 }
 
 // nav elements
@@ -840,7 +847,13 @@ async function loadSquad(clubId){
       return `<div class="m-card" style="margin:6px 0">${escapeHtml(n)}</div>`;
     }).join('');
   }catch(e){
-    body.textContent = 'Failed to load squad.';
+    if (e.status === 504) {
+      body.textContent = 'EA API timed out. Try again.';
+    } else if (e.status === 502) {
+      body.textContent = 'EA API request failed.';
+    } else {
+      body.textContent = 'Failed to load squad.';
+    }
   }
 }
 
