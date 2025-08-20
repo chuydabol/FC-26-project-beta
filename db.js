@@ -7,6 +7,10 @@ const pool = new Pool({
   // Accept self-signed certificates (e.g. for managed hobby instances)
   ssl: {
     require: true,
+  
+    "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a:5432/upcl?sslmode=require",
+  ssl: {
+ main
     rejectUnauthorized: false,
   },
 });
