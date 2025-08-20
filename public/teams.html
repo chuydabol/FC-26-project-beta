@@ -556,13 +556,27 @@ async function loadTeams(){
   try{
     const data = await apiGet('/api/teams');
     teams = Array.isArray(data) ? data : [];
+    return true;
+  }catch(e){
+    console.error('Failed to load teams', e);
+    teams = [];
+    teamsGrid.innerHTML = '<div class="muted">Failed to load teams</div>';
+    return false;
+=======
   }catch{
     teams = [];
+
   }
 }
 
 // helpers
-const byId = id => teams.find(t=>String(t.id)===String(id));
+function normalizeId(id){
+  return String(id||'').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+}
+const byId = id => {
+  const norm = normalizeId(id);
+  return teams.find(t => normalizeId(t.id) === norm);
+};
 function replaceClubIds(str){
   if(!str) return str;
   return String(str).replace(/[A-Za-z0-9_-]+/g, token => {
@@ -1796,6 +1810,11 @@ async function computeNewsFromFixtures(list){
 //   INIT
 // =======================
 async function init(){
+
+  const playerLoad = loadPlayers().catch(e => console.error('Failed to load players', e));
+  const ok = await loadTeams();
+  if (ok) renderTeams();
+
   await loadTeams();
   await loadPlayers();
   renderTeams();
@@ -1807,6 +1826,7 @@ async function init(){
 
   await refreshFixturesPublic(); renderFixturesPublic();
   if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
+  await playerLoad;
   await loadFA();
 
   // hash-open team
