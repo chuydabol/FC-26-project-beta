@@ -523,6 +523,14 @@ app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
 });
 
 
+// Recent matches served from Postgres
+app.get('/api/matches', wrap(async (_req, res) => {
+  const { rows } = await pool.query(
+    'SELECT id, timestamp, clubs, players FROM matches ORDER BY timestamp DESC LIMIT 50'
+  );
+  res.json({ matches: rows });
+}));
+
 // Aggregate players from league (single call, old behavior)
 app.get('/api/players', wrap(async (req, res) => {
   // Allow explicit override (?clubIds=1,2,3), otherwise use default league list

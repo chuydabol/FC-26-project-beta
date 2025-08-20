@@ -1,8 +1,12 @@
 const fetchFn =
   global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
 
-const USER_AGENT =
-  process.env.EA_USER_AGENT || 'UPCL/1.0 (https://your-domain.example)';
+// Browser-like headers to avoid EA blocking the requests
+const EA_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+  Accept: 'application/json',
+  Referer: 'https://www.ea.com/',
+};
 
 async function fetchClubLeagueMatches(clubIds) {
   const ids = Array.isArray(clubIds) ? clubIds : [clubIds];
@@ -14,10 +18,7 @@ async function fetchClubLeagueMatches(clubIds) {
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetchFn(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'application/json'
-      },
+      headers: EA_HEADERS,
       signal: controller.signal
     });
     if (!res.ok) {
@@ -48,10 +49,7 @@ async function fetchClubMembers(clubId) {
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetchFn(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'application/json'
-      },
+      headers: EA_HEADERS,
       signal: controller.signal
     });
     if (!res.ok) {
@@ -79,10 +77,7 @@ async function fetchPlayersForClub(clubId) {
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetchFn(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'application/json'
-      },
+      headers: EA_HEADERS,
       signal: controller.signal
     });
     if (!res.ok) {
@@ -104,7 +99,7 @@ async function fetchPlayersForClubWithRetry(clubId, retries = 2) {
   let attempt = 0;
   while (true) {
     try {
-      return await fetchPlayersForClub(clubId);
+      return await module.exports.fetchPlayersForClub(clubId);
     } catch (err) {
       attempt++;
       if (attempt > retries) throw err;
