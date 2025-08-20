@@ -79,6 +79,16 @@ const DEFAULT_CLUB_IDS = (process.env.LEAGUE_CLUB_IDS ||
   TEAM_META.filter(t => isNumericId(t.id)).map(t => t.id).join(',')
 ).split(',').map(s => s.trim()).filter(isNumericId);
 
+// Browser-like headers to appease EA's API
+const EA_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+  Accept: 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9',
+  Referer: 'https://www.ea.com/',
+  Origin: 'https://www.ea.com',
+  Connection: 'keep-alive'
+};
+
 // Tiny concurrency limiter so we don't hammer EA
 let _inFlight = 0;
 const MAX_CONCURRENCY = Number(process.env.MAX_CONCURRENCY || 3);
@@ -103,6 +113,21 @@ function limit(fn){
 // Simple 60s in-memory cache for /api/players
 let _playersCache = { at: 0, data: null };
 const PLAYERS_TTL_MS = 60_000;
+
+// Fetch helper with logging
+async function fetchClubPlayers(clubId) {
+  const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
+  try {
+    const res = await fetchFn(url, { headers: EA_HEADERS });
+    if (!res.ok) throw new Error(`EA responded ${res.status}`);
+    const data = await res.json();
+    console.log(`✅ Club ${clubId} -> ${data.members?.length || 0} players`);
+    return data.members || [];
+  } catch (err) {
+    console.error(`❌ Failed fetching club ${clubId}:`, err.message);
+    return [];
+  }
+}
 
 // -----------------------------
 // Express app
@@ -511,26 +536,12 @@ app.get('/api/players', wrap(async (req, res) => {
     return res.json(_playersCache.data);
   }
 
-  const results = await Promise.all(
-    clubIds.map(id =>
-      limit(() => eaApi.fetchPlayersForClubWithRetry(id))
-        .then(raw => ({ id, raw }))
-        .catch(err => {
-          console.error('fetchPlayersForClub failed', id, err?.message || err);
-          return { id, raw: null };
-        })
-    )
-  );
-
   const byClub = {};
   const union = [];
   const seen = new Set();
 
-  for (const { id, raw } of results) {
-    let members = [];
-    if (Array.isArray(raw)) members = raw;
-    else if (Array.isArray(raw?.members)) members = raw.members;
-    else if (raw?.members && typeof raw.members === 'object') members = Object.values(raw.members);
+  for (const id of clubIds) {
+    const members = await fetchClubPlayers(id);
     byClub[id] = members;
 
     for (const p of members) {
@@ -539,6 +550,9 @@ app.get('/api/players', wrap(async (req, res) => {
       seen.add(name);
       union.push(p);
     }
+
+    // short pause between calls
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   const payload = { members: union, byClub };
