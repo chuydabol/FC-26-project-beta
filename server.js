@@ -13,7 +13,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { hasDuplicates, uniqueStrings } = require('./utils');
 const pool = require('./db');
-const { fetchClubLeagueMatches, fetchClubMembers, fetchPlayersForClub } = require('./services/eaApi');
+const eaApi = require('./services/eaApi');
 
 let helmet = null, compression = null, cors = null, morgan = null;
 try { helmet = require('helmet'); } catch {}
@@ -437,8 +437,16 @@ app.get('/api/ea/clubs/:clubId/members', wrap(async (req,res)=>{
   const { clubId } = req.params;
   if (!/^\d+$/.test(String(clubId))) return res.status(400).json({ error:'Invalid clubId' });
   try {
-    const data = await fetchClubMembers(clubId);
-    res.json(data);
+    const data = await eaApi.fetchClubMembers(clubId);
+    let members = [];
+    if (Array.isArray(data)) {
+      members = data;
+    } else if (Array.isArray(data?.members)) {
+      members = data.members;
+    } else if (data?.members && typeof data.members === 'object') {
+      members = Object.values(data.members);
+    }
+    res.json({ members });
   } catch (err) {
     if (err?.error === 'EA API request timed out') {
       res.status(504).json(err);
@@ -464,7 +472,7 @@ app.get('/api/players', wrap(async (req,res)=>{
   if (!clubIds.length) return res.status(400).json({ error:'clubId required' });
 
   const results = await Promise.all(clubIds.map(id =>
-    fetchPlayersForClub(id).catch(err => {
+    eaApi.fetchPlayersForClub(id).catch(err => {
       console.error('fetchPlayersForClub failed', id, err);
       return null;
     })
@@ -1225,7 +1233,7 @@ app.post('/api/leagues/:leagueId/fetch-ea', requireAdmin, wrap(async (req,res)=>
   const teamIds = Array.isArray(league.teams) ? league.teams : [];
   let inserted = 0;
 
-  const matchesByClub = await fetchClubLeagueMatches(teamIds);
+  const matchesByClub = await eaApi.fetchClubLeagueMatches(teamIds);
   for (const clubId of teamIds) {
     const matches = matchesByClub?.[clubId] || [];
     if (!Array.isArray(matches) || !matches.length) continue;
@@ -1617,7 +1625,11 @@ app.use((err, _req, res, _next)=>{
 // -----------------------------
 // Start
 // -----------------------------
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);
-  console.log(`Firestore project: ${admin.app().options.projectId || '(loaded)'}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT} (env: ${NODE_ENV})`);
+    console.log(`Firestore project: ${admin.app().options.projectId || '(loaded)'}`);
+  });
+}
+
+module.exports = app;
