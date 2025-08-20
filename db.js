@@ -45,4 +45,17 @@ pool.query(`
   console.error('Failed to ensure ea_last_matches table', err);
 });
 
+// Recent match history fetched from EA API
+pool.query(`
+  CREATE TABLE IF NOT EXISTS matches (
+    id BIGINT PRIMARY KEY,
+    timestamp TIMESTAMPTZ,
+    clubs JSONB,
+    players JSONB,
+    raw JSONB
+  )
+`).catch(err => {
+  console.error('Failed to ensure matches table', err);
+});
+
 module.exports = pool;
