@@ -58,4 +58,30 @@ pool.query(`
   console.error('Failed to ensure matches table', err);
 });
 
+// Cached teams and players from EA API
+pool.query(`
+  CREATE TABLE IF NOT EXISTS teams (
+    id BIGINT PRIMARY KEY,
+    name TEXT,
+    logo JSONB,
+    season JSONB,
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )
+`).catch(err => {
+  console.error('Failed to ensure teams table', err);
+});
+
+pool.query(`
+  CREATE TABLE IF NOT EXISTS players (
+    id SERIAL PRIMARY KEY,
+    club_id BIGINT REFERENCES teams(id),
+    name TEXT,
+    position TEXT,
+    stats JSONB,
+    updated_at TIMESTAMPTZ DEFAULT now()
+  )
+`).catch(err => {
+  console.error('Failed to ensure players table', err);
+});
+
 module.exports = pool;
