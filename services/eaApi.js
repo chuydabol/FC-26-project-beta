@@ -100,9 +100,23 @@ async function fetchPlayersForClub(clubId) {
   }
 }
 
+async function fetchPlayersForClubWithRetry(clubId, retries = 2) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fetchPlayersForClub(clubId);
+    } catch (err) {
+      attempt++;
+      if (attempt > retries) throw err;
+      await new Promise(r => setTimeout(r, 200 * attempt));
+    }
+  }
+}
+
 module.exports = {
   fetchClubLeagueMatches,
   fetchRecentLeagueMatches,
   fetchClubMembers,
-  fetchPlayersForClub
+  fetchPlayersForClub,
+  fetchPlayersForClubWithRetry
 };
