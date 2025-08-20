@@ -1,12 +1,12 @@
 const { Pool } = require('pg');
 
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL env var is required');
-}
-
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  connectionString:
+    process.env.DATABASE_URL ||
+    "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a:5432/upcl?sslmode=require",
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
 
 // Ensure fixtures table exists
