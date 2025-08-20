@@ -830,20 +830,25 @@ async function loadSquad(clubId){
   panel.style.display = 'block';
   body.textContent = 'Loading…';
   document.getElementById('squadTools').style.display = 'none';
-
-  if (!/^\d+$/.test(String(clubId))){
-    body.innerHTML = '<div class="muted">Squad not available.</div>';
-    return;
-  }
-
   try{
-    const { members } = await fetchClubMembers(clubId);
+    let members = [];
+    if (/^\d+$/.test(String(clubId))){
+      const { members: eaMembers } = await fetchClubMembers(clubId);
+      members = eaMembers || [];
+    } else {
+      const r = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/squad`, {credentials:'include'})
+        .then(res => res.ok ? res.json() : { slots: [] })
+        .catch(() => ({ slots: [] }));
+      members = r.slots
+        .filter(s => s.player && (s.player.eaName || s.player.name))
+        .map(s => ({ name: s.player.eaName || s.player.name || s.label }));
+    }
     if (!members.length){
-      body.innerHTML = '<div class="muted">No players found.</div>';
+      body.innerHTML = '<div class="muted">No players registered.</div>';
       return;
     }
     body.innerHTML = members.map(m=>{
-      const n = m.name || m.playername || m.proName || '';
+      const n = m.name || m.playername || m.proName || m.personaName || '';
       return `<div class="m-card" style="margin:6px 0">${escapeHtml(n)}</div>`;
     }).join('');
   }catch(e){
