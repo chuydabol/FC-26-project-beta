@@ -70,7 +70,10 @@ h2{margin:0 0 10px}
 }
 .team-meta{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
 .team-meta .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.trophy-badge{background:#e00;color:#fff;font-weight:700;padding:6px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 6px rgba(255,0,0,.6)}
+.team-meta .record{font-weight:700;font-size:14px}
+.player-list{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.player-row{display:flex;justify-content:space-between;border-bottom:1px solid #220000;padding:2px 0}
+.player-row:last-child{border-bottom:0}
 
 /* Generic card */
 .m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
@@ -543,23 +546,21 @@ const CC_ID = 'UPCL_CC_2025_08'; // current Champions Cup id
 const LEAGUE_ID = 'UPCL_LEAGUE_2025'; // current League id
 const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
 
-const TEAM_TITLES = {
-  '3638105': [
-    { count: 1, name: 'United Pro Clubs League Title' },
-    { count: 1, name: 'Leagues Cup' }
-  ]
-};
-
 // Teams (add FC Dhizz)
 let teams = [];
 async function loadTeams(){
   try{
-    const data = await apiGet('/api/teams');
-    teams = Array.isArray(data) ? data : [];
+    const data = await apiGet('/api/teams-with-players');
+    teams = Array.isArray(data?.teams) ? data.teams : [];
+    playersByClub = {};
+    teams.forEach(t => {
+      playersByClub[t.id] = Array.isArray(t.players) ? t.players : [];
+    });
     return true;
   }catch(e){
     console.error('Failed to load teams', e);
     teams = [];
+    playersByClub = {};
     teamsGrid.innerHTML = '<div class="muted">Failed to load teams</div>';
     return false;
   }
@@ -606,16 +607,6 @@ async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',h
 
 // players cache
 let playersByClub = {};
-let allPlayers = [];
-async function loadPlayers(){
-  try{
-    const d = await apiGet('/api/players');
-    allPlayers = Array.isArray(d?.members) ? d.members : [];
-    playersByClub = d?.byClub || {};
-  }catch{
-    allPlayers = []; playersByClub = {};
-  }
-}
 
 const playerNameCache = new Map();
 async function resolvePlayerName(id){
@@ -754,6 +745,12 @@ function renderTeams(){
     const card = document.createElement('div');
     card.className='team-card';
     card.setAttribute('role','listitem');
+    const record = team.season ? `${team.season.wins||0}-${team.season.ties||0}-${team.season.losses||0}` : '';
+    const playersHtml = (team.players||[]).map(p=>{
+      const n = p.name || p.playername || p.personaName || '';
+      const pos = p.position || p.preferredPosition || '';
+      return `<div class="player-row"><span>${escapeHtml(n)}</span><span class="muted">${escapeHtml(pos)}</span></div>`;
+    }).join('');
     card.innerHTML = `
       <img class="team-logo"
            src="${teamLogoUrl(team)}"
@@ -761,8 +758,9 @@ function renderTeams(){
            alt="${escapeHtml(team.name)} logo" />
       <div class="team-meta">
         <div class="name">${escapeHtml(team.name)}</div>
-        <div class="trophy-badge">${Array.isArray(TEAM_TITLES[team.id]) ? TEAM_TITLES[team.id].map(t=>`${t.count}x ${t.name}`).join(', ') : ''}</div>
+        <div class="record">${record}</div>
       </div>
+      <div class="player-list">${playersHtml}</div>
     `;
     card.addEventListener('click', ()=> showTeam(team));
     teamsGrid.appendChild(card);
@@ -1810,7 +1808,6 @@ async function computeNewsFromFixtures(list){
 // =======================
 async function init(){
 
-  const playerLoad = loadPlayers().catch(e => console.error('Failed to load players', e));
   const ok = await loadTeams();
   if (ok) renderTeams();
   await checkAdmin();
@@ -1821,7 +1818,6 @@ async function init(){
 
   await refreshFixturesPublic(); renderFixturesPublic();
   if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
-  await playerLoad;
   await loadFA();
 
   // hash-open team

@@ -54,6 +54,7 @@ function limit(fn) {
 // Cache for /api/players
 let _playersCache = { at: 0, data: null };
 const PLAYERS_TTL_MS = 60_000;
+const TEAM_CACHE_MS = 15 * 60 * 1000;
 
 // Fetch helper with logging
 async function fetchClubPlayers(clubId) {
@@ -104,6 +105,74 @@ app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
     return res
       .status(status)
       .json({ error: 'EA API request failed', details: msg });
+  }
+});
+
+// Cached teams with players
+app.get('/api/teams-with-players', async (_req, res) => {
+  try {
+    const { rows: cacheRows } = await pool.query(
+      'SELECT MAX(updated_at) AS updated_at FROM teams'
+    );
+    const latest = cacheRows[0]?.updated_at;
+    let needsRefresh = true;
+    if (latest) {
+      const age = Date.now() - new Date(latest).getTime();
+      needsRefresh = age > TEAM_CACHE_MS;
+    }
+
+    const clubIds = DEFAULT_CLUB_IDS;
+
+    if (needsRefresh) {
+      const infoUrl =
+        'https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=' +
+        clubIds.join(',');
+      const infoRes = await fetchFn(infoUrl, { headers: EA_HEADERS });
+      const infoData = await infoRes.json();
+
+      for (const id of clubIds) {
+        const club = infoData?.[id];
+        if (!club) continue;
+
+        const memRes = await fetchFn(
+          `https://proclubs.ea.com/api/fc/clubs/members?platform=common-gen5&clubId=${id}`,
+          { headers: EA_HEADERS }
+        );
+        const memData = await memRes.json();
+        const players = Array.isArray(memData.members) ? memData.members : [];
+
+        await pool.query(
+          `INSERT INTO teams (id, name, logo, season, updated_at)
+           VALUES ($1,$2,$3,$4,now())
+           ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, logo=EXCLUDED.logo, season=EXCLUDED.season, updated_at=now()`,
+          [id, club.name, club.customLogo, club.season]
+        );
+
+        await pool.query('DELETE FROM players WHERE club_id=$1', [id]);
+        for (const p of players) {
+          const name = p.name || p.playername || p.personaName || '';
+          const pos = p.position || p.preferredPosition || '';
+          await pool.query(
+            'INSERT INTO players (club_id, name, position, stats, updated_at) VALUES ($1,$2,$3,$4,now())',
+            [id, name, pos, p]
+          );
+        }
+      }
+    }
+
+    const { rows } = await pool.query(
+      `SELECT t.id, t.name, t.logo, t.season,
+              COALESCE(json_agg(json_build_object('name', p.name, 'position', p.position, 'stats', p.stats) ORDER BY p.id) FILTER (WHERE p.id IS NOT NULL), '[]') AS players
+       FROM teams t
+       LEFT JOIN players p ON p.club_id = t.id
+       GROUP BY t.id, t.name, t.logo, t.season
+       ORDER BY t.id`
+    );
+
+    res.json({ ok: true, teams: rows });
+  } catch (err) {
+    console.error('Failed to load teams with players', err);
+    res.status(500).json({ ok: false, error: 'Failed to load teams' });
   }
 });
 
