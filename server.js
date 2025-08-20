@@ -108,6 +108,19 @@ app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
   }
 });
 
+// Basic teams listing
+app.get('/api/teams', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM teams ORDER BY updated_at DESC LIMIT 20'
+    );
+    res.json({ ok: true, teams: rows });
+  } catch (err) {
+    console.error('Failed to load teams:', err);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // Cached teams with players
 app.get('/api/teams-with-players', async (_req, res) => {
   try {
