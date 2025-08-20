@@ -20,5 +20,8 @@
   { "id": "jids-trivela",  "name": "Jids Trivela",  "logo": "/assets/logos/jids-trivela.png" },
   { "id": "razorblack-fc", "name": "Razorblack FC", "logo": "/assets/logos/razorblack-fc.png" },
   { "id": "fc-dhizz",      "name": "FC Dhizz",      "logo": "/assets/logos/fc-dhizz.png" },
+
   { "id": "elite-xi",      "name": "Elite xi",      "logo": "/assets/logos/elite-xi.png" }
+=======
+  { "id": "Elite-xi",      "name": "Elite xi",      "logo": "/assets/logos/elite-xi.png" }
 ]

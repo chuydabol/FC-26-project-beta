@@ -562,6 +562,10 @@ async function loadTeams(){
     teams = [];
     teamsGrid.innerHTML = '<div class="muted">Failed to load teams</div>';
     return false;
+=======
+  }catch{
+    teams = [];
+
   }
 }
 
@@ -1806,9 +1810,14 @@ async function computeNewsFromFixtures(list){
 //   INIT
 // =======================
 async function init(){
+
   const playerLoad = loadPlayers().catch(e => console.error('Failed to load players', e));
   const ok = await loadTeams();
   if (ok) renderTeams();
+
+  await loadTeams();
+  await loadPlayers();
+  renderTeams();
   await checkAdmin();
   await checkMe();
 
