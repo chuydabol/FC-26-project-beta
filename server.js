@@ -72,6 +72,27 @@ const CUP_POINTS = { winner:60, runner_up:40, semifinal:25, quarterfinal:15, rou
 const DISCORD_WEBHOOK_CC  = process.env.DISCORD_WEBHOOK_CC || '';
 const DISCORD_CRON_SECRET = process.env.DISCORD_CRON_SECRET || ''; // for /api/discord/cc/auto
 
+// Default EA club IDs for league-wide player fetches
+const DEFAULT_CLUB_IDS = (process.env.LEAGUE_CLUB_IDS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+// Simple concurrency limiter for EA API calls
+const MAX_CONCURRENCY = Number(process.env.MAX_CONCURRENCY || 3);
+let inFlight = 0;
+const limit = fn => async (...args) => {
+  while (inFlight >= MAX_CONCURRENCY) {
+    await new Promise(r => setTimeout(r, 25));
+  }
+  inFlight++;
+  try {
+    return await fn(...args);
+  } finally {
+    inFlight--;
+  }
+};
+
 // -----------------------------
 // Express app
 // -----------------------------
@@ -472,38 +493,40 @@ app.get('/api/players', wrap(async (req,res)=>{
   const clubIds = Array.isArray(q)
     ? q
     : String(q).split(',').map(s=>s.trim()).filter(Boolean);
-  if (!clubIds.length) return res.status(400).json({ error:'clubId required' });
+  const ids = clubIds.length ? clubIds : DEFAULT_CLUB_IDS;
+  if (!ids.length) return res.status(400).json({ error:'clubId required' });
 
-  const results = await Promise.all(clubIds.map(id =>
-    eaApi.fetchPlayersForClub(id).catch(err => {
+  const fetchClub = limit(eaApi.fetchPlayersForClub);
+  const results = await Promise.all(ids.map(id =>
+    fetchClub(id).catch(err => {
       console.error('fetchPlayersForClub failed', id, err);
       return null;
     })
   ));
 
-  const all = [];
-  for (const r of results) {
-    if (!r) continue;
-    const members = Array.isArray(r)
+  const byClub = {};
+  const unique = new Map();
+  ids.forEach((id, idx) => {
+    const r = results[idx];
+    const members = !r ? [] : Array.isArray(r)
       ? r
       : Array.isArray(r.members)
         ? r.members
         : r.members
           ? Object.values(r.members)
           : [];
-    all.push(...members);
-  }
+    byClub[id] = members;
+    for (const p of members) {
+      const name = p?.name || p?.playername || p?.personaName;
+      if (!name) continue;
+      const posCode = p?.preferredPosition ?? p?.position ?? p?.role;
+      const role = proPos[String(posCode)] || proPos[Number(posCode)] || posCode;
+      if (!unique.has(name)) unique.set(name, { ...p, name, role });
+    }
+  });
 
-  const unique = new Map();
-  for (const p of all) {
-    const name = p?.name || p?.playername || p?.personaName;
-    if (!name) continue;
-    const posCode = p?.preferredPosition ?? p?.position ?? p?.role;
-    const role = proPos[String(posCode)] || proPos[Number(posCode)] || posCode;
-    if (!unique.has(name)) unique.set(name, { ...p, name, role });
-  }
-
-  res.json(Array.from(unique.values()));
+  res.set('Cache-Control','public, max-age=60');
+  res.json({ members: Array.from(unique.values()), byClub });
 }));
 
 // -----------------------------

@@ -4,8 +4,15 @@
 
 ### `GET /api/players`
 
-Returns players from one or more EA Pro Clubs. Provide club IDs as a comma-separated
-`clubId` query parameter, e.g. `/api/players?clubId=123,456`.
+Fetch players from EA Pro Clubs. You may pass one or more club IDs as a comma-separated
+`clubId`/`clubIds` query string. If omitted, the server falls back to the
+`LEAGUE_CLUB_IDS` environment variable.
 
-The server fetches each club, maps position codes using `proPos`, removes duplicates by
-name, and responds with the combined player list.
+The response shape is `{ members: [], byClub: { [clubId]: [] } }` where `members` is the
+deduplicated union list and `byClub` maps each club ID to its members. Results are cached
+for 60 seconds.
+
+#### Environment
+
+`LEAGUE_CLUB_IDS` – comma-separated default club IDs used when the route is called
+without specifying a `clubId`.
