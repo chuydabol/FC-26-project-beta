@@ -607,6 +607,19 @@ async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 
+// players cache
+let playersByClub = {};
+let allPlayers = [];
+async function loadPlayers(){
+  try{
+    const d = await apiGet('/api/players');
+    allPlayers = Array.isArray(d?.members) ? d.members : [];
+    playersByClub = d?.byClub || {};
+  }catch{
+    allPlayers = []; playersByClub = {};
+  }
+}
+
 const playerNameCache = new Map();
 async function resolvePlayerName(id){
   if(!id) return '';
@@ -623,21 +636,7 @@ async function resolvePlayerName(id){
 }
 
 async function fetchClubMembers(clubId){
-  if (!/^\d+$/.test(String(clubId))) return { members: [] };
-  try{
-    const raw = await apiGet(`/api/ea/clubs/${encodeURIComponent(clubId)}/members`);
-    if (Array.isArray(raw)) return { members: raw };
-    if (Array.isArray(raw?.members)) return raw;
-    if (raw?.members && typeof raw.members === 'object') {
-      return { members: Object.values(raw.members) };
-    }
-    return { members: [] };
-  }catch(e){
-    const m = String(e.message||'');
-    const match = /^HTTP (\d+)/.exec(m);
-    const status = match ? Number(match[1]) : e.status;
-    throw Object.assign(new Error(m), { status });
-  }
+  return { members: playersByClub[clubId] || [] };
 }
 
 // nav elements
@@ -1813,6 +1812,7 @@ async function computeNewsFromFixtures(list){
 //   INIT
 // =======================
 async function init(){
+  await loadPlayers();
   renderTeams();
   await checkAdmin();
   await checkMe();
