@@ -176,7 +176,7 @@ h2{margin:0 0 10px}
 <body>
 <div id="intro">
     <img src="/assets/logos/UPCL.png" alt="League logo">
-  <audio id="introAudio" src="/assets/intro.mp3"></audio>
+  <audio id="introAudio" src="/intro.mp3"></audio>
 </div>
 <header>
   <h1>Pro Club — League Hub</h1>
@@ -562,9 +562,6 @@ async function loadTeams(){
     teams = [];
     teamsGrid.innerHTML = '<div class="muted">Failed to load teams</div>';
     return false;
-  }catch{
-    teams = [];
-
   }
 }
 
@@ -584,7 +581,10 @@ function replaceClubIds(str){
   });
 }
 function teamLogoUrl(team){ return team?.logo || `https://via.placeholder.com/800x480.png?text=${encodeURIComponent(team?.name||'Club')}`; }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function escapeHtml(s){
+  const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+  return String(s).replace(/[&<>"']/g, c => map[c]);
+}
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
 function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
 function getFixtureBanner(){ return '/assets/ui/fixture-banner.png'; }
@@ -1813,10 +1813,6 @@ async function init(){
   const playerLoad = loadPlayers().catch(e => console.error('Failed to load players', e));
   const ok = await loadTeams();
   if (ok) renderTeams();
-
-  await loadTeams();
-  await loadPlayers();
-  renderTeams();
   await checkAdmin();
   await checkMe();
 
