@@ -1,13 +1,11 @@
+// db.js
 const { Pool } = require('pg');
 
+// Use internal connection string (no SSL required inside Render)
 const pool = new Pool({
   connectionString:
     process.env.DATABASE_URL ||
-    "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a:5432/upcl",
-  ssl: {
-    require: true,
-    rejectUnauthorized: false, // ✅ allows self-signed certs
-  },
+    "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a/upcl",
 });
 
 // Ensure fixtures table exists
