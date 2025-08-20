@@ -8,8 +8,18 @@ const pool = new Pool({
     "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a/upcl",
 });
 
+function ensureTable(sql, name) {
+  return pool
+    .query(sql)
+    .then(() => console.log(`Ensured ${name} table`))
+    .catch(err => {
+      console.error(`Failed to ensure ${name} table`, err);
+    });
+}
+
 // Ensure fixtures table exists
-pool.query(`
+ensureTable(
+  `
   CREATE TABLE IF NOT EXISTS fixtures (
     id TEXT PRIMARY KEY,
     home TEXT NOT NULL,
@@ -20,32 +30,35 @@ pool.query(`
     league_id TEXT,
     played_at TIMESTAMPTZ
   )
-`).catch(err => {
-  console.error('Failed to ensure fixtures table', err);
-});
+`,
+  'fixtures'
+);
 
 // Store league metadata (teams, etc.)
-pool.query(`
+ensureTable(
+  `
   CREATE TABLE IF NOT EXISTS leagues (
     id TEXT PRIMARY KEY,
     details JSONB
   )
-`).catch(err => {
-  console.error('Failed to ensure leagues table', err);
-});
+`,
+  'leagues'
+);
 
 // Track last fetched EA match per club
-pool.query(`
+ensureTable(
+  `
   CREATE TABLE IF NOT EXISTS ea_last_matches (
     club_id TEXT PRIMARY KEY,
     last_match_id TEXT
   )
-`).catch(err => {
-  console.error('Failed to ensure ea_last_matches table', err);
-});
+`,
+  'ea_last_matches'
+);
 
 // Recent match history fetched from EA API
-pool.query(`
+ensureTable(
+  `
   CREATE TABLE IF NOT EXISTS matches (
     id BIGINT PRIMARY KEY,
     timestamp TIMESTAMPTZ,
@@ -53,12 +66,13 @@ pool.query(`
     players JSONB,
     raw JSONB
   )
-`).catch(err => {
-  console.error('Failed to ensure matches table', err);
-});
+`,
+  'matches'
+);
 
 // Cached teams and players from EA API
-pool.query(`
+ensureTable(
+  `
   CREATE TABLE IF NOT EXISTS teams (
     id BIGINT PRIMARY KEY,
     name TEXT,
@@ -66,11 +80,12 @@ pool.query(`
     season JSONB,
     updated_at TIMESTAMPTZ DEFAULT now()
   )
-`).catch(err => {
-  console.error('Failed to ensure teams table', err);
-});
+`,
+  'teams'
+);
 
-pool.query(`
+ensureTable(
+  `
   CREATE TABLE IF NOT EXISTS players (
     id SERIAL PRIMARY KEY,
     club_id BIGINT REFERENCES teams(id),
@@ -79,8 +94,8 @@ pool.query(`
     stats JSONB,
     updated_at TIMESTAMPTZ DEFAULT now()
   )
-`).catch(err => {
-  console.error('Failed to ensure players table', err);
-});
+`,
+  'players'
+);
 
 module.exports = pool;
