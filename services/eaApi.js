@@ -1,4 +1,5 @@
-const fetch = require('node-fetch');
+const fetch = (...args) =>
+  import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 async function fetchClubLeagueMatches(clubIds) {
   const ids = Array.isArray(clubIds) ? clubIds : [clubIds];
