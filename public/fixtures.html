@@ -13,41 +13,6 @@
   <div id="fixtures"></div>
 
   <script>
-
-    const EA_HEADERS = {
-      "User-Agent": "Mozilla/5.0",
-      "Accept": "application/json",
-      "Referer": "https://www.ea.com/",
-      "Connection": "keep-alive"
-    };
-
-    async function getClubIds() {
-      try {
-        const res = await fetch('/api/teams');
-        if (!res.ok) throw new Error('failed');
-        const data = await res.json();
-        return (data.teams || []).map(t => t.id).filter(Boolean);
-      } catch (err) {
-        console.error('Failed to load club ids', err);
-        return [];
-      }
-    }
-
-    async function fetchClubMatches(id) {
-      const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${id}`;
-      const res = await fetch(url, { headers: EA_HEADERS });
-      if (!res.ok) throw new Error('EA request failed');
-      const data = await res.json();
-      return data[id] || [];
-    }
-
-    async function fetchMatches() {
-      const res = await fetch('/api/matches');
-      if (!res.ok) throw new Error('Failed to fetch matches');
-      return res.json();
-
-    }
-
     function renderMatches(matches) {
       const container = document.getElementById('fixtures');
       container.innerHTML = '';
@@ -66,49 +31,12 @@
         });
     }
 
-
-    async function loadMatches() {
-      const clubIds = await getClubIds();
-      const all = [];
-      for (const id of clubIds) {
-        try {
-          const m = await fetchClubMatches(id);
-          all.push(...m);
-        } catch (err) {
-          console.error('Failed to fetch matches for', id, err);
-        }
-        await new Promise(r => setTimeout(r, 1500));
-      }
-
-      renderMatches(all);
-
-      try {
-        await fetch('/api/saveMatches', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(all)
-        });
-      } catch (err) {
-        console.error('Failed to store matches', err);
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadMatches();
-      setInterval(loadMatches, 15 * 60 * 1000);
+    document.addEventListener("DOMContentLoaded", () => {
+      fetch("/api/matches")
+        .then(res => res.json())
+        .then(data => renderMatches(data))
+        .catch(err => console.error("Error fetching matches:", err));
     });
-      
-    async function load() {
-      try {
-        const matches = await fetchMatches();
-        renderMatches(matches);
-        console.log('Fetched matches:', matches);
-      } catch (e) {
-        console.error('Error fetching matches:', e);
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', load);
   </script>
 </body>
 </html>
