@@ -2,7 +2,10 @@ const { test, mock } = require('node:test');
 const assert = require('assert');
 
 process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
+
 process.env.LEAGUE_CLUB_IDS = '111,222';
+
+
 
 const eaApi = require('../services/eaApi');
 const app = require('../server');
@@ -16,6 +19,7 @@ async function withServer(fn) {
     server.close();
   }
 }
+
 
 test('aggregates and normalizes matches from multiple clubs', async () => {
   const stub = mock.method(
@@ -78,10 +82,24 @@ test('aggregates and normalizes matches from multiple clubs', async () => {
     }
   );
 
+test('aggregates matches from multiple clubs', async () => {
+  const stub = mock.method(eaApi, 'fetchClubLeagueMatches', async () => ({
+    '111': [
+      { matchId: '1', timestamp: 1, clubs: { a: { name: 'A', score: '1' }, b: { name: 'B', score: '0' } }, players: {} },
+      { matchId: '2', timestamp: 2, clubs: {}, players: {} }
+    ],
+    '222': [
+      { matchId: '2', timestamp: 2, clubs: {}, players: {} },
+      { matchId: '3', timestamp: 3, clubs: {}, players: {} }
+    ]
+  }));
+
+
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/ea/matches`);
     const body = await res.json();
     assert.deepStrictEqual(body, [
+
       {
         matchId: '1',
         timestamp: 1,
@@ -113,6 +131,11 @@ test('aggregates and normalizes matches from multiple clubs', async () => {
         awayClub: { id: 'f', name: 'F', score: 1 },
         players: [],
       },
+
+      { matchId: '1', timestamp: 1, clubs: { a: { name: 'A', score: '1' }, b: { name: 'B', score: '0' } }, players: {} },
+      { matchId: '2', timestamp: 2, clubs: {}, players: {} },
+      { matchId: '3', timestamp: 3, clubs: {}, players: {} }
+
     ]);
   });
 
