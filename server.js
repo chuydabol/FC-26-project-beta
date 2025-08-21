@@ -279,26 +279,28 @@ function normalizeMatch(m) {
   };
 }
 
+function normalizeMatches(res, clubId) {
+  const arr = res?.[clubId];
+  if (!Array.isArray(arr)) return [];
+  return arr.map(normalizeMatch).filter(Boolean);
+}
+
 // Aggregate recent matches for default club list
 app.get('/api/ea/matches', async (_req, res) => {
   try {
     const map = new Map();
     for (const id of CLUB_IDS) {
       try {
-        const arr = await eaApi.fetchRecentLeagueMatches(id);
-        if (Array.isArray(arr)) {
-          arr.forEach(m => {
-            if (!map.has(m.matchId)) map.set(m.matchId, m);
-          });
+        const data = await eaApi.fetchClubLeagueMatches(id);
+        const matches = normalizeMatches(data, id);
+        for (const m of matches) {
+          if (!map.has(m.matchId)) map.set(m.matchId, m);
         }
       } catch (err) {
-        console.error('EA matches fetch failed for club', id, err.message || err);
+        console.error(`Failed fetching club ${id}:`, err.message || err);
       }
     }
-    const normalized = Array.from(map.values())
-      .map(normalizeMatch)
-      .filter(Boolean);
-    res.json(normalized);
+    res.json(Array.from(map.values()));
   } catch (err) {
     console.error('EA matches fetch failed', err.message || err);
     res
