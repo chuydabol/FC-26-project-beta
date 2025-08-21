@@ -686,13 +686,6 @@ let friendliesFxCache  = [];
 let friendliesTeams    = [];
 let matchesCache       = [];
 
-// numeric club ids for league teams – used when fetching matches
-const LEAGUE_CLUB_IDS = [
-  "2491998","1527486","1969494","2086022","2462194","5098824",
-  "4869810","576007","4933507","4824736","481847","3050467",
-  "4154835","3638105","55408","4819681","35642"
-];
-
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -989,38 +982,30 @@ const matchesList = document.getElementById('matchesList');
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 
 async function refreshMatches(){
-  const byId = {};
-  for (const id of LEAGUE_CLUB_IDS){
-    try{
-      const url = `/api/ea/clubs/${id}/matches`;
-      const res = await fetch(url);
-      if(!res.ok) throw new Error('EA '+res.status);
-      const data = await res.json();
-      const arr = data?.[id] || [];
-      for(const m of arr){ byId[m.matchId] = m; }
-    }catch(err){
-      console.error('EA fetch failed', id, err);
-    }
-    await new Promise(r=>setTimeout(r,300));
+  try{
+    const res = await fetch('/api/matches');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    matchesCache = await res.json();
+  }catch(err){
+    console.error('Matches fetch failed', err);
+    matchesCache = [];
+  }finally{
+    renderMatches();
   }
-  matchesCache = Object.values(byId);
-  renderMatches();
-  // persist after rendering
-  fetch('/api/saveMatches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(matchesCache) })
-    .then(res => res.json())
-    .then(out => console.log('Saved matches:', out))
-    .catch(err => console.error('Save failed:', err));
 }
 function renderMatches(){
   const list = matchesCache.slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
   matchesList.innerHTML = list.length ? list.map(m=>{
-    const id = m.matchId || m.id;
+    const id = m.matchId;
     const date = fmtDate(m.timestamp);
     const hn = m.clubs?.home?.name || '';
     const an = m.clubs?.away?.name || '';
     const hs = m.clubs?.home?.score ?? '';
     const as = m.clubs?.away?.score ?? '';
-    return `<div class="fx"><div><strong>Match ${escapeHtml(id)}</strong><div class="meta">Date: ${escapeHtml(date)}</div><div class="fx-vs"><span class="fx-team"><span>${escapeHtml(hn)}</span></span><span class="muted">${escapeHtml(hs)} – ${escapeHtml(as)}</span><span class="fx-team"><span>${escapeHtml(an)}</span></span></div></div></div>`;
+    const hp = (m.players?.home || []).map(p=>escapeHtml(p.name || p.playername || p.personaName || p.id || '')).join(', ');
+    const ap = (m.players?.away || []).map(p=>escapeHtml(p.name || p.playername || p.personaName || p.id || '')).join(', ');
+    const playersHtml = hp || ap ? `<div class="meta">${hp} • ${ap}</div>` : '';
+    return `<div class="fx"><div><strong>Match ${escapeHtml(id)}</strong><div class="meta">Date: ${escapeHtml(date)}</div><div class="fx-vs"><span class="fx-team"><span>${escapeHtml(hn)}</span></span><span class="muted">${escapeHtml(hs)} – ${escapeHtml(as)}</span><span class="fx-team"><span>${escapeHtml(an)}</span></span></div>${playersHtml}</div></div>`;
   }).join('') : `<div class="muted">No matches.</div>`;
 }
 
