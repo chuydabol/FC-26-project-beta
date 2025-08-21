@@ -39,6 +39,7 @@
       if (!res.ok) throw new Error('EA request failed');
       const data = await res.json();
       return data[id] || [];
+    }
 
     async function fetchMatches() {
       const res = await fetch('/api/matches');
@@ -101,8 +102,9 @@
       try {
         const matches = await fetchMatches();
         renderMatches(matches);
+        console.log('Fetched matches:', matches);
       } catch (e) {
-        console.error(e);
+        console.error('Error fetching matches:', e);
       }
     }
 
