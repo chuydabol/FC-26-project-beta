@@ -2,7 +2,17 @@ const express = require('express');
 const path = require('path');
 const pool = require('./db');
 const eaApi = require('./services/eaApi');
+const { saveLeagueMatches } = require('./services/matches');
 const { isNumericId } = require('./utils');
+
+// Minimal cron-like scheduler using setInterval
+const cron = {
+  schedule: (_expr, fn) => {
+    const t = setInterval(fn, 10 * 60 * 1000);
+    if (typeof t.unref === 'function') t.unref();
+    return t;
+  }
+};
 
 // Fallback fetch for environments without global fetch
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
@@ -16,6 +26,15 @@ const DEFAULT_CLUB_IDS = (
   .split(',')
   .map(s => s.trim())
   .filter(isNumericId);
+
+const CLUB_IDS = DEFAULT_CLUB_IDS.slice();
+cron.schedule('*/10 * * * *', () => {
+  CLUB_IDS.forEach(id =>
+    saveLeagueMatches(id, pool).catch(err =>
+      console.error('Failed to save matches for club', id, err.message || err)
+    )
+  );
+});
 
 // Browser-like headers for EA API
 const EA_HEADERS = {
@@ -152,11 +171,16 @@ app.get('/api/teams', async (_req, res) => {
 });
 
 // Recent matches served from Postgres
-app.get('/api/matches', async (_req, res) => {
+app.get('/api/leagues/:leagueId/matches', async (req, res) => {
+  const { leagueId } = req.params;
   const { rows } = await pool.query(
-    'SELECT id, timestamp, clubs, players FROM matches ORDER BY timestamp DESC LIMIT 50'
+    `SELECT * FROM matches
+     WHERE raw->'clubIds' ? $1
+     ORDER BY matchDate DESC
+     LIMIT 50`,
+    [leagueId]
   );
-  res.json({ matches: rows });
+  res.json(rows);
 });
 
 // Aggregate players from league

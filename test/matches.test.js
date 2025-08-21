@@ -4,11 +4,16 @@ const assert = require('assert');
 process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 
 const pool = require('../db');
-const queryStub = mock.method(pool, 'query', async sql => {
+const queryStub = mock.method(pool, 'query', async (sql, params) => {
   if (/FROM matches/i.test(sql)) {
     return {
       rows: [
-        { id: 1, timestamp: '2024-01-01T00:00:00Z', clubs: {}, players: {} }
+        {
+          id: '1',
+          matchdate: '2024-01-01T00:00:00Z',
+          clubids: ['123'],
+          raw: { clubIds: ['123'] }
+        }
       ]
     };
   }
@@ -27,13 +32,20 @@ async function withServer(fn) {
   }
 }
 
-test('serves recent matches from db', async () => {
+test('serves league matches from db', async () => {
   await withServer(async port => {
-    const res = await fetch(`http://localhost:${port}/api/matches`);
+    const res = await fetch(
+      `http://localhost:${port}/api/leagues/123/matches`
+    );
     const body = await res.json();
-    assert.deepStrictEqual(body, {
-      matches: [{ id: 1, timestamp: '2024-01-01T00:00:00Z', clubs: {}, players: {} }]
-    });
+    assert.deepStrictEqual(body, [
+      {
+        id: '1',
+        matchdate: '2024-01-01T00:00:00Z',
+        clubids: ['123'],
+        raw: { clubIds: ['123'] }
+      }
+    ]);
   });
   queryStub.mock.restore();
 });
