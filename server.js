@@ -410,20 +410,28 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 if (require.main === module) {
-  const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`Server running on ${PORT}`);
-    if (process.env.NODE_ENV !== 'test') {
-      (async () => {
-        try {
-          await refreshAllMatches();
-          console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
-        } catch (err) {
-          console.error(`[${new Date().toISOString()}] ❌ Initial sync error:`, err.message);
+  (async () => {
+    try {
+      await pool.initDb();
+      const PORT = process.env.PORT || 3001;
+      app.listen(PORT, () => {
+        console.log(`Server running on ${PORT}`);
+        if (process.env.NODE_ENV !== 'test') {
+          (async () => {
+            try {
+              await refreshAllMatches();
+              console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
+            } catch (err) {
+              console.error(`[${new Date().toISOString()}] ❌ Initial sync error:`, err.message);
+            }
+          })();
         }
-      })();
+      });
+    } catch (err) {
+      console.error('Failed to initialize database', err);
+      process.exit(1);
     }
-  });
+  })();
 }
 
 module.exports = app;
