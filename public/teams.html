@@ -365,7 +365,7 @@ h2{margin:0 0 10px}
   <!-- FIXTURES (PUBLIC) -->
   <section id="fixtures-public" style="display:none">
     <h2>Fixtures</h2>
-    <div id="matchesList" class="fx-list" style="margin-top:10px"></div>
+    <div id="fixtures" class="fx-list" style="margin-top:10px"></div>
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
@@ -684,8 +684,6 @@ let fixturesPublicCache = [];
 let fixturesSchedCache  = [];
 let friendliesFxCache  = [];
 let friendliesTeams    = [];
-const CLUB_IDS = [35642, 3638105, 1527486, 55408];
-let matchesCache       = [];
 
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -979,70 +977,36 @@ document.getElementById('btnUnlistFA').onclick = async ()=>{
 // =======================
 //   FIXTURES — PUBLIC
 // =======================
-const matchesList = document.getElementById('matchesList');
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 
 async function refreshMatches() {
-  matchesCache = [];
-
-  for (const id of CLUB_IDS) {
-    try {
-      const res = await fetch(`/api/ea/matches/${id}`);
-      if (!res.ok) throw new Error(`Failed for club ${id}`);
-      const data = await res.json();
-
-      if (Array.isArray(data)) {
-        matchesCache.push(...data);
-      } else {
-        console.warn(`Unexpected format for club ${id}`, data);
-      }
-    } catch (err) {
-      console.error(`Club ${id} fetch failed`, err);
-    }
-  }
-
-  renderMatches();
-
   try {
-    await fetch('/api/saveMatches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(matchesCache)
-    });
+    const res = await fetch('/api/matches');
+    const matches = await res.json();
+    renderMatches(matches);
   } catch (err) {
-    console.error('Failed to save matches', err);
+    console.error('Failed to load matches', err);
   }
 }
 
-function renderMatches() {
-  matchesList.innerHTML = '';
-
-  if (!matchesCache.length) {
-    matchesList.innerHTML = '<p>No matches yet.</p>';
+function renderMatches(matches) {
+  const container = document.querySelector('#fixtures');
+  container.innerHTML = '';
+  if (!Array.isArray(matches) || !matches.length) {
+    container.innerHTML = '<p>No matches yet.</p>';
     return;
   }
-
-  matchesCache.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-
-  for (const match of matchesCache) {
+  matches.forEach(m => {
+    const teams = Object.values(m.clubs || {});
+    if (teams.length < 2) return;
     const card = document.createElement('div');
     card.className = 'match-card';
-
-    const home = match.clubs ? Object.values(match.clubs)[0]?.name || 'Home' : 'Home';
-    const away = match.clubs ? Object.values(match.clubs)[1]?.name || 'Away' : 'Away';
-    const score = `${Object.values(match.clubs || {})[0]?.score ?? 0} - ${Object.values(match.clubs || {})[1]?.score ?? 0}`;
-    const date = match.timestamp ? new Date(match.timestamp * 1000).toLocaleString() : 'Unknown';
-
     card.innerHTML = `
-      <div class="match-info">
-        <span class="teams">${home} vs ${away}</span>
-        <span class="score">${score}</span>
-        <span class="date">${date}</span>
-      </div>
+      <div>${teams[0].name} ${teams[0].score} - ${teams[1].score} ${teams[1].name}</div>
+      <small>${new Date(m.timestamp * 1000).toLocaleString()}</small>
     `;
-
-    matchesList.appendChild(card);
-  }
+    container.appendChild(card);
+  });
 }
 
 async function refreshFixturesPublic(){

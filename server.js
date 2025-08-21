@@ -124,6 +124,17 @@ async function fetchClubPlayers(clubId) {
   }
 }
 
+async function fetchClubLeagueMatches(clubId) {
+  const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
+  const fetcher =
+    global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
+  const res = await fetcher(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  if (!res.ok)
+    throw new Error(`Failed fetching club ${clubId}, status: ${res.status}`);
+  const data = await res.json();
+  return data?.[clubId] || [];
+}
+
 const app = express();
 app.set('trust proxy', 1);
 app.use(cors({ origin: '*' }));
@@ -253,16 +264,31 @@ app.get('/api/teams', async (_req, res) => {
   }
 });
 
-// Serve matches stored in Postgres
+// Fetch recent matches for the configured clubs
 app.get('/api/matches', async (_req, res) => {
   try {
-    const { rows } = await pool.query(
-      'SELECT id AS "matchId", timestamp, clubs, players FROM matches ORDER BY timestamp DESC LIMIT 50'
-    );
-    res.json(rows);
+    const seen = new Set();
+    const allMatches = [];
+
+    for (const clubId of CLUB_IDS) {
+      const eaMatches = await fetchClubLeagueMatches(clubId);
+      eaMatches.forEach(match => {
+        if (!seen.has(match.matchId)) {
+          allMatches.push({
+            matchId: match.matchId,
+            timestamp: match.timestamp,
+            clubs: match.clubs,
+            players: match.players
+          });
+          seen.add(match.matchId);
+        }
+      });
+    }
+
+    res.json(allMatches.sort((a, b) => b.timestamp - a.timestamp));
   } catch (err) {
-    console.error('DB fetch failed:', err);
-    res.status(500).json({ error: 'DB fetch failed' });
+    console.error('EA matches fetch failed', err);
+    res.status(500).json({ error: 'Failed to fetch matches' });
   }
 });
 
