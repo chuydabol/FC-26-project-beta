@@ -23,7 +23,6 @@ const pool = require('./db');
 const eaApi = require('./services/eaApi');
 const { isNumericId } = require('./utils');
 
-const { fetchAndStoreMatches } = require('./utils/matches');
 let cron;
 try {
   cron = require('node-cron');
@@ -38,34 +37,51 @@ try {
   };
 }
 
-
 // Fallback fetch for environments without global fetch
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
 
-// Default club list from teams metadata
-const TEAM_META = require('./data/teams.json');
-const DEFAULT_CLUB_IDS = (
-  process.env.LEAGUE_CLUB_IDS ||
-  TEAM_META.filter(t => isNumericId(t.id)).map(t => t.id).join(',')
-)
-  .split(',')
-  .map(s => s.trim())
-  .filter(isNumericId);
+// Explicit club list used for league operations
+const CLUB_IDS = [
+  '2491998', // Royal Republic
+  '1527486', // Gungan FC
+  '1969494', // Club Frijol
+  '2086022', // Brehemen
+  '2462194', // Costa Chica FC
+  '5098824', // Sporting de la ma
+  '4869810', // Afc Tekki
+  '576007', // Ethabella FC
+  '481847', // Rooney tunes
+  '3050467', // invincible afc
+  '4933507', // Loss Toyz
+  '4824736', // GoldenGoals FC
+  '4154835', // khalch Fc
+  '3638105', // Real mvc
+  '55408', // Elite VT
+  '4819681', // EVERYTHING DEAD
+  '35642' // EBK FC
+];
 
+const CLUB_NAMES = {
+  '2491998': 'Royal Republic',
+  '1527486': 'Gungan FC',
+  '1969494': 'Club Frijol',
+  '2086022': 'Brehemen',
+  '2462194': 'Costa Chica FC',
+  '5098824': 'Sporting de la ma',
+  '4869810': 'Afc Tekki',
+  '576007': 'Ethabella FC',
+  '4933507': 'Loss Toyz',
+  '4824736': 'GoldenGoals FC',
+  '481847': 'Rooney tunes',
+  '3050467': 'invincible afc',
+  '4154835': 'khalch Fc',
+  '3638105': 'Real mvc',
+  '55408': 'Elite VT',
+  '4819681': 'EVERYTHING DEAD',
+  '35642': 'EBK FC'
+};
 
-
-const CLUB_IDS = DEFAULT_CLUB_IDS.slice();
-
-function fetchMatchesJob() {
-  return fetchAndStoreMatches(CLUB_IDS, pool).catch(err =>
-    console.error('Failed to fetch/store matches', err.message || err)
-  );
-}
-
-if (process.env.NODE_ENV !== 'test') {
-  fetchMatchesJob();
-  cron.schedule('*/15 * * * *', fetchMatchesJob);
-}
+const DEFAULT_CLUB_IDS = CLUB_IDS.slice();
 
 
 // Browser-like headers for EA API
@@ -133,6 +149,151 @@ async function fetchClubLeagueMatches(clubId) {
     throw new Error(`Failed fetching club ${clubId}, status: ${res.status}`);
   const data = await res.json();
   return data?.[clubId] || [];
+}
+
+// --- Match utilities backed by Postgres ---
+const LEAGUE_START_DATE = new Date('2025-07-23T07:00:00Z');
+
+function isAfterLeagueStart(match) {
+  const ts = match.timestamp || match.matchTimestamp;
+  if (!ts) return false;
+  const date = new Date(ts * 1000);
+  return date >= LEAGUE_START_DATE;
+}
+
+async function trimMatchesToLimit(limit = 10) {
+  const { rows } = await pool.query(
+    'SELECT id, "timestamp", clubs FROM matches WHERE "timestamp" >= $1',
+    [LEAGUE_START_DATE]
+  );
+
+  const clubMatchMap = {};
+  rows.forEach(row => {
+    const ts = new Date(row.timestamp).getTime();
+    const clubs = row.clubs || {};
+    Object.keys(clubs).forEach(id => {
+      if (!clubMatchMap[id]) clubMatchMap[id] = [];
+      clubMatchMap[id].push({ id: row.id, ts });
+    });
+  });
+
+  Object.keys(clubMatchMap).forEach(id => {
+    clubMatchMap[id].sort((a, b) => a.ts - b.ts);
+  });
+
+  const excessIds = new Set();
+  for (const id of CLUB_IDS) {
+    const matches = clubMatchMap[id] || [];
+    if (matches.length > limit) {
+      matches.slice(0, matches.length - limit).forEach(m => excessIds.add(m.id));
+    }
+  }
+
+  if (excessIds.size) {
+    await pool.query('DELETE FROM matches WHERE id = ANY($1::bigint[])', [
+      Array.from(excessIds)
+    ]);
+  }
+}
+
+async function deleteMatchesForClubBeforeDate(clubId, cutoffDateStr) {
+  const cutoff = new Date(cutoffDateStr);
+  await pool.query(
+    'DELETE FROM matches WHERE "timestamp" < $1 AND clubs ? $2',
+    [cutoff, clubId]
+  );
+}
+
+async function cleanOldMatches() {
+  await pool.query('DELETE FROM matches WHERE "timestamp" < $1', [
+    LEAGUE_START_DATE
+  ]);
+}
+
+async function fetchMatches(clubId) {
+  try {
+    const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
+    const res = await fetchFn(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) throw new Error(`Status ${res.status}`);
+    const data = await res.json();
+    let arr = [];
+    if (Array.isArray(data)) arr = data;
+    else if (Array.isArray(data?.[clubId])) arr = data[clubId];
+    else if (data && typeof data === 'object') {
+      for (const key of Object.keys(data)) {
+        if (Array.isArray(data[key])) arr = arr.concat(data[key]);
+      }
+    }
+    return arr;
+  } catch (err) {
+    console.error(`Error fetching matches for club ${clubId}:`, err.message);
+    return [];
+  }
+}
+
+async function saveNewMatches(matches) {
+  const { rows } = await pool.query(
+    'SELECT id, clubs FROM matches WHERE "timestamp" >= $1',
+    [LEAGUE_START_DATE]
+  );
+  const existingMatchIds = new Set(rows.map(r => String(r.id)));
+  const matchCountPerClub = {};
+  rows.forEach(r => {
+    const clubs = r.clubs || {};
+    Object.keys(clubs).forEach(id => {
+      matchCountPerClub[id] = (matchCountPerClub[id] || 0) + 1;
+    });
+  });
+
+  const SKIP_BEFORE = {
+    '3638105': new Date('2025-07-23T10:00:00Z')
+  };
+
+  let savedCount = 0;
+  for (const match of matches) {
+    const matchId = match.matchId?.toString() || match.id?.toString();
+    if (!matchId || existingMatchIds.has(matchId)) continue;
+
+    const ts = match.timestamp || match.matchTimestamp;
+    const matchDate = ts ? new Date(ts * 1000) : null;
+    if (!matchDate || matchDate < LEAGUE_START_DATE) continue;
+
+    const clubs = match.clubs || {};
+    const clubIds = Object.keys(clubs);
+    if (clubIds.length !== 2) continue;
+    if (!clubIds.some(id => CLUB_IDS.includes(id))) continue;
+
+    const skipForClub = clubIds.some(id => {
+      const cutoff = SKIP_BEFORE[id];
+      return cutoff && matchDate < cutoff;
+    });
+    if (skipForClub) continue;
+
+    const anyOverLimit = clubIds.some(
+      id => (matchCountPerClub[id] || 0) >= 10
+    );
+    if (anyOverLimit) continue;
+
+    await pool.query(
+      `INSERT INTO matches (id, "timestamp", clubs, players, raw)
+       VALUES ($1, to_timestamp($2), $3, $4, $5)
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        matchId,
+        ts,
+        JSON.stringify(match.clubs || {}),
+        JSON.stringify(match.players || {}),
+        JSON.stringify(match)
+      ]
+    );
+    savedCount++;
+    existingMatchIds.add(matchId);
+    clubIds.forEach(id => {
+      matchCountPerClub[id] = (matchCountPerClub[id] || 0) + 1;
+    });
+  }
+
+  return savedCount;
 }
 
 const app = express();
@@ -264,93 +425,55 @@ app.get('/api/teams', async (_req, res) => {
   }
 });
 
-// Fetch recent matches for the configured clubs
+// Recent matches served from Postgres
 app.get('/api/matches', async (_req, res) => {
   try {
-    const seen = new Set();
-    const allMatches = [];
-
-    for (const clubId of CLUB_IDS) {
-      const eaMatches = await fetchClubLeagueMatches(clubId);
-      eaMatches.forEach(match => {
-        if (!seen.has(match.matchId)) {
-          allMatches.push({
-            matchId: match.matchId,
-            timestamp: match.timestamp,
-            clubs: match.clubs,
-            players: match.players
-          });
-          seen.add(match.matchId);
-        }
-      });
-    }
-
-    res.json(allMatches.sort((a, b) => b.timestamp - a.timestamp));
+    const { rows } = await pool.query(
+      'SELECT * FROM matches ORDER BY "timestamp" DESC LIMIT 100'
+    );
+    res.status(200).json(rows);
   } catch (err) {
-    console.error('EA matches fetch failed', err);
+    console.error('Failed to fetch matches:', err);
     res.status(500).json({ error: 'Failed to fetch matches' });
   }
 });
 
-// Recent matches served from Postgres
-app.get('/api/leagues/:leagueId/matches', async (req, res) => {
-  const { leagueId } = req.params;
-  const { rows } = await pool.query(
-    `SELECT * FROM matches
-     WHERE raw->'clubIds' ? $1
-     ORDER BY "timestamp" DESC
-     LIMIT 50`,
-    [leagueId]
-  );
-  res.json(rows);
-});
-
-// Store matches posted from frontend
-app.post('/api/saveMatches', async (req, res) => {
-  const matches = req.body;
-  if (!Array.isArray(matches)) {
-    return res.status(400).json({ error: 'Invalid format' });
-  }
-
-  let inserted = 0;
-  for (const match of matches) {
-    try {
-      await pool.query(
-        `INSERT INTO matches (id, "timestamp", clubs, players, raw)
-         VALUES ($1, to_timestamp($2 / 1000), $3, $4, $5)
-         ON CONFLICT (id) DO NOTHING`,
-        [
-          match.matchId,
-          match.timestamp,
-          JSON.stringify(
-            match.clubs || {
-              home: match.homeTeam,
-              away: match.awayTeam,
-            }
-          ),
-          JSON.stringify(match.players),
-          JSON.stringify(match)
-        ]
-      );
-      inserted++;
-    } catch (err) {
-      console.error('Failed to insert match', match.matchId, err.message);
-    }
-  }
-
-  res.json({ status: 'ok', inserted });
-});
-
-// Fetch stored matches for UPCL
-app.get('/api/upcl/matches', async (_req, res) => {
+// Delete matches for a specific club before a cutoff date
+app.post('/api/delete-3638105-before-3am', async (_req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM matches ORDER BY "timestamp" DESC LIMIT 50'
-    );
-    res.json(result.rows);
+    await deleteMatchesForClubBeforeDate('3638105', '2025-07-23T10:00:00Z');
+    res.status(200).send({ message: 'Matches deleted.' });
   } catch (err) {
-    console.error('DB fetch failed:', err);
-    res.status(500).json({ error: 'DB fetch failed' });
+    console.error(err);
+    res.status(500).send({ error: 'Failed to delete matches.' });
+  }
+});
+
+// Clean matches before league start
+app.post('/api/clean-old-matches', async (_req, res) => {
+  try {
+    await cleanOldMatches();
+    res.status(200).send({ message: 'Old matches cleaned.' });
+  } catch (err) {
+    console.error('Error cleaning old matches:', err.message);
+    res.status(500).send({ error: 'Failed to clean old matches.' });
+  }
+});
+
+// Fetch new matches from EA and store in Postgres
+app.get('/api/update-matches', async (_req, res) => {
+  try {
+    await trimMatchesToLimit(10);
+    let allMatches = [];
+    for (const clubId of CLUB_IDS) {
+      const matches = await fetchMatches(clubId);
+      allMatches = allMatches.concat(matches);
+    }
+    const saved = await saveNewMatches(allMatches);
+    res.status(200).send(`Saved ${saved} new matches.`);
+  } catch (err) {
+    console.error('Error updating matches:', err);
+    res.status(500).json({ error: 'Failed to update matches' });
   }
 });
 
@@ -393,9 +516,46 @@ app.get('/api/players', async (req, res) => {
   res.json(payload);
 });
 
+// Auto update every 10 minutes
+if (process.env.NODE_ENV !== 'test') {
+  cron.schedule('*/10 * * * *', async () => {
+    console.log(`[${new Date().toISOString()}] Auto update starting...`);
+    try {
+      await cleanOldMatches();
+      for (const clubId of CLUB_IDS) {
+        const matches = await fetchMatches(clubId);
+        await saveNewMatches(matches);
+      }
+      console.log(`[${new Date().toISOString()}] ✅ Auto update complete.`);
+    } catch (err) {
+      console.error(`[${new Date().toISOString()}] ❌ Auto update failed: ${err.message}`);
+    }
+  });
+}
+
 if (require.main === module) {
   const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`Server running on ${PORT}`);
+    if (process.env.NODE_ENV !== 'test') {
+      (async () => {
+        try {
+          await cleanOldMatches();
+          await deleteMatchesForClubBeforeDate('3638105', '2025-07-23T10:00:00Z');
+          let allMatches = [];
+          for (const clubId of CLUB_IDS) {
+            const matches = await fetchMatches(clubId);
+            allMatches = allMatches.concat(matches);
+          }
+          await saveNewMatches(allMatches);
+          await trimMatchesToLimit(10);
+          console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
+        } catch (err) {
+          console.error(`[${new Date().toISOString()}] ❌ Initial sync error:`, err.message);
+        }
+      })();
+    }
+  });
 }
 
 module.exports = app;

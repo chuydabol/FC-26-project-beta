@@ -4,14 +4,15 @@ const assert = require('assert');
 process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 
 const pool = require('../db');
-const queryStub = mock.method(pool, 'query', async (sql, params) => {
+const queryStub = mock.method(pool, 'query', async sql => {
   if (/FROM matches/i.test(sql)) {
     return {
       rows: [
         {
           id: '1',
-          matchdate: '2024-01-01T00:00:00Z',
-          clubids: ['123'],
+          timestamp: '2024-01-01T00:00:00Z',
+          clubs: { '123': {} },
+          players: {},
           raw: { clubIds: ['123'] }
         }
       ]
@@ -32,17 +33,16 @@ async function withServer(fn) {
   }
 }
 
-test('serves league matches from db', async () => {
+test('serves recent matches from db', async () => {
   await withServer(async port => {
-    const res = await fetch(
-      `http://localhost:${port}/api/leagues/123/matches`
-    );
+    const res = await fetch(`http://localhost:${port}/api/matches`);
     const body = await res.json();
     assert.deepStrictEqual(body, [
       {
         id: '1',
-        matchdate: '2024-01-01T00:00:00Z',
-        clubids: ['123'],
+        timestamp: '2024-01-01T00:00:00Z',
+        clubs: { '123': {} },
+        players: {},
         raw: { clubIds: ['123'] }
       }
     ]);
