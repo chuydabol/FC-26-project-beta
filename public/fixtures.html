@@ -13,27 +13,90 @@
   <div id="fixtures"></div>
 
   <script>
+
+    const EA_HEADERS = {
+      "User-Agent": "Mozilla/5.0",
+      "Accept": "application/json",
+      "Referer": "https://www.ea.com/",
+      "Connection": "keep-alive"
+    };
+
+    async function getClubIds() {
+      try {
+        const res = await fetch('/api/teams');
+        if (!res.ok) throw new Error('failed');
+        const data = await res.json();
+        return (data.teams || []).map(t => t.id).filter(Boolean);
+      } catch (err) {
+        console.error('Failed to load club ids', err);
+        return [];
+      }
+    }
+
+    async function fetchClubMatches(id) {
+      const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${id}`;
+      const res = await fetch(url, { headers: EA_HEADERS });
+      if (!res.ok) throw new Error('EA request failed');
+      const data = await res.json();
+      return data[id] || [];
+
     async function fetchMatches() {
       const res = await fetch('/api/matches');
       if (!res.ok) throw new Error('Failed to fetch matches');
       return res.json();
+
     }
 
     function renderMatches(matches) {
       const container = document.getElementById('fixtures');
       container.innerHTML = '';
-      matches.forEach(match => {
-        const card = document.createElement('div');
-        card.className = 'match-card';
-        card.innerHTML = `
-          <h3>Match ${match.matchId}</h3>
-          <p>Date: ${new Date(match.timestamp).toLocaleString()}</p>
-          <p>${match.clubs.home.name} ${match.clubs.home.score} - ${match.clubs.away.score} ${match.clubs.away.name}</p>
-        `;
-        container.appendChild(card);
-      });
+      matches
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))
+        .forEach(match => {
+          const id = match.matchId || match.id;
+          const card = document.createElement('div');
+          card.className = 'match-card';
+          card.innerHTML = `
+            <h3>Match ${id}</h3>
+            <p>Date: ${new Date(match.timestamp).toLocaleString()}</p>
+            <p>${match.clubs?.home?.name} ${match.clubs?.home?.score} - ${match.clubs?.away?.score} ${match.clubs?.away?.name}</p>
+          `;
+          container.appendChild(card);
+        });
     }
 
+
+    async function loadMatches() {
+      const clubIds = await getClubIds();
+      const all = [];
+      for (const id of clubIds) {
+        try {
+          const m = await fetchClubMatches(id);
+          all.push(...m);
+        } catch (err) {
+          console.error('Failed to fetch matches for', id, err);
+        }
+        await new Promise(r => setTimeout(r, 1500));
+      }
+
+      renderMatches(all);
+
+      try {
+        await fetch('/api/saveMatches', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(all)
+        });
+      } catch (err) {
+        console.error('Failed to store matches', err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadMatches();
+      setInterval(loadMatches, 15 * 60 * 1000);
+    });
+      
     async function load() {
       try {
         const matches = await fetchMatches();

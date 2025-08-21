@@ -4,6 +4,7 @@ const path = require('path');
 const pool = require('./db');
 const eaApi = require('./services/eaApi');
 const { isNumericId } = require('./utils');
+
 const { fetchAndStoreMatches } = require('./utils/matches');
 let cron;
 try {
@@ -19,6 +20,7 @@ try {
   };
 }
 
+
 // Fallback fetch for environments without global fetch
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
 
@@ -32,6 +34,8 @@ const DEFAULT_CLUB_IDS = (
   .map(s => s.trim())
   .filter(isNumericId);
 
+
+
 const CLUB_IDS = DEFAULT_CLUB_IDS.slice();
 
 function fetchMatchesJob() {
@@ -44,6 +48,7 @@ if (process.env.NODE_ENV !== 'test') {
   fetchMatchesJob();
   cron.schedule('*/15 * * * *', fetchMatchesJob);
 }
+
 
 // Browser-like headers for EA API
 const EA_HEADERS = {
@@ -235,28 +240,34 @@ app.get('/api/leagues/:leagueId/matches', async (req, res) => {
 });
 
 // Store matches posted from frontend
-app.post('/api/store-matches', async (req, res) => {
-  try {
-    const matches = req.body;
-    for (const match of matches) {
+app.post('/api/saveMatches', async (req, res) => {
+  const matches = req.body;
+  if (!Array.isArray(matches)) {
+    return res.status(400).json({ error: 'Invalid format' });
+  }
+
+  let inserted = 0;
+  for (const match of matches) {
+    try {
       await pool.query(
         `INSERT INTO matches (id, "timestamp", clubs, players, raw)
-         VALUES ($1, to_timestamp($2), $3, $4, $5)
+         VALUES ($1, to_timestamp($2 / 1000), $3, $4, $5)
          ON CONFLICT (id) DO NOTHING`,
         [
           match.matchId,
-          match.timestamp / 1000,
+          match.timestamp,
           JSON.stringify(match.clubs),
           JSON.stringify(match.players),
           JSON.stringify(match)
         ]
       );
+      inserted++;
+    } catch (err) {
+      console.error('Failed to insert match', match.matchId, err.message);
     }
-    res.json({ success: true, count: matches.length });
-  } catch (err) {
-    console.error('DB insert failed:', err);
-    res.status(500).json({ error: 'DB insert failed' });
   }
+
+  res.json({ status: 'ok', inserted });
 });
 
 // Fetch stored matches for UPCL
