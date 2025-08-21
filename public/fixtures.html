@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fixtures</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    .match-card { border: 1px solid #ccc; padding: 0.5rem; margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Fixtures</h1>
+  <input id="clubId" placeholder="Club ID" />
+  <button id="btnFetch">Fetch Matches</button>
+  <div id="fixtures"></div>
+
+  <script>
+    async function fetchMatches(clubId) {
+      const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': navigator.userAgent,
+          Accept: 'application/json',
+          Referer: 'https://www.ea.com/',
+          Connection: 'keep-alive'
+        }
+      });
+      if (!res.ok) throw new Error('Failed to fetch matches');
+      return res.json();
+    }
+
+    function renderMatches(matches) {
+      const container = document.getElementById('fixtures');
+      container.innerHTML = '';
+      matches.forEach(match => {
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        card.innerHTML = `
+          <h3>Match ${match.matchId}</h3>
+          <p>Date: ${new Date(match.timestamp).toLocaleString()}</p>
+          <p>${match.clubs.home.name} ${match.clubs.home.score} - ${match.clubs.away.score} ${match.clubs.away.name}</p>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    async function storeMatches(matches) {
+      await fetch('/api/store-matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(matches)
+      });
+    }
+
+    document.getElementById('btnFetch').onclick = async () => {
+      const clubId = document.getElementById('clubId').value.trim();
+      if (!clubId) return;
+      try {
+        const data = await fetchMatches(clubId);
+        const matches = data[clubId] || data;
+        console.log(matches);
+        renderMatches(matches);
+        await storeMatches(matches);
+      } catch (e) {
+        console.error(e);
+        alert(e.message);
+      }
+    };
+  </script>
+</body>
+</html>
+

@@ -176,11 +176,49 @@ app.get('/api/leagues/:leagueId/matches', async (req, res) => {
   const { rows } = await pool.query(
     `SELECT * FROM matches
      WHERE raw->'clubIds' ? $1
-     ORDER BY matchDate DESC
+     ORDER BY "timestamp" DESC
      LIMIT 50`,
     [leagueId]
   );
   res.json(rows);
+});
+
+// Store matches posted from frontend
+app.post('/api/store-matches', async (req, res) => {
+  try {
+    const matches = req.body;
+    for (const match of matches) {
+      await pool.query(
+        `INSERT INTO matches (id, "timestamp", clubs, players, raw)
+         VALUES ($1, to_timestamp($2), $3, $4, $5)
+         ON CONFLICT (id) DO NOTHING`,
+        [
+          match.matchId,
+          match.timestamp / 1000,
+          JSON.stringify(match.clubs),
+          JSON.stringify(match.players),
+          JSON.stringify(match)
+        ]
+      );
+    }
+    res.json({ success: true, count: matches.length });
+  } catch (err) {
+    console.error('DB insert failed:', err);
+    res.status(500).json({ error: 'DB insert failed' });
+  }
+});
+
+// Fetch stored matches for UPCL
+app.get('/api/upcl/matches', async (_req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM matches ORDER BY "timestamp" DESC LIMIT 50'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('DB fetch failed:', err);
+    res.status(500).json({ error: 'DB fetch failed' });
+  }
 });
 
 // Aggregate players from league
