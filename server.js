@@ -3,17 +3,7 @@ const session = require('express-session');
 const path = require('path');
 const pool = require('./db');
 const eaApi = require('./services/eaApi');
-const { saveLeagueMatches } = require('./services/matches');
 const { isNumericId } = require('./utils');
-
-// Minimal cron-like scheduler using setInterval
-const cron = {
-  schedule: (_expr, fn) => {
-    const t = setInterval(fn, 10 * 60 * 1000);
-    if (typeof t.unref === 'function') t.unref();
-    return t;
-  }
-};
 
 // Fallback fetch for environments without global fetch
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
@@ -27,15 +17,6 @@ const DEFAULT_CLUB_IDS = (
   .split(',')
   .map(s => s.trim())
   .filter(isNumericId);
-
-const CLUB_IDS = DEFAULT_CLUB_IDS.slice();
-cron.schedule('*/10 * * * *', () => {
-  CLUB_IDS.forEach(id =>
-    saveLeagueMatches(id, pool).catch(err =>
-      console.error('Failed to save matches for club', id, err.message || err)
-    )
-  );
-});
 
 // Browser-like headers for EA API
 const EA_HEADERS = {
@@ -200,51 +181,17 @@ app.get('/api/teams', async (_req, res) => {
   }
 });
 
-// Fetch recent matches from EA and store in Postgres
-app.get('/api/matches', async (req, res) => {
-  // Allow explicit override (?clubIds=1,2,3), otherwise use default league list
-  const q = req.query.clubId || req.query.clubIds || req.query.ids || '';
-  let clubIds = Array.isArray(q)
-    ? q
-    : String(q)
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-  if (!clubIds.length) clubIds = DEFAULT_CLUB_IDS.slice();
-  clubIds = clubIds.filter(isNumericId);
-
-  const allMatches = [];
-
-  for (const id of clubIds) {
-    try {
-      const url =
-        `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${id}`;
-      const resEa = await fetchFn(url, { headers: EA_HEADERS });
-      if (!resEa.ok) throw new Error(`EA responded ${resEa.status}`);
-      const data = await resEa.json();
-      const matches = data?.[id] || [];
-      for (const match of matches) {
-        await pool.query(
-          `INSERT INTO matches (id, "timestamp", clubs, players, raw)
-           VALUES ($1, to_timestamp($2 / 1000), $3, $4, $5)
-           ON CONFLICT (id) DO NOTHING`,
-          [
-            String(match.matchId),
-            match.timestamp,
-            JSON.stringify(match.clubs || {}),
-            JSON.stringify(match.players || {}),
-            JSON.stringify(match)
-          ]
-        );
-      }
-      allMatches.push(...matches);
-    } catch (err) {
-      console.error('Failed fetching matches for club', id, err.message);
-    }
-    await new Promise(r => setTimeout(r, 200));
+// Serve matches stored in Postgres
+app.get('/api/matches', async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM matches ORDER BY "timestamp" DESC LIMIT 50'
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('DB fetch failed:', err);
+    res.status(500).json({ error: 'DB fetch failed' });
   }
-
-  res.json(allMatches);
 });
 
 // Recent matches served from Postgres
@@ -261,28 +208,34 @@ app.get('/api/leagues/:leagueId/matches', async (req, res) => {
 });
 
 // Store matches posted from frontend
-app.post('/api/store-matches', async (req, res) => {
-  try {
-    const matches = req.body;
-    for (const match of matches) {
+app.post('/api/saveMatches', async (req, res) => {
+  const matches = req.body;
+  if (!Array.isArray(matches)) {
+    return res.status(400).json({ error: 'Invalid format' });
+  }
+
+  let inserted = 0;
+  for (const match of matches) {
+    try {
       await pool.query(
         `INSERT INTO matches (id, "timestamp", clubs, players, raw)
-         VALUES ($1, to_timestamp($2), $3, $4, $5)
+         VALUES ($1, to_timestamp($2 / 1000), $3, $4, $5)
          ON CONFLICT (id) DO NOTHING`,
         [
           match.matchId,
-          match.timestamp / 1000,
+          match.timestamp,
           JSON.stringify(match.clubs),
           JSON.stringify(match.players),
           JSON.stringify(match)
         ]
       );
+      inserted++;
+    } catch (err) {
+      console.error('Failed to insert match', match.matchId, err.message);
     }
-    res.json({ success: true, count: matches.length });
-  } catch (err) {
-    console.error('DB insert failed:', err);
-    res.status(500).json({ error: 'DB insert failed' });
   }
+
+  res.json({ status: 'ok', inserted });
 });
 
 // Fetch stored matches for UPCL
