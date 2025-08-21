@@ -217,7 +217,7 @@ app.get('/api/teams', async (_req, res) => {
 app.get('/api/matches', async (_req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM matches ORDER BY "timestamp" DESC LIMIT 50'
+      'SELECT id AS "matchId", "timestamp", clubs, players FROM matches ORDER BY "timestamp" DESC LIMIT 50'
     );
     res.json(rows);
   } catch (err) {
