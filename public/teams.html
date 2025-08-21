@@ -982,7 +982,7 @@ const fixturesPublicList = document.getElementById('fixturesPublicList');
 async function refreshMatches() {
   try {
     const res = await fetch('/api/matches');
-    const matches = await res.json();
+    const { matches } = await res.json();
     renderMatches(matches);
   } catch (err) {
     console.error('Failed to load matches', err);
@@ -997,13 +997,16 @@ function renderMatches(matches) {
     return;
   }
   matches.forEach(m => {
-    const teams = Object.values(m.clubs || {});
+    const teams = Object.values(m.clubs || {}).map(c => ({
+      name: c.details?.name || '',
+      score: c.goals
+    }));
     if (teams.length < 2) return;
     const card = document.createElement('div');
     card.className = 'match-card';
     card.innerHTML = `
       <div>${teams[0].name} ${teams[0].score} - ${teams[1].score} ${teams[1].name}</div>
-      <small>${new Date(m.timestamp * 1000).toLocaleString()}</small>
+      <small>${new Date(m.timestamp).toLocaleString()}</small>
     `;
     container.appendChild(card);
   });

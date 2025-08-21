@@ -16,17 +16,40 @@ async function main() {
   for (const clubId of Object.keys(data || {})) {
     const matches = Array.isArray(data[clubId]) ? data[clubId] : [];
     for (const m of matches) {
-      const id = Number(m.matchId);
+      const matchId = String(m.matchId);
+      const tsMs = Number(m.timestamp) * 1000;
       try {
         const { rowCount } = await pool.query(
-          `INSERT INTO matches (id, club_id, timestamp, data)
-           VALUES ($1,$2,$3,$4)
-           ON CONFLICT (id) DO NOTHING`,
-          [id, Number(clubId), m.timestamp, m]
+          `INSERT INTO matches (match_id, ts_ms, raw)
+           VALUES ($1,$2,$3::jsonb)
+           ON CONFLICT (match_id) DO NOTHING`,
+          [matchId, tsMs, m]
         );
-        inserted += rowCount;
+        if (rowCount) {
+          const entries = Object.entries(m.clubs || {});
+          if (entries.length === 2) {
+            const homeEntry = entries.find(([, d]) => String(d?.home) === '1') || entries[0];
+            const awayEntry = entries.find(([id]) => id !== homeEntry[0]) || entries[1];
+            const [homeId, homeData] = homeEntry;
+            const [awayId, awayData] = awayEntry;
+            const homeGoals = Number(homeData?.score ?? homeData?.goals ?? 0);
+            const awayGoals = Number(awayData?.score ?? awayData?.goals ?? 0);
+            await pool.query(
+              `INSERT INTO match_participants (match_id, club_id, is_home, goals)
+               VALUES ($1,$2,TRUE,$3),($1,$4,FALSE,$5)
+               ON CONFLICT (match_id, club_id) DO NOTHING`,
+              [matchId, homeId, homeGoals, awayId, awayGoals]
+            );
+            await pool.query(
+              `INSERT INTO clubs (club_id, club_name) VALUES ($1,$2),($3,$4)
+               ON CONFLICT (club_id) DO NOTHING`,
+              [homeId, homeData?.name || '', awayId, awayData?.name || '']
+            );
+          }
+          inserted += rowCount;
+        }
       } catch (err) {
-        console.error('Failed to insert match', id, err);
+        console.error('Failed to insert match', matchId, err);
       }
     }
   }
