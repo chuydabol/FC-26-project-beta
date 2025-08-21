@@ -984,6 +984,8 @@ const fixturesPublicList = document.getElementById('fixturesPublicList');
 async function refreshMatches(){
   const ids = teams.map(t=>t.id).filter(id=>/^\d+$/.test(String(id)));
   const map = new Map();
+  matchesCache = []; // clear any previous results
+  renderMatches(); // show loading state
 
   for (const id of ids){
     try{
@@ -992,13 +994,12 @@ async function refreshMatches(){
       const data = await res.json();
       const arr = data?.[id] || [];
       arr.forEach(m => { if (!map.has(m.matchId)) map.set(m.matchId, m); });
+      matchesCache = Array.from(map.values());
+      renderMatches(); // display before persisting
     }catch(err){
       console.error('EA matches fetch failed', id, err);
     }
   }
-
-  matchesCache = Array.from(map.values());
-  renderMatches();
 
   try{
     await fetch('/api/saveMatches',{
