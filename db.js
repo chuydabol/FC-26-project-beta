@@ -60,10 +60,9 @@ ensureTable(
 ensureTable(
   `
   CREATE TABLE IF NOT EXISTS matches (
-    id BIGINT PRIMARY KEY,
-    timestamp TIMESTAMPTZ,
-    clubs JSONB,
-    players JSONB,
+    id TEXT PRIMARY KEY,
+    matchDate TIMESTAMPTZ,
+    clubIds JSONB,
     raw JSONB
   )
 `,
