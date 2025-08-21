@@ -5,6 +5,22 @@ const pool = require('./db');
 const eaApi = require('./services/eaApi');
 const { isNumericId } = require('./utils');
 
+const { fetchAndStoreMatches } = require('./utils/matches');
+let cron;
+try {
+  cron = require('node-cron');
+} catch {
+  // Fallback minimal scheduler if node-cron isn't installed
+  cron = {
+    schedule: (_expr, fn) => {
+      const t = setInterval(fn, 15 * 60 * 1000);
+      if (typeof t.unref === 'function') t.unref();
+      return t;
+    }
+  };
+}
+
+
 // Fallback fetch for environments without global fetch
 const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
 
@@ -17,6 +33,22 @@ const DEFAULT_CLUB_IDS = (
   .split(',')
   .map(s => s.trim())
   .filter(isNumericId);
+
+
+
+const CLUB_IDS = DEFAULT_CLUB_IDS.slice();
+
+function fetchMatchesJob() {
+  return fetchAndStoreMatches(CLUB_IDS, pool).catch(err =>
+    console.error('Failed to fetch/store matches', err.message || err)
+  );
+}
+
+if (process.env.NODE_ENV !== 'test') {
+  fetchMatchesJob();
+  cron.schedule('*/15 * * * *', fetchMatchesJob);
+}
+
 
 // Browser-like headers for EA API
 const EA_HEADERS = {

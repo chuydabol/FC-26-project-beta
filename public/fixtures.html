@@ -13,6 +13,7 @@
   <div id="fixtures"></div>
 
   <script>
+
     const EA_HEADERS = {
       "User-Agent": "Mozilla/5.0",
       "Accept": "application/json",
@@ -38,6 +39,12 @@
       if (!res.ok) throw new Error('EA request failed');
       const data = await res.json();
       return data[id] || [];
+
+    async function fetchMatches() {
+      const res = await fetch('/api/matches');
+      if (!res.ok) throw new Error('Failed to fetch matches');
+      return res.json();
+
     }
 
     function renderMatches(matches) {
@@ -57,6 +64,7 @@
           container.appendChild(card);
         });
     }
+
 
     async function loadMatches() {
       const clubIds = await getClubIds();
@@ -88,6 +96,17 @@
       loadMatches();
       setInterval(loadMatches, 15 * 60 * 1000);
     });
+      
+    async function load() {
+      try {
+        const matches = await fetchMatches();
+        renderMatches(matches);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', load);
   </script>
 </body>
 </html>

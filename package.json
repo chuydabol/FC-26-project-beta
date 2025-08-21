@@ -9,6 +9,7 @@
     "express-session": "^1.17.3",
     "uuid": "^9.0.1",
     "pg": "^8.11.0",
-    "node-fetch": "^2.6.9"
+    "node-fetch": "^2.6.9",
+    "node-cron": "^3.0.2"
   }
 }
