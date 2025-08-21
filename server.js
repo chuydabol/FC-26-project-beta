@@ -219,19 +219,24 @@ app.get('/api/ea/clubs/:clubId/info', async (req, res) => {
   }
 });
 
-// Fetch recent matches for a single club
+// Fetch recent matches for a single club directly from EA
 app.get('/api/ea/matches/:clubId', async (req, res) => {
   const { clubId } = req.params;
   if (!/^\d+$/.test(String(clubId))) {
     return res.status(400).json({ error: 'Invalid clubId' });
   }
 
+  const url =
+    `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
+
   try {
-    const matches = await eaApi.fetchRecentLeagueMatches(clubId);
-    res.json(matches);
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!r.ok) throw new Error(`EA API error ${r.status}`);
+    const data = await r.json();
+    res.json(data?.[clubId] || []);
   } catch (err) {
-    console.error(`EA fetch failed for club ${clubId}`, err.message);
-    res.status(500).json({ error: 'Failed to fetch matches' });
+    console.error('EA matches fetch failed', err);
+    res.status(500).json({ error: 'EA API error' });
   }
 });
 
