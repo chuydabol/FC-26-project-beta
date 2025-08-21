@@ -10,13 +10,11 @@
 </head>
 <body>
   <h1>Fixtures</h1>
-  <input id="clubId" placeholder="Club ID" />
-  <button id="btnFetch">Fetch Matches</button>
   <div id="fixtures"></div>
 
   <script>
-    async function fetchMatches(clubId) {
-      const res = await fetch(`/api/matches?clubId=${clubId}`);
+    async function fetchMatches() {
+      const res = await fetch('/api/matches');
       if (!res.ok) throw new Error('Failed to fetch matches');
       return res.json();
     }
@@ -36,18 +34,16 @@
       });
     }
 
-    document.getElementById('btnFetch').onclick = async () => {
-      const clubId = document.getElementById('clubId').value.trim();
-      if (!clubId) return;
+    async function load() {
       try {
-        const matches = await fetchMatches(clubId);
-        console.log(matches);
+        const matches = await fetchMatches();
         renderMatches(matches);
       } catch (e) {
         console.error(e);
-        alert(e.message);
       }
-    };
+    }
+
+    window.addEventListener('DOMContentLoaded', load);
   </script>
 </body>
 </html>
