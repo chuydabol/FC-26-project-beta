@@ -170,6 +170,53 @@ app.get('/api/teams', async (_req, res) => {
   }
 });
 
+// Fetch recent matches from EA and store in Postgres
+app.get('/api/matches', async (req, res) => {
+  // Allow explicit override (?clubIds=1,2,3), otherwise use default league list
+  const q = req.query.clubId || req.query.clubIds || req.query.ids || '';
+  let clubIds = Array.isArray(q)
+    ? q
+    : String(q)
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+  if (!clubIds.length) clubIds = DEFAULT_CLUB_IDS.slice();
+  clubIds = clubIds.filter(isNumericId);
+
+  const allMatches = [];
+
+  for (const id of clubIds) {
+    try {
+      const url =
+        `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${id}`;
+      const resEa = await fetchFn(url, { headers: EA_HEADERS });
+      if (!resEa.ok) throw new Error(`EA responded ${resEa.status}`);
+      const data = await resEa.json();
+      const matches = data?.[id] || [];
+      for (const match of matches) {
+        await pool.query(
+          `INSERT INTO matches (id, "timestamp", clubs, players, raw)
+           VALUES ($1, to_timestamp($2 / 1000), $3, $4, $5)
+           ON CONFLICT (id) DO NOTHING`,
+          [
+            String(match.matchId),
+            match.timestamp,
+            JSON.stringify(match.clubs || {}),
+            JSON.stringify(match.players || {}),
+            JSON.stringify(match)
+          ]
+        );
+      }
+      allMatches.push(...matches);
+    } catch (err) {
+      console.error('Failed fetching matches for club', id, err.message);
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  res.json(allMatches);
+});
+
 // Recent matches served from Postgres
 app.get('/api/leagues/:leagueId/matches', async (req, res) => {
   const { leagueId } = req.params;
