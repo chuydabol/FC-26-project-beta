@@ -365,7 +365,7 @@ h2{margin:0 0 10px}
   <!-- FIXTURES (PUBLIC) -->
   <section id="fixtures-public" style="display:none">
     <h2>Fixtures</h2>
-    <div id="matchesList" class="fx-list" style="margin-top:10px"></div>
+    <div id="fixtures" class="fx-list" style="margin-top:10px"></div>
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
@@ -978,53 +978,46 @@ document.getElementById('btnUnlistFA').onclick = async ()=>{
 // =======================
 //   FIXTURES — PUBLIC
 // =======================
-const matchesList = document.getElementById('matchesList');
+const fixturesEl = document.getElementById('fixtures');
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 
 async function refreshMatches(){
-  const ids = teams.map(t=>t.id).filter(id=>/^\d+$/.test(String(id)));
-  const map = new Map();
-  matchesCache = []; // clear any previous results
-  renderMatches(); // show loading state
-
-  for (const id of ids){
-    try{
-      const res = await fetch(`/api/ea/clubs/${encodeURIComponent(id)}/matches`);
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const data = await res.json();
-      const arr = data?.[id] || [];
-      arr.forEach(m => { if (!map.has(m.matchId)) map.set(m.matchId, m); });
-      matchesCache = Array.from(map.values());
-      renderMatches(); // display before persisting
-    }catch(err){
-      console.error('EA matches fetch failed', id, err);
-    }
-  }
-
   try{
-    await fetch('/api/saveMatches',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(matchesCache)
+    const res = await fetch('/api/ea/matches');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    matchesCache = Array.isArray(data) ? data : [];
+    renderMatches();
+    await fetch('/api/saveMatches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(matchesCache)
     });
-  }catch(err){
-    console.error('Persist matches failed', err);
+  } catch(err){
+    console.error('Error fetching matches:', err);
   }
 }
+
 function renderMatches(){
-  const list = matchesCache.slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
-  matchesList.innerHTML = list.length ? list.map(m=>{
-    const id = m.matchId;
-    const date = fmtDate(m.timestamp);
-    const hn = m.clubs?.home?.name || '';
-    const an = m.clubs?.away?.name || '';
-    const hs = m.clubs?.home?.score ?? '';
-    const as = m.clubs?.away?.score ?? '';
-    const hp = (m.players?.home || []).map(p=>escapeHtml(p.name || p.playername || p.personaName || p.id || '')).join(', ');
-    const ap = (m.players?.away || []).map(p=>escapeHtml(p.name || p.playername || p.personaName || p.id || '')).join(', ');
-    const playersHtml = hp || ap ? `<div class="meta">${hp} • ${ap}</div>` : '';
-    return `<div class="fx"><div><strong>Match ${escapeHtml(id)}</strong><div class="meta">Date: ${escapeHtml(date)}</div><div class="fx-vs"><span class="fx-team"><span>${escapeHtml(hn)}</span></span><span class="muted">${escapeHtml(hs)} – ${escapeHtml(as)}</span><span class="fx-team"><span>${escapeHtml(an)}</span></span></div>${playersHtml}</div></div>`;
-  }).join('') : `<div class="muted">No matches.</div>`;
+  fixturesEl.innerHTML = '';
+  if (!matchesCache.length) {
+    fixturesEl.innerHTML = '<div class="muted">No matches.</div>';
+    return;
+  }
+  matchesCache.forEach(match => {
+    const clubs = Object.values(match.clubs || {});
+    if (clubs.length < 2) return;
+    const [clubA, clubB] = clubs;
+    const date = fmtDate(match.timestamp * 1000);
+    const card = document.createElement('div');
+    card.className = 'match-card';
+    card.innerHTML = `
+      <h3>Match ${match.matchId}</h3>
+      <p>Date: ${date}</p>
+      <p>${clubA.name} ${clubA.score} - ${clubB.score} ${clubB.name}</p>
+    `;
+    fixturesEl.appendChild(card);
+  });
 }
 
 async function refreshFixturesPublic(){

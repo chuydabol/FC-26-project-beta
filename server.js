@@ -239,6 +239,27 @@ app.get('/api/ea/clubs/:clubId/matches', async (req, res) => {
   }
 });
 
+// Aggregate recent matches for default club list
+app.get('/api/ea/matches', async (_req, res) => {
+  try {
+    const data = await eaApi.fetchClubLeagueMatches(CLUB_IDS);
+    const map = new Map();
+    Object.values(data || {}).forEach(arr => {
+      if (Array.isArray(arr)) {
+        arr.forEach(m => {
+          if (!map.has(m.matchId)) map.set(m.matchId, m);
+        });
+      }
+    });
+    res.json(Array.from(map.values()));
+  } catch (err) {
+    console.error('EA matches fetch failed', err.message || err);
+    res
+      .status(err.status || 502)
+      .json({ error: 'EA API request failed', details: err.message || err.error });
+  }
+});
+
 // Basic teams listing
 app.get('/api/teams', async (_req, res) => {
   try {
