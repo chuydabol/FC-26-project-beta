@@ -18,44 +18,48 @@ async function withServer(fn) {
 }
 
 test('aggregates matches from multiple clubs', async () => {
-  const stub = mock.method(eaApi, 'fetchRecentLeagueMatches', async clubId => {
+  const stub = mock.method(eaApi, 'fetchClubLeagueMatches', async clubId => {
     if (clubId === '111') {
-      return [
-        {
-          matchId: '1',
-          timestamp: 1,
-          clubs: { a: { name: 'A', score: '1' }, b: { name: 'B', score: '0' } },
-          players: {
-            a: {
-              p1: { name: 'P1', pos: 'F', rating: '9.1', goals: '1', assists: '0' },
+      return {
+        '111': [
+          {
+            matchId: '1',
+            timestamp: 1,
+            clubs: { a: { name: 'A', score: '1' }, b: { name: 'B', score: '0' } },
+            players: {
+              a: {
+                p1: { name: 'P1', pos: 'F', rating: '9.1', goals: '1', assists: '0' },
+              },
             },
           },
-        },
-        {
-          matchId: '2',
-          timestamp: 2,
-          clubs: { c: { name: 'C', score: '0' }, d: { name: 'D', score: '2' } },
-          players: {},
-        },
-      ];
+          {
+            matchId: '2',
+            timestamp: 2,
+            clubs: { c: { name: 'C', score: '0' }, d: { name: 'D', score: '2' } },
+            players: {},
+          },
+        ],
+      };
     }
     if (clubId === '222') {
-      return [
-        {
-          matchId: '2',
-          timestamp: 2,
-          clubs: { c: { name: 'C', score: '0' }, d: { name: 'D', score: '2' } },
-          players: {},
-        },
-        {
-          matchId: '3',
-          timestamp: 3,
-          clubs: { e: { name: 'E', score: '1' }, f: { name: 'F', score: '1' } },
-          players: {},
-        },
-      ];
+      return {
+        '222': [
+          {
+            matchId: '2',
+            timestamp: 2,
+            clubs: { c: { name: 'C', score: '0' }, d: { name: 'D', score: '2' } },
+            players: {},
+          },
+          {
+            matchId: '3',
+            timestamp: 3,
+            clubs: { e: { name: 'E', score: '1' }, f: { name: 'F', score: '1' } },
+            players: {},
+          },
+        ],
+      };
     }
-    return [];
+    return {};
   });
 
   await withServer(async port => {
