@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS matches (
   ts_ms     BIGINT NOT NULL,
   raw       JSONB  NOT NULL
 );
+ALTER TABLE matches RENAME COLUMN IF EXISTS id TO match_id;
 ALTER TABLE matches DROP COLUMN IF EXISTS club_id;
 CREATE TABLE IF NOT EXISTS match_participants (
   match_id  TEXT   NOT NULL REFERENCES matches(match_id) ON DELETE CASCADE,
