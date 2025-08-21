@@ -48,9 +48,6 @@ try {
   };
 }
 
-// Fallback fetch for environments without global fetch
-const fetchFn = global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
-
 // Explicit club list used for league operations
 const CLUB_IDS = [
   '2491998', // Royal Republic
@@ -95,20 +92,10 @@ const CLUB_NAMES = {
 const DEFAULT_CLUB_IDS = CLUB_IDS.slice();
 
 
-// Browser-like headers for EA API
-const EA_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-  Accept: 'application/json, text/plain, */*',
-  'Accept-Language': 'en-US,en;q=0.9',
-  Referer: 'https://www.ea.com/',
-  Origin: 'https://www.ea.com',
-  Connection: 'keep-alive'
-};
 
 // Simple concurrency limiter so we don't hammer EA
 let _inFlight = 0;
-const MAX_CONCURRENCY = Number(process.env.MAX_CONCURRENCY || 3);
+const MAX_CONCURRENCY = Number(process.env.MAX_CONCURRENCY || 2);
 const _queue = [];
 function limit(fn) {
   return new Promise((resolve, reject) => {
@@ -139,14 +126,11 @@ const CLUB_INFO_TTL_MS = 60_000;
 
 // Fetch helper with logging
 async function fetchClubPlayers(clubId) {
-  const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
   try {
-    const res = await fetchFn(url, { headers: EA_HEADERS });
-    if (!res.ok) throw new Error(`EA responded ${res.status}`);
-    const data = await res.json();
+    const data = await eaApi.fetchClubMembers(clubId);
     return data.members || [];
   } catch (err) {
-    console.error(`Failed fetching club ${clubId}:`, err.message);
+    console.error(`Failed fetching club ${clubId}:`, err.message || err);
     return [];
   }
 }
@@ -155,15 +139,13 @@ async function fetchClubPlayers(clubId) {
 
 // --- Match utilities backed by Postgres ---
 async function fetchClubMatches(clubId) {
-  const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!res.ok) throw new Error(`EA responded ${res.status}`);
-    const data = await res.json();
-    if (Array.isArray(data)) return data;
-    return data?.[clubId] || [];
+    return await eaApi.fetchRecentLeagueMatches(clubId);
   } catch (err) {
-    console.error(`[EA] Failed fetching matches for club ${clubId}:`, err.message);
+    console.error(
+      `[EA] Failed fetching matches for club ${clubId}:`,
+      err.message || err
+    );
     return [];
   }
 }
