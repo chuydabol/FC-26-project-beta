@@ -213,20 +213,37 @@ async function cleanOldMatches() {
 async function fetchMatches(clubId) {
   try {
     const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
-    const res = await fetchFn(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!res.ok) throw new Error(`Status ${res.status}`);
-    const data = await res.json();
-    let arr = [];
-    if (Array.isArray(data)) arr = data;
-    else if (Array.isArray(data?.[clubId])) arr = data[clubId];
-    else if (data && typeof data === 'object') {
-      for (const key of Object.keys(data)) {
-        if (Array.isArray(data[key])) arr = arr.concat(data[key]);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`Status ${response.status}`);
+    }
+
+    const matches = await response.json();
+
+    let matchesArray = [];
+
+    if (Array.isArray(matches)) {
+      matchesArray = matches;
+    } else if (typeof matches === 'object' && matches !== null) {
+      for (const key of Object.keys(matches)) {
+        if (Array.isArray(matches[key])) {
+          matchesArray = matchesArray.concat(matches[key]);
+        }
       }
     }
-    return arr;
-  } catch (err) {
-    console.error(`Error fetching matches for club ${clubId}:`, err.message);
+
+    return matchesArray;
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error fetching matches for club ${clubId}:`, error.message);
     return [];
   }
 }
