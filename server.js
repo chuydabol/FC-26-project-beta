@@ -55,9 +55,9 @@ function limit(fn) {
 let _playersCache = { at: 0, data: null };
 const PLAYERS_TTL_MS = 60_000;
 
-// Cache for /api/teams-with-players
-let _teamsCache = { at: 0, data: null };
-const TEAMS_TTL_MS = 10 * 60 * 1000;
+// Cache for club info lookups
+const _clubInfoCache = new Map();
+const CLUB_INFO_TTL_MS = 60_000;
 
 // Fetch helper with logging
 async function fetchClubPlayers(clubId) {
@@ -111,6 +111,33 @@ app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
   }
 });
 
+// Proxy to fetch club info from EA API
+app.get('/api/ea/clubs/:clubId/info', async (req, res) => {
+  const { clubId } = req.params;
+  if (!/^\d+$/.test(String(clubId))) {
+    return res.status(400).json({ error: 'Invalid clubId' });
+  }
+
+  const cached = _clubInfoCache.get(clubId);
+  if (cached && Date.now() - cached.at < CLUB_INFO_TTL_MS) {
+    return res.json({ club: cached.data });
+  }
+
+  try {
+    const info = await limit(() => eaApi.fetchClubInfoWithRetry(clubId));
+    _clubInfoCache.set(clubId, { at: Date.now(), data: info });
+    return res.json({ club: info });
+  } catch (err) {
+    const msg = err?.error || err?.message || 'EA API error';
+    const status = /abort|timeout|timed out|ETIMEDOUT/i.test(String(msg))
+      ? 504
+      : 502;
+    return res
+      .status(status)
+      .json({ error: 'EA API request failed', details: msg });
+  }
+});
+
 // Basic teams listing
 app.get('/api/teams', async (_req, res) => {
   try {
@@ -121,56 +148,6 @@ app.get('/api/teams', async (_req, res) => {
   } catch (err) {
     console.error('Failed to load teams:', err);
     res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// Cached teams with players
-app.get('/api/teams-with-players', async (_req, res) => {
-  try {
-    if (_teamsCache.data && Date.now() - _teamsCache.at < TEAMS_TTL_MS) {
-      return res.json(_teamsCache.data);
-    }
-
-    const clubIds = DEFAULT_CLUB_IDS;
-
-    const infoUrl =
-      'https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=' +
-      clubIds.join(',');
-    const infoRes = await fetchFn(infoUrl, { headers: EA_HEADERS });
-    if (!infoRes.ok) throw new Error('info fetch failed');
-    const infoData = await infoRes.json();
-
-    const teams = [];
-    for (const id of clubIds) {
-      const club = infoData?.[id];
-      if (!club) continue;
-      const memRes = await fetchFn(
-        `https://proclubs.ea.com/api/fc/clubs/members?platform=common-gen5&clubId=${id}`,
-        { headers: EA_HEADERS }
-      );
-      if (!memRes.ok) throw new Error('members fetch failed');
-      const memData = await memRes.json();
-      const playersRaw = Array.isArray(memData.members) ? memData.members : [];
-      const players = playersRaw.map(p => ({
-        name: p.name || p.playername || p.personaName || '',
-        position: p.position || p.preferredPosition || '',
-        stats: p
-      }));
-      teams.push({
-        id: Number(id),
-        name: club.name,
-        logo: club.customLogo,
-        season: club.season,
-        players
-      });
-    }
-
-    const payload = { ok: true, teams };
-    _teamsCache = { at: Date.now(), data: payload };
-    res.json(payload);
-  } catch (err) {
-    console.error('Failed to load teams from EA', err);
-    res.status(502).json({ ok: false, error: 'EA API unavailable' });
   }
 });
 
