@@ -1006,7 +1006,10 @@ async function refreshMatches(){
   matchesCache = Object.values(byId);
   renderMatches();
   // persist after rendering
-  try{ await apiPost('/api/saveMatches', matchesCache); } catch(err){ console.warn('saveMatches failed', err); }
+  fetch('/api/saveMatches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(matchesCache) })
+    .then(res => res.json())
+    .then(out => console.log('Saved matches:', out))
+    .catch(err => console.error('Save failed:', err));
 }
 function renderMatches(){
   const list = matchesCache.slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
