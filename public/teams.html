@@ -982,15 +982,32 @@ const matchesList = document.getElementById('matchesList');
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 
 async function refreshMatches(){
+  const ids = teams.map(t=>t.id).filter(id=>/^\d+$/.test(String(id)));
+  const map = new Map();
+
+  for (const id of ids){
+    try{
+      const res = await fetch(`/api/ea/clubs/${encodeURIComponent(id)}/matches`);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      const arr = data?.[id] || [];
+      arr.forEach(m => { if (!map.has(m.matchId)) map.set(m.matchId, m); });
+    }catch(err){
+      console.error('EA matches fetch failed', id, err);
+    }
+  }
+
+  matchesCache = Array.from(map.values());
+  renderMatches();
+
   try{
-    const res = await fetch('/api/matches');
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    matchesCache = await res.json();
+    await fetch('/api/saveMatches',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(matchesCache)
+    });
   }catch(err){
-    console.error('Matches fetch failed', err);
-    matchesCache = [];
-  }finally{
-    renderMatches();
+    console.error('Persist matches failed', err);
   }
 }
 function renderMatches(){
