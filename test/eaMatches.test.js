@@ -18,16 +18,45 @@ async function withServer(fn) {
 }
 
 test('aggregates matches from multiple clubs', async () => {
-  const stub = mock.method(eaApi, 'fetchClubLeagueMatches', async () => ({
-    '111': [
-      { matchId: '1', timestamp: 1, clubs: { a: { name: 'A', score: '1' }, b: { name: 'B', score: '0' } }, players: {} },
-      { matchId: '2', timestamp: 2, clubs: {}, players: {} }
-    ],
-    '222': [
-      { matchId: '2', timestamp: 2, clubs: {}, players: {} },
-      { matchId: '3', timestamp: 3, clubs: {}, players: {} }
-    ]
-  }));
+  const stub = mock.method(eaApi, 'fetchRecentLeagueMatches', async clubId => {
+    if (clubId === '111') {
+      return [
+        {
+          matchId: '1',
+          timestamp: 1,
+          clubs: { a: { name: 'A', score: '1' }, b: { name: 'B', score: '0' } },
+          players: {
+            a: {
+              p1: { name: 'P1', pos: 'F', rating: '9.1', goals: '1', assists: '0' },
+            },
+          },
+        },
+        {
+          matchId: '2',
+          timestamp: 2,
+          clubs: { c: { name: 'C', score: '0' }, d: { name: 'D', score: '2' } },
+          players: {},
+        },
+      ];
+    }
+    if (clubId === '222') {
+      return [
+        {
+          matchId: '2',
+          timestamp: 2,
+          clubs: { c: { name: 'C', score: '0' }, d: { name: 'D', score: '2' } },
+          players: {},
+        },
+        {
+          matchId: '3',
+          timestamp: 3,
+          clubs: { e: { name: 'E', score: '1' }, f: { name: 'F', score: '1' } },
+          players: {},
+        },
+      ];
+    }
+    return [];
+  });
 
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/ea/matches`);
@@ -36,8 +65,8 @@ test('aggregates matches from multiple clubs', async () => {
       {
         matchId: '1',
         timestamp: 1,
-        homeClub: { id: 'a', name: 'A', score: 1 },
-        awayClub: { id: 'b', name: 'B', score: 0 },
+        homeTeam: { clubId: 'a', name: 'A', score: 1 },
+        awayTeam: { clubId: 'b', name: 'B', score: 0 },
         players: [
           {
             clubId: 'a',
@@ -53,15 +82,15 @@ test('aggregates matches from multiple clubs', async () => {
       {
         matchId: '2',
         timestamp: 2,
-        homeClub: { id: 'c', name: 'C', score: 0 },
-        awayClub: { id: 'd', name: 'D', score: 2 },
+        homeTeam: { clubId: 'c', name: 'C', score: 0 },
+        awayTeam: { clubId: 'd', name: 'D', score: 2 },
         players: [],
       },
       {
         matchId: '3',
         timestamp: 3,
-        homeClub: { id: 'e', name: 'E', score: 1 },
-        awayClub: { id: 'f', name: 'F', score: 1 },
+        homeTeam: { clubId: 'e', name: 'E', score: 1 },
+        awayTeam: { clubId: 'f', name: 'F', score: 1 },
         players: [],
       },
     ]);
