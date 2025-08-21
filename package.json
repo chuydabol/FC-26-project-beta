@@ -1,15 +1,21 @@
 {
   "name": "fc-26-project-beta",
   "private": true,
-  "engines": { "node": ">=18" },
-  "scripts": { "start": "node server.js", "test": "NODE_ENV=test node --test" },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "NODE_ENV=test node --test"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "express": "^4.19.2",
     "express-session": "^1.17.3",
-    "uuid": "^9.0.1",
-    "pg": "^8.11.0",
+    "node-cron": "^3.0.2",
     "node-fetch": "^2.6.9",
-    "node-cron": "^3.0.2"
+    "pg": "^8.11.0",
+    "uuid": "^9.0.1"
   }
 }

@@ -1,5 +1,23 @@
 const express = require('express');
 const session = require('express-session');
+let cors;
+try {
+  cors = require('cors');
+} catch {
+  // Fallback minimal CORS middleware if package isn't installed
+  cors = () => (req, res, next) => {
+    res.set('Access-Control-Allow-Origin', '*');
+    if (req.method === 'OPTIONS') {
+      res.set(
+        'Access-Control-Allow-Methods',
+        'GET,HEAD,PUT,PATCH,POST,DELETE'
+      );
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      return res.status(204).end();
+    }
+    next();
+  };
+}
 const path = require('path');
 const pool = require('./db');
 const eaApi = require('./services/eaApi');
@@ -108,6 +126,7 @@ async function fetchClubPlayers(clubId) {
 
 const app = express();
 app.set('trust proxy', 1);
+app.use(cors({ origin: '*' }));
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'dev-secret',
