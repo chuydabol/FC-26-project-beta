@@ -1,4 +1,5 @@
 const express = require('express');
+const session = require('express-session');
 const path = require('path');
 const pool = require('./db');
 const eaApi = require('./services/eaApi');
@@ -94,12 +95,41 @@ async function fetchClubPlayers(clubId) {
 
 const app = express();
 app.set('trust proxy', 1);
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'dev-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false }
+  })
+);
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static(path.join(__dirname, 'public', 'assets')));
 app.get('/', (_req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'teams.html'))
 );
+
+// Basic admin session endpoints
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body || {};
+  const expected = process.env.ADMIN_PASSWORD || 'admin';
+  if (!password || password !== expected) {
+    return res.status(401).json({ error: 'Invalid password' });
+  }
+  req.session.isAdmin = true;
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.json({ ok: true });
+  });
+});
+
+app.get('/api/admin/me', (req, res) => {
+  res.json({ admin: !!req.session?.isAdmin });
+});
 
 // Proxy to fetch club members from EA API (avoids browser CORS)
 app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
