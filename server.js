@@ -219,93 +219,19 @@ app.get('/api/ea/clubs/:clubId/info', async (req, res) => {
   }
 });
 
-// Proxy to fetch recent matches from EA API
-app.get('/api/ea/clubs/:clubId/matches', async (req, res) => {
+// Fetch recent matches for a single club
+app.get('/api/ea/matches/:clubId', async (req, res) => {
   const { clubId } = req.params;
   if (!/^\d+$/.test(String(clubId))) {
     return res.status(400).json({ error: 'Invalid clubId' });
   }
 
   try {
-    const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
-    const r = await fetchFn(url, { headers: EA_HEADERS });
-    if (!r.ok) throw new Error(`EA responded ${r.status}`);
-    res.json(await r.json());
+    const matches = await eaApi.fetchRecentLeagueMatches(clubId);
+    res.json(matches);
   } catch (err) {
-    console.error('EA matches fetch failed', err.message);
-    res
-      .status(502)
-      .json({ error: 'EA API request failed', details: err.message });
-  }
-});
-
-
-function normalizeMatch(m) {
-  const clubIds = Object.keys(m.clubs || {});
-  if (clubIds.length < 2) return null;
-  const [homeId, awayId] = clubIds;
-  const homeRaw = m.clubs[homeId] || {};
-  const awayRaw = m.clubs[awayId] || {};
-
-  const players = [];
-  for (const [clubId, clubPlayers] of Object.entries(m.players || {})) {
-    for (const [playerId, p] of Object.entries(clubPlayers || {})) {
-      players.push({
-        clubId,
-        playerId,
-        name: p.playername || p.name || p.personaName || '',
-        pos: p.pos || p.position || '',
-        rating: p.rating != null ? Number(p.rating) : undefined,
-        goals: p.goals != null ? Number(p.goals) : 0,
-        assists: p.assists != null ? Number(p.assists) : 0,
-      });
-    }
-  }
-
-  return {
-    matchId: String(m.matchId),
-    timestamp: Number(m.timestamp),
-    homeTeam: {
-      clubId: String(homeId),
-      name: homeRaw.name,
-      score: homeRaw.score != null ? Number(homeRaw.score) : 0,
-    },
-    awayTeam: {
-      clubId: String(awayId),
-      name: awayRaw.name,
-      score: awayRaw.score != null ? Number(awayRaw.score) : 0,
-    },
-    players,
-  };
-}
-
-function normalizeMatches(res, clubId) {
-  const arr = res?.[clubId];
-  if (!Array.isArray(arr)) return [];
-  return arr.map(normalizeMatch).filter(Boolean);
-}
-
-// Aggregate recent matches for default club list
-app.get('/api/ea/matches', async (_req, res) => {
-  try {
-    const map = new Map();
-    for (const id of CLUB_IDS) {
-      try {
-        const data = await eaApi.fetchClubLeagueMatches(id);
-        const matches = normalizeMatches(data, id);
-        for (const m of matches) {
-          if (!map.has(m.matchId)) map.set(m.matchId, m);
-        }
-      } catch (err) {
-        console.error(`Failed fetching club ${id}:`, err.message || err);
-      }
-    }
-    res.json(Array.from(map.values()));
-  } catch (err) {
-    console.error('EA matches fetch failed', err.message || err);
-    res
-      .status(err.status || 502)
-      .json({ error: 'EA API request failed', details: err.message || err.error });
+    console.error(`EA fetch failed for club ${clubId}`, err.message);
+    res.status(500).json({ error: 'Failed to fetch matches' });
   }
 });
 
