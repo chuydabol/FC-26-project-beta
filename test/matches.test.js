@@ -9,10 +9,12 @@ const queryStub = mock.method(pool, 'query', async sql => {
     return {
       rows: [
         {
-          id: '1',
-          club_id: '123',
-          timestamp: 123,
-          data: { matchId: '1', foo: 'bar' }
+          match_id: '1',
+          ts_ms: 1000,
+          clubs_obj: {
+            '1': { details: { name: 'A' }, goals: 1 },
+            '2': { details: { name: 'B' }, goals: 2 }
+          }
         }
       ]
     };
@@ -34,9 +36,20 @@ async function withServer(fn) {
 
 test('serves recent matches from db', async () => {
   await withServer(async port => {
-      const res = await fetch(`http://localhost:${port}/api/matches`);
-      const body = await res.json();
-      assert.deepStrictEqual(body, { matches: [{ matchId: '1', foo: 'bar' }] });
+    const res = await fetch(`http://localhost:${port}/api/matches`);
+    const body = await res.json();
+    assert.deepStrictEqual(body, {
+      matches: [
+        {
+          id: '1',
+          timestamp: 1000,
+          clubs: {
+            '1': { details: { name: 'A' }, goals: 1 },
+            '2': { details: { name: 'B' }, goals: 2 }
+          }
+        }
+      ]
     });
-    queryStub.mock.restore();
   });
+  queryStub.mock.restore();
+});

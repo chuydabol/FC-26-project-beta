@@ -56,18 +56,51 @@ ensureTable(
   'ea_last_matches'
 );
 
-// Recent match history fetched from EA API. One row per match per club.
+// Clubs catalog
+ensureTable(
+  `
+  CREATE TABLE IF NOT EXISTS clubs (
+    club_id   TEXT PRIMARY KEY,
+    club_name TEXT NOT NULL
+  )
+`,
+  'clubs'
+);
+
+// Matches: one row per match
 ensureTable(
   `
   CREATE TABLE IF NOT EXISTS matches (
-    id BIGINT PRIMARY KEY,
-    club_id BIGINT NOT NULL,
-    timestamp BIGINT NOT NULL,
-    data JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
+    match_id  TEXT  PRIMARY KEY,
+    ts_ms     BIGINT NOT NULL,
+    raw       JSONB  NOT NULL
   )
 `,
   'matches'
+);
+
+// Participants: two rows per match (home/away)
+ensureTable(
+  `
+  CREATE TABLE IF NOT EXISTS match_participants (
+    match_id  TEXT   NOT NULL REFERENCES matches(match_id) ON DELETE CASCADE,
+    club_id   TEXT   NOT NULL REFERENCES clubs(club_id),
+    is_home   BOOLEAN NOT NULL,
+    goals     INT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (match_id, club_id)
+  )
+`,
+  'match_participants'
+);
+
+// Indexes
+ensureTable(
+  `CREATE INDEX IF NOT EXISTS idx_matches_ts_ms_desc ON matches (ts_ms DESC)`,
+  'idx_matches_ts_ms_desc'
+);
+ensureTable(
+  `CREATE INDEX IF NOT EXISTS idx_mp_club_ts ON match_participants (club_id, match_id)`,
+  'idx_mp_club_ts'
 );
 
 // Cached teams and players from EA API

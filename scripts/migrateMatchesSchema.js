@@ -1,0 +1,60 @@
+const pool = require('../db');
+
+async function migrate() {
+  const migrationSql = `
+BEGIN;
+CREATE TABLE IF NOT EXISTS clubs (
+  club_id   TEXT PRIMARY KEY,
+  club_name TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS matches (
+  match_id  TEXT  PRIMARY KEY,
+  ts_ms     BIGINT NOT NULL,
+  raw       JSONB  NOT NULL
+);
+ALTER TABLE matches DROP COLUMN IF EXISTS club_id;
+CREATE TABLE IF NOT EXISTS match_participants (
+  match_id  TEXT   NOT NULL REFERENCES matches(match_id) ON DELETE CASCADE,
+  club_id   TEXT   NOT NULL REFERENCES clubs(club_id),
+  is_home   BOOLEAN NOT NULL,
+  goals     INT     NOT NULL DEFAULT 0,
+  PRIMARY KEY (match_id, club_id)
+);
+CREATE INDEX IF NOT EXISTS idx_matches_ts_ms_desc ON matches (ts_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_mp_club_ts ON match_participants (club_id, match_id);
+COMMIT;`;
+
+  const seedSql = `
+INSERT INTO clubs (club_id, club_name) VALUES
+('2491998','Royal Republic'),
+('1527486','Gungan FC'),
+('1969494','Club Frijol'),
+('2086022','Brehemen'),
+('2462194','Costa Chica FC'),
+('5098824','Sporting de la ma'),
+('4869810','Afc Tekki'),
+('576007','Ethabella FC'),
+('4933507','Loss Toyz'),
+('4824736','GoldenGoals FC'),
+('481847','Rooney tunes'),
+('3050467','invincible afc'),
+('4154835','khalch Fc'),
+('3638105','Real mvc'),
+('55408','Elite VT'),
+('4819681','EVERYTHING DEAD'),
+('35642','EBK FC')
+ON CONFLICT (club_id) DO NOTHING;`;
+
+  try {
+    await pool.query(migrationSql);
+    await pool.query(seedSql);
+    console.log('Migration complete');
+  } catch (err) {
+    console.error('Migration failed', err);
+    process.exitCode = 1;
+  } finally {
+    await pool.end();
+  }
+}
+
+migrate();
