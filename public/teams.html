@@ -546,16 +546,39 @@ const CC_ID = 'UPCL_CC_2025_08'; // current Champions Cup id
 const LEAGUE_ID = 'UPCL_LEAGUE_2025'; // current League id
 const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
 
+const CLUB_IDS = [
+  2491998, 1527486, 1969494, 2086022, 2462194, 5098824, 4869810, 576007,
+  4933507, 4824736, 481847, 3050467, 4154835, 3638105, 55408, 4819681,
+  35642
+];
+
 // Teams (add FC Dhizz)
 let teams = [];
 async function loadTeams(){
   try{
-    const data = await apiGet('/api/teams-with-players');
-    teams = Array.isArray(data?.teams) ? data.teams : [];
+    teams = [];
     playersByClub = {};
-    teams.forEach(t => {
-      playersByClub[t.id] = Array.isArray(t.players) ? t.players : [];
-    });
+    for (const id of CLUB_IDS){
+      const info = await apiGet(`/api/ea/clubs/${id}/info`).catch(()=>({}));
+      const mem = await apiGet(`/api/ea/clubs/${id}/members`).catch(()=>({}));
+      const club = info.club || {};
+      const raw = Array.isArray(mem.members) ? mem.members : [];
+      const players = raw.map(p => ({
+        name: p.name || p.playername || p.personaName || '',
+        position: p.position || p.preferredPosition || '',
+        stats: p
+      }));
+      const team = {
+        id: Number(id),
+        name: club.name || `Club ${id}`,
+        logo: club.customLogo,
+        season: club.season,
+        players
+      };
+      teams.push(team);
+      playersByClub[id] = players;
+      await new Promise(r => setTimeout(r, 1000));
+    }
     return true;
   }catch(e){
     console.error('Failed to load teams', e);
@@ -623,8 +646,16 @@ async function resolvePlayerName(id){
   }
 }
 
+const membersCache = new Map();
 async function fetchClubMembers(clubId){
-  return { members: playersByClub[clubId] || [] };
+  const c = membersCache.get(clubId) || (playersByClub[clubId] ? { at: 0, data: playersByClub[clubId] } : null);
+  if (c && Date.now() - c.at < 60_000){
+    return { members: c.data };
+  }
+  const d = await apiGet(`/api/ea/clubs/${encodeURIComponent(clubId)}/members`).catch(()=>({}));
+  const members = Array.isArray(d.members) ? d.members : [];
+  membersCache.set(clubId, { at: Date.now(), data: members });
+  return { members };
 }
 
 // nav elements
