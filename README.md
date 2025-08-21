@@ -16,3 +16,13 @@ for 60 seconds.
 
 `LEAGUE_CLUB_IDS` – optional comma-separated club IDs overriding the built-in
 default list used when the route is called without specifying a `clubId`.
+
+## Logging
+
+This project uses a Pino-based logger. Logs default to the `info` level. To see
+verbose output, set a `LOG_LEVEL` environment variable before starting the
+server, for example:
+
+```bash
+LOG_LEVEL=debug node server.js
+```

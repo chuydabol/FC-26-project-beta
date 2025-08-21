@@ -1,5 +1,6 @@
 // db.js
 const { Pool } = require('pg');
+const logger = require('./logger');
 
 // Use internal connection string (no SSL required inside Render)
 const pool = new Pool({
@@ -13,7 +14,7 @@ function ensureTable(sql, name) {
     .query(sql)
     .then(() => console.log(`Ensured ${name} table`))
     .catch(err => {
-      console.error(`Failed to ensure ${name} table`, err);
+      logger.error({ err, sql }, `Failed to ensure ${name} table`);
     });
 }
 
