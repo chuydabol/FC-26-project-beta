@@ -365,6 +365,7 @@ h2{margin:0 0 10px}
   <!-- FIXTURES (PUBLIC) -->
   <section id="fixtures-public" style="display:none">
     <h2>Fixtures</h2>
+    <div id="matchesList" class="fx-list" style="margin-top:10px"></div>
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
@@ -683,6 +684,7 @@ let fixturesPublicCache = [];
 let fixturesSchedCache  = [];
 let friendliesFxCache  = [];
 let friendliesTeams    = [];
+let matchesCache       = [];
 
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -976,7 +978,29 @@ document.getElementById('btnUnlistFA').onclick = async ()=>{
 // =======================
 //   FIXTURES — PUBLIC
 // =======================
+const matchesList = document.getElementById('matchesList');
 const fixturesPublicList = document.getElementById('fixturesPublicList');
+
+async function refreshMatches(){
+  try {
+    matchesCache = await apiGet('/api/matches');
+  } catch {
+    matchesCache = [];
+  }
+}
+function renderMatches(){
+  const list = matchesCache.slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
+  matchesList.innerHTML = list.length ? list.map(m=>{
+    const id = m.matchId || m.id;
+    const date = fmtDate(m.timestamp);
+    const hn = m.clubs?.home?.name || '';
+    const an = m.clubs?.away?.name || '';
+    const hs = m.clubs?.home?.score ?? '';
+    const as = m.clubs?.away?.score ?? '';
+    return `<div class="fx"><div><strong>Match ${escapeHtml(id)}</strong><div class="meta">Date: ${escapeHtml(date)}</div><div class="fx-vs"><span class="fx-team"><span>${escapeHtml(hn)}</span></span><span class="muted">${escapeHtml(hs)} – ${escapeHtml(as)}</span><span class="fx-team"><span>${escapeHtml(an)}</span></span></div></div></div>`;
+  }).join('') : `<div class="muted">No matches.</div>`;
+}
+
 async function refreshFixturesPublic(){
   try {
     const d = await apiGet('/api/cup/fixtures?cup=UPCL');
@@ -1893,6 +1917,9 @@ async function init(){
 
   // default
   setNav('teams');
+
+  await refreshMatches(); renderMatches();
+  setInterval(async () => { await refreshMatches(); renderMatches(); }, 10*60*1000);
 
   await refreshFixturesPublic(); renderFixturesPublic();
   if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
