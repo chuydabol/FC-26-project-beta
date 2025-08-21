@@ -282,23 +282,6 @@ function normalizeMatch(m) {
 // Aggregate recent matches for default club list
 app.get('/api/ea/matches', async (_req, res) => {
   try {
-    const all = [];
-    for (const id of CLUB_IDS) {
-      const arr = await eaApi.fetchRecentLeagueMatches(id);
-      if (Array.isArray(arr)) all.push(...arr);
-    }
-    const map = new Map();
-    for (const m of all) {
-      if (!map.has(m.matchId)) map.set(m.matchId, m);
-    }
-    const out = Array.from(map.values())
-      .map(normalizeMatch)
-      .filter(Boolean);
-    res.json(out);
-
-// Aggregate recent matches for default club list
-app.get('/api/ea/matches', async (_req, res) => {
-  try {
     const data = await eaApi.fetchClubLeagueMatches(CLUB_IDS);
     const map = new Map();
     Object.values(data || {}).forEach(arr => {
@@ -309,7 +292,6 @@ app.get('/api/ea/matches', async (_req, res) => {
       }
     });
     res.json(Array.from(map.values()));
-
   } catch (err) {
     console.error('EA matches fetch failed', err.message || err);
     res
