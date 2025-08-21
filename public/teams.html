@@ -1005,16 +1005,28 @@ function renderMatches(){
     return;
   }
   matchesCache.forEach(match => {
+
+    const home = match.homeClub;
+    const away = match.awayClub;
+    if (!home || !away) return;
+
     const clubs = Object.values(match.clubs || {});
     if (clubs.length < 2) return;
     const [clubA, clubB] = clubs;
+
     const date = fmtDate(match.timestamp * 1000);
     const card = document.createElement('div');
     card.className = 'match-card';
     card.innerHTML = `
+
+      <h3>Match ${escapeHtml(match.matchId)}</h3>
+      <p>Date: ${date}</p>
+      <p>${escapeHtml(home.name)} ${home.score} - ${away.score} ${escapeHtml(away.name)}</p>
+
       <h3>Match ${match.matchId}</h3>
       <p>Date: ${date}</p>
       <p>${clubA.name} ${clubA.score} - ${clubB.score} ${clubB.name}</p>
+
     `;
     fixturesEl.appendChild(card);
   });

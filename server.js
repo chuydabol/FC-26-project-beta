@@ -239,6 +239,63 @@ app.get('/api/ea/clubs/:clubId/matches', async (req, res) => {
   }
 });
 
+
+function normalizeMatch(m) {
+  const clubIds = Object.keys(m.clubs || {});
+  if (clubIds.length < 2) return null;
+  const [homeId, awayId] = clubIds;
+  const homeRaw = m.clubs[homeId] || {};
+  const awayRaw = m.clubs[awayId] || {};
+
+  const players = [];
+  for (const [clubId, clubPlayers] of Object.entries(m.players || {})) {
+    for (const [playerId, p] of Object.entries(clubPlayers || {})) {
+      players.push({
+        clubId,
+        playerId,
+        name: p.playername || p.name || p.personaName || '',
+        pos: p.pos || p.position || '',
+        rating: p.rating != null ? Number(p.rating) : undefined,
+        goals: p.goals != null ? Number(p.goals) : 0,
+        assists: p.assists != null ? Number(p.assists) : 0,
+      });
+    }
+  }
+
+  return {
+    matchId: String(m.matchId),
+    timestamp: Number(m.timestamp),
+    homeClub: {
+      id: String(homeId),
+      name: homeRaw.name,
+      score: homeRaw.score != null ? Number(homeRaw.score) : 0,
+    },
+    awayClub: {
+      id: String(awayId),
+      name: awayRaw.name,
+      score: awayRaw.score != null ? Number(awayRaw.score) : 0,
+    },
+    players,
+  };
+}
+
+// Aggregate recent matches for default club list
+app.get('/api/ea/matches', async (_req, res) => {
+  try {
+    const all = [];
+    for (const id of CLUB_IDS) {
+      const arr = await eaApi.fetchRecentLeagueMatches(id);
+      if (Array.isArray(arr)) all.push(...arr);
+    }
+    const map = new Map();
+    for (const m of all) {
+      if (!map.has(m.matchId)) map.set(m.matchId, m);
+    }
+    const out = Array.from(map.values())
+      .map(normalizeMatch)
+      .filter(Boolean);
+    res.json(out);
+
 // Aggregate recent matches for default club list
 app.get('/api/ea/matches', async (_req, res) => {
   try {
@@ -252,6 +309,7 @@ app.get('/api/ea/matches', async (_req, res) => {
       }
     });
     res.json(Array.from(map.values()));
+
   } catch (err) {
     console.error('EA matches fetch failed', err.message || err);
     res
@@ -316,7 +374,12 @@ app.post('/api/saveMatches', async (req, res) => {
         [
           match.matchId,
           match.timestamp,
-          JSON.stringify(match.clubs),
+          JSON.stringify(
+            match.clubs || {
+              home: match.homeClub,
+              away: match.awayClub,
+            }
+          ),
           JSON.stringify(match.players),
           JSON.stringify(match)
         ]
