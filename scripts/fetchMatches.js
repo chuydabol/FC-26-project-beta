@@ -17,15 +17,12 @@ async function main() {
     const matches = Array.isArray(data[clubId]) ? data[clubId] : [];
     for (const m of matches) {
       const id = Number(m.matchId);
-      const ts = m.timestamp
-        ? new Date(m.timestamp).toISOString()
-        : (m.matchDate ? new Date(m.matchDate).toISOString() : null);
       try {
         const { rowCount } = await pool.query(
-          `INSERT INTO matches (id, timestamp, clubs, players, raw)
-           VALUES ($1,$2,$3,$4,$5)
+          `INSERT INTO matches (id, club_id, timestamp, data)
+           VALUES ($1,$2,$3,$4)
            ON CONFLICT (id) DO NOTHING`,
-          [id, ts, m.clubs || { home: m.home, away: m.away }, m.players || null, m]
+          [id, Number(clubId), m.timestamp, m]
         );
         inserted += rowCount;
       } catch (err) {

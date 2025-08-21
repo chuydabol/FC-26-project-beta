@@ -20,16 +20,10 @@ async function saveLeagueMatches(clubId, pool) {
   const matches = await fetchLeagueMatches(clubId);
   for (const m of matches) {
     await pool.query(
-      `INSERT INTO matches (id, "timestamp", clubs, players, raw)
-       VALUES ($1, to_timestamp($2 / 1000), $3, $4, $5)
+      `INSERT INTO matches (id, club_id, timestamp, data)
+       VALUES ($1, $2, $3, $4)
        ON CONFLICT (id) DO NOTHING`,
-      [
-        String(m.matchId),
-        m.timestamp,
-        JSON.stringify(m.clubs || {}),
-        JSON.stringify(m.players || {}),
-        JSON.stringify(m)
-      ]
+      [String(m.matchId), clubId, m.timestamp, JSON.stringify(m)]
     );
   }
 }

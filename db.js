@@ -56,15 +56,15 @@ ensureTable(
   'ea_last_matches'
 );
 
-// Recent match history fetched from EA API
+// Recent match history fetched from EA API. One row per match per club.
 ensureTable(
   `
   CREATE TABLE IF NOT EXISTS matches (
     id BIGINT PRIMARY KEY,
-    "timestamp" TIMESTAMPTZ,
-    clubs JSONB,
-    players JSONB,
-    raw JSONB
+    club_id BIGINT NOT NULL,
+    timestamp BIGINT NOT NULL,
+    data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
   )
 `,
   'matches'
