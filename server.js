@@ -314,7 +314,8 @@ app.get('/api/matches', async (_req, res) => {
     const { rows } = await pool.query(
       'SELECT id, club_id, timestamp, data FROM matches ORDER BY timestamp DESC LIMIT 50'
     );
-    res.status(200).json(rows.map(r => r.data));
+    const matches = rows.map(r => r.data);
+    res.status(200).json({ matches });
   } catch (err) {
     console.error('Failed to fetch matches:', err);
     res.status(500).json({ error: 'Failed to fetch matches' });

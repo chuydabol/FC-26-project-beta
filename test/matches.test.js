@@ -34,9 +34,9 @@ async function withServer(fn) {
 
 test('serves recent matches from db', async () => {
   await withServer(async port => {
-    const res = await fetch(`http://localhost:${port}/api/matches`);
-    const body = await res.json();
-    assert.deepStrictEqual(body, [{ matchId: '1', foo: 'bar' }]);
+      const res = await fetch(`http://localhost:${port}/api/matches`);
+      const body = await res.json();
+      assert.deepStrictEqual(body, { matches: [{ matchId: '1', foo: 'bar' }] });
+    });
+    queryStub.mock.restore();
   });
-  queryStub.mock.restore();
-});
