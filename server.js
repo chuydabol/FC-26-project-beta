@@ -155,25 +155,35 @@ async function fetchClubPlayers(clubId) {
 
 // --- Match utilities backed by Postgres ---
 // Fetch matches for a single club from EA and return an array of matches.
-// Uses a 10s timeout and returns [] on any error.
+// Uses a 30s timeout, retries once on timeout and returns [] on any error.
 async function fetchMatches(clubId) {
   const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
-  try {
+  for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    if (!res.ok) throw new Error(`EA responded ${res.status}`);
-    const data = await res.json();
-    if (Array.isArray(data)) return data;
-    return data?.[clubId] || [];
-  } catch (err) {
-    console.error(`Failed fetching matches for club ${clubId}:`, err.message);
-    return [];
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error(`EA responded ${res.status}`);
+      const data = await res.json();
+      if (Array.isArray(data)) return data;
+      return data?.[clubId] || [];
+    } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError' && attempt === 0) {
+        console.warn(`[EA] request timed out for club ${clubId}, retrying`);
+        await new Promise(r => setTimeout(r, 1_500));
+        continue;
+      }
+      const msg = err.message || 'EA API error';
+      console.warn(`[EA] Failed fetching matches for club ${clubId}: ${msg}`);
+      return [];
+    }
   }
+  return [];
 }
 
 // Save matches into Postgres, ignoring duplicates.
@@ -208,6 +218,7 @@ async function updateAllMatches() {
   for (const clubId of CLUB_IDS) {
     const matches = await fetchMatches(clubId);
     total += await saveMatches(clubId, matches);
+    await new Promise(r => setTimeout(r, 1_500));
   }
   return total;
 }

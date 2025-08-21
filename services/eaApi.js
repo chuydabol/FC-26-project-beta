@@ -8,32 +8,55 @@ const EA_HEADERS = {
   Referer: 'https://www.ea.com/',
 };
 
+const EA_TIMEOUT_MS = 30_000;
+const FETCH_DELAY_MS = 1_500;
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function fetchClubLeagueMatches(clubIds) {
   const ids = Array.isArray(clubIds) ? clubIds : [clubIds];
   if (!ids.length) throw new Error('clubIds required');
-  const url =
-    `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch` +
-    `&platform=common-gen5&clubIds=${ids.join(',')}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  try {
-    const res = await fetchFn(url, {
-      headers: EA_HEADERS,
-      signal: controller.signal
-    });
-    if (!res.ok) {
-      throw { error: 'EA API error', status: res.status };
+
+  const results = {};
+  for (const id of ids) {
+    let attempt = 0;
+    let done = false;
+    while (!done && attempt < 2) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), EA_TIMEOUT_MS);
+      try {
+        const url =
+          `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch` +
+          `&platform=common-gen5&clubIds=${id}`;
+        const res = await fetchFn(url, {
+          headers: EA_HEADERS,
+          signal: controller.signal
+        });
+        if (!res.ok) {
+          throw { error: 'EA API error', status: res.status };
+        }
+        const data = await res.json();
+        results[id] = Array.isArray(data) ? data : data?.[id] || [];
+        done = true;
+      } catch (err) {
+        if (err.name === 'AbortError' && attempt === 0) {
+          console.warn(`[EA] request timed out for club ${id}, retrying`);
+          attempt++;
+          await delay(FETCH_DELAY_MS);
+          continue;
+        }
+        const msg = err?.error || err?.message || 'EA API error';
+        console.warn(`[EA] ${msg} for club ${id}`);
+        done = true;
+      } finally {
+        clearTimeout(timeout);
+      }
     }
-    return res.json();
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      throw { error: 'EA API request timed out' };
-    }
-    if (err && err.error) throw err;
-    throw { error: 'EA API error' };
-  } finally {
-    clearTimeout(timeout);
+    await delay(FETCH_DELAY_MS);
   }
+  return results;
 }
 
 async function fetchRecentLeagueMatches(clubId) {
@@ -46,7 +69,7 @@ async function fetchClubMembers(clubId) {
   const url =
     `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${encodeURIComponent(clubId)}`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), EA_TIMEOUT_MS);
   try {
     const res = await fetchFn(url, {
       headers: EA_HEADERS,
@@ -74,7 +97,7 @@ async function fetchPlayersForClub(clubId) {
       clubId
     )}/members?platform=common-gen5`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), EA_TIMEOUT_MS);
   try {
     const res = await fetchFn(url, {
       headers: EA_HEADERS,
@@ -115,7 +138,7 @@ async function fetchClubInfo(clubId) {
       clubId
     )}`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), EA_TIMEOUT_MS);
   try {
     const res = await fetchFn(url, {
       headers: EA_HEADERS,
