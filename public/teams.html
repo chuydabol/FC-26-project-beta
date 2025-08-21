@@ -686,6 +686,19 @@ let friendliesFxCache  = [];
 let friendliesTeams    = [];
 let matchesCache       = [];
 
+// numeric club ids for league teams – used when fetching matches directly
+const LEAGUE_CLUB_IDS = [
+  "2491998","1527486","1969494","2086022","2462194","5098824",
+  "4869810","576007","4933507","4824736","481847","3050467",
+  "4154835","3638105","55408","4819681","35642"
+];
+
+// headers resembling a browser request for EA endpoints
+const EA_FETCH_HEADERS = {
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'en-US,en;q=0.9'
+};
+
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -982,11 +995,24 @@ const matchesList = document.getElementById('matchesList');
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 
 async function refreshMatches(){
-  try {
-    matchesCache = await apiGet('/api/matches');
-  } catch {
-    matchesCache = [];
+  const byId = {};
+  for (const id of LEAGUE_CLUB_IDS){
+    try{
+      const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${id}`;
+      const res = await fetch(url,{ headers: EA_FETCH_HEADERS });
+      if(!res.ok) throw new Error('EA '+res.status);
+      const data = await res.json();
+      const arr = data?.[id] || [];
+      for(const m of arr){ byId[m.matchId] = m; }
+    }catch(err){
+      console.error('EA fetch failed', id, err);
+    }
+    await new Promise(r=>setTimeout(r,300));
   }
+  matchesCache = Object.values(byId);
+  renderMatches();
+  // persist after rendering
+  try{ await apiPost('/api/saveMatches', matchesCache); } catch(err){ console.warn('saveMatches failed', err); }
 }
 function renderMatches(){
   const list = matchesCache.slice().sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
@@ -1918,8 +1944,8 @@ async function init(){
   // default
   setNav('teams');
 
-  await refreshMatches(); renderMatches();
-  setInterval(async () => { await refreshMatches(); renderMatches(); }, 10*60*1000);
+  await refreshMatches();
+  setInterval(async () => { await refreshMatches(); }, 10*60*1000);
 
   await refreshFixturesPublic(); renderFixturesPublic();
   if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
