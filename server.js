@@ -20,6 +20,7 @@ try {
 }
 const path = require('path');
 const pool = require('./db');
+const logger = require('./logger');
 const eaApi = require('./services/eaApi');
 const { isNumericId } = require('./utils');
 
@@ -130,7 +131,7 @@ async function fetchClubPlayers(clubId) {
     const data = await eaApi.fetchClubMembers(clubId);
     return data.members || [];
   } catch (err) {
-    console.error(`Failed fetching club ${clubId}:`, err.message || err);
+    logger.error({ err }, `Failed fetching club ${clubId}`);
     return [];
   }
 }
@@ -142,10 +143,7 @@ async function fetchClubMatches(clubId) {
   try {
     return await eaApi.fetchRecentLeagueMatches(clubId);
   } catch (err) {
-    console.error(
-      `[EA] Failed fetching matches for club ${clubId}:`,
-      err.message || err
-    );
+    logger.error({ err }, `[EA] Failed fetching matches for club ${clubId}`);
     return [];
   }
 }
@@ -155,13 +153,13 @@ async function refreshClubMatches(clubId) {
   for (const m of matches) {
     const matchId = String(m.matchId);
     const tsMs = Number(m.timestamp) * 1000;
+    let lastSql, lastParams;
     try {
-      await pool.query(
-        `INSERT INTO matches (match_id, ts_ms, raw)
+      lastSql = `INSERT INTO matches (match_id, ts_ms, raw)
          VALUES ($1, $2, $3::jsonb)
-         ON CONFLICT (match_id) DO NOTHING`,
-        [matchId, tsMs, m]
-      );
+         ON CONFLICT (match_id) DO NOTHING`;
+      lastParams = [matchId, tsMs, m];
+      await pool.query(lastSql, lastParams);
 
       const entries = Object.entries(m.clubs || {});
       if (entries.length === 2) {
@@ -171,20 +169,18 @@ async function refreshClubMatches(clubId) {
         const [awayId, awayData] = awayEntry;
         const homeGoals = Number(homeData?.score ?? homeData?.goals ?? 0);
         const awayGoals = Number(awayData?.score ?? awayData?.goals ?? 0);
-        await pool.query(
-          `INSERT INTO match_participants (match_id, club_id, is_home, goals)
+        lastSql = `INSERT INTO match_participants (match_id, club_id, is_home, goals)
            VALUES ($1,$2,TRUE,$3),($1,$4,FALSE,$5)
-           ON CONFLICT (match_id, club_id) DO NOTHING`,
-          [matchId, homeId, homeGoals, awayId, awayGoals]
-        );
-        await pool.query(
-          `INSERT INTO clubs (club_id, club_name) VALUES ($1,$2),($3,$4)
-           ON CONFLICT (club_id) DO NOTHING`,
-          [homeId, homeData?.name || '', awayId, awayData?.name || '']
-        );
+           ON CONFLICT (match_id, club_id) DO NOTHING`;
+        lastParams = [matchId, homeId, homeGoals, awayId, awayGoals];
+        await pool.query(lastSql, lastParams);
+        lastSql = `INSERT INTO clubs (club_id, club_name) VALUES ($1,$2),($3,$4)
+           ON CONFLICT (club_id) DO NOTHING`;
+        lastParams = [homeId, homeData?.name || '', awayId, awayData?.name || ''];
+        await pool.query(lastSql, lastParams);
       }
     } catch (err) {
-      console.error(`[EA] Failed inserting match ${matchId} for club ${clubId}:`, err.message);
+      logger.error({ err, sql: lastSql, params: lastParams }, `[EA] Failed inserting match ${matchId} for club ${clubId}`);
     }
   }
 }
@@ -302,22 +298,19 @@ app.get('/api/ea/matches/:clubId', async (req, res) => {
 
 // Basic teams listing
 app.get('/api/teams', async (_req, res) => {
+  const sql = 'SELECT * FROM teams ORDER BY updated_at DESC LIMIT 20';
   try {
-    const { rows } = await pool.query(
-      'SELECT * FROM teams ORDER BY updated_at DESC LIMIT 20'
-    );
+    const { rows } = await pool.query(sql);
     res.json({ ok: true, teams: rows });
   } catch (err) {
-    console.error('Failed to load teams:', err);
+    logger.error({ err, sql, params: [] }, 'Failed to load teams');
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
 // Recent matches served from Postgres
 app.get('/api/matches', async (_req, res) => {
-  try {
-    const { rows } = await pool.query(
-      `SELECT
+  const sql = `SELECT
         m.match_id,
         m.ts_ms,
         jsonb_object_agg(mp.club_id,
@@ -331,8 +324,9 @@ app.get('/api/matches', async (_req, res) => {
        JOIN clubs c ON c.club_id = mp.club_id
        GROUP BY m.match_id, m.ts_ms
        ORDER BY m.ts_ms DESC
-       LIMIT 100`
-    );
+       LIMIT 100`;
+  try {
+    const { rows } = await pool.query(sql);
     res.status(200).json({
       matches: rows.map(r => ({
         id: r.match_id,
@@ -341,7 +335,7 @@ app.get('/api/matches', async (_req, res) => {
       }))
     });
   } catch (err) {
-    console.error('Failed to fetch matches:', err);
+    logger.error({ err, sql, params: [] }, 'Failed to fetch matches');
     res.status(500).json({ error: 'Failed to fetch matches' });
   }
 });
@@ -352,7 +346,7 @@ app.get('/api/update-matches', async (_req, res) => {
     await refreshAllMatches();
     res.json({ status: 'ok' });
   } catch (err) {
-    console.error('Error updating matches:', err);
+    logger.error({ err }, 'Error updating matches');
     res.status(500).json({ status: 'error', error: 'Failed to update matches' });
   }
 });
@@ -404,7 +398,7 @@ if (process.env.NODE_ENV !== 'test') {
       await refreshAllMatches();
       console.log(`[${new Date().toISOString()}] ✅ Auto update complete.`);
     } catch (err) {
-      console.error(`[${new Date().toISOString()}] ❌ Auto update failed: ${err.message}`);
+      logger.error({ err }, `[${new Date().toISOString()}] ❌ Auto update failed`);
     }
   });
 }
@@ -422,13 +416,13 @@ if (require.main === module) {
               await refreshAllMatches();
               console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
             } catch (err) {
-              console.error(`[${new Date().toISOString()}] ❌ Initial sync error:`, err.message);
+              logger.error({ err }, `[${new Date().toISOString()}] ❌ Initial sync error`);
             }
           })();
         }
       });
     } catch (err) {
-      console.error('Failed to initialize database', err);
+      logger.error({ err }, 'Failed to initialize database');
       process.exit(1);
     }
   })();
