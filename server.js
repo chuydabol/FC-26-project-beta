@@ -154,73 +154,40 @@ async function fetchClubPlayers(clubId) {
 
 
 // --- Match utilities backed by Postgres ---
-// Fetch matches for a single club from EA and return an array of matches.
-// Uses a 30s timeout, retries once on timeout and returns [] on any error.
-async function fetchMatches(clubId) {
+async function fetchClubMatches(clubId) {
   const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30_000);
-    try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`EA responded ${res.status}`);
-      const data = await res.json();
-      if (Array.isArray(data)) return data;
-      return data?.[clubId] || [];
-    } catch (err) {
-      clearTimeout(timeoutId);
-      if (err.name === 'AbortError' && attempt === 0) {
-        console.warn(`[EA] request timed out for club ${clubId}, retrying`);
-        await new Promise(r => setTimeout(r, 1_500));
-        continue;
-      }
-      const msg = err.message || 'EA API error';
-      console.warn(`[EA] Failed fetching matches for club ${clubId}: ${msg}`);
-      return [];
-    }
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) throw new Error(`EA responded ${res.status}`);
+    const data = await res.json();
+    if (Array.isArray(data)) return data;
+    return data?.[clubId] || [];
+  } catch (err) {
+    console.error(`[EA] Failed fetching matches for club ${clubId}:`, err.message);
+    return [];
   }
-  return [];
 }
 
-// Save matches into Postgres, ignoring duplicates.
-async function saveMatches(clubId, matches) {
-  let inserted = 0;
-  for (const match of matches) {
-    const matchId = match.matchId || match.id;
-    const ts = match.timestamp || match.matchTimestamp;
-    if (!matchId || !ts) continue;
+async function refreshClubMatches(clubId) {
+  const matches = await fetchClubMatches(clubId);
+  for (const m of matches) {
     try {
-      const result = await pool.query(
-        `INSERT INTO matches (id, "timestamp", clubs, players)
-         VALUES ($1, to_timestamp($2), $3, $4)
+      await pool.query(
+        `INSERT INTO matches (id, club_id, timestamp, data)
+         VALUES ($1, $2, $3, $4)
          ON CONFLICT (id) DO NOTHING`,
-        [
-          matchId,
-          ts,
-          JSON.stringify(match.clubs || {}),
-          JSON.stringify(match.players || {})
-        ]
+        [m.matchId, clubId, m.timestamp, m]
       );
-      inserted += result.rowCount;
     } catch (err) {
-      console.error(`Failed to insert match ${matchId} for club ${clubId}:`, err.message);
+      console.error(`[EA] Failed inserting match ${m.matchId} for club ${clubId}:`, err.message);
     }
   }
-  return inserted;
 }
 
-async function updateAllMatches() {
-  let total = 0;
+async function refreshAllMatches() {
   for (const clubId of CLUB_IDS) {
-    const matches = await fetchMatches(clubId);
-    total += await saveMatches(clubId, matches);
-    await new Promise(r => setTimeout(r, 1_500));
+    await refreshClubMatches(clubId);
   }
-  return total;
 }
 
 const app = express();
@@ -324,7 +291,7 @@ app.get('/api/ea/matches/:clubId', async (req, res) => {
   if (!/^\d+$/.test(String(clubId))) {
     return res.status(400).json({ error: 'Invalid clubId' });
   }
-  const matches = await fetchMatches(clubId);
+  const matches = await fetchClubMatches(clubId);
   res.json(matches);
 });
 
@@ -345,9 +312,9 @@ app.get('/api/teams', async (_req, res) => {
 app.get('/api/matches', async (_req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT * FROM matches ORDER BY "timestamp" DESC LIMIT 100'
+      'SELECT id, club_id, timestamp, data FROM matches ORDER BY timestamp DESC LIMIT 50'
     );
-    res.status(200).json(rows);
+    res.status(200).json(rows.map(r => r.data));
   } catch (err) {
     console.error('Failed to fetch matches:', err);
     res.status(500).json({ error: 'Failed to fetch matches' });
@@ -357,8 +324,8 @@ app.get('/api/matches', async (_req, res) => {
 // Fetch new matches from EA and store in Postgres
 app.get('/api/update-matches', async (_req, res) => {
   try {
-    const inserted = await updateAllMatches();
-    res.json({ status: 'ok', inserted });
+    await refreshAllMatches();
+    res.json({ status: 'ok' });
   } catch (err) {
     console.error('Error updating matches:', err);
     res.status(500).json({ status: 'error', error: 'Failed to update matches' });
@@ -409,7 +376,7 @@ if (process.env.NODE_ENV !== 'test') {
   cron.schedule('*/10 * * * *', async () => {
     console.log(`[${new Date().toISOString()}] Auto update starting...`);
     try {
-      await updateAllMatches();
+      await refreshAllMatches();
       console.log(`[${new Date().toISOString()}] ✅ Auto update complete.`);
     } catch (err) {
       console.error(`[${new Date().toISOString()}] ❌ Auto update failed: ${err.message}`);
@@ -424,7 +391,7 @@ if (require.main === module) {
     if (process.env.NODE_ENV !== 'test') {
       (async () => {
         try {
-          await updateAllMatches();
+          await refreshAllMatches();
           console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
         } catch (err) {
           console.error(`[${new Date().toISOString()}] ❌ Initial sync error:`, err.message);

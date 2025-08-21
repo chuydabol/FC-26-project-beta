@@ -25,16 +25,10 @@ async function fetchAndStoreMatches(clubIds = [], pool, delayMs = 300) {
       const matches = await fetchMatchesForClub(id);
       for (const m of matches) {
         await pool.query(
-          `INSERT INTO matches (id, "timestamp", clubs, players, raw)
-           VALUES ($1, to_timestamp($2 / 1000), $3, $4, $5)
+          `INSERT INTO matches (id, club_id, timestamp, data)
+           VALUES ($1, $2, $3, $4)
            ON CONFLICT (id) DO NOTHING`,
-          [
-            String(m.matchId),
-            m.timestamp,
-            JSON.stringify(m.clubs || {}),
-            JSON.stringify(m.players || {}),
-            JSON.stringify(m),
-          ]
+          [String(m.matchId), id, m.timestamp, JSON.stringify(m)]
         );
       }
     } catch (err) {
