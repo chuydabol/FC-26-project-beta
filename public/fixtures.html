@@ -16,15 +16,7 @@
 
   <script>
     async function fetchMatches(clubId) {
-      const url = `https://proclubs.ea.com/api/fc/clubs/matches?matchType=leagueMatch&platform=common-gen5&clubIds=${clubId}`;
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': navigator.userAgent,
-          Accept: 'application/json',
-          Referer: 'https://www.ea.com/',
-          Connection: 'keep-alive'
-        }
-      });
+      const res = await fetch(`/api/matches?clubId=${clubId}`);
       if (!res.ok) throw new Error('Failed to fetch matches');
       return res.json();
     }
@@ -44,23 +36,13 @@
       });
     }
 
-    async function storeMatches(matches) {
-      await fetch('/api/store-matches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(matches)
-      });
-    }
-
     document.getElementById('btnFetch').onclick = async () => {
       const clubId = document.getElementById('clubId').value.trim();
       if (!clubId) return;
       try {
-        const data = await fetchMatches(clubId);
-        const matches = data[clubId] || data;
+        const matches = await fetchMatches(clubId);
         console.log(matches);
         renderMatches(matches);
-        await storeMatches(matches);
       } catch (e) {
         console.error(e);
         alert(e.message);
