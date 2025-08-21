@@ -265,13 +265,13 @@ function normalizeMatch(m) {
   return {
     matchId: String(m.matchId),
     timestamp: Number(m.timestamp),
-    homeClub: {
-      id: String(homeId),
+    homeTeam: {
+      clubId: String(homeId),
       name: homeRaw.name,
       score: homeRaw.score != null ? Number(homeRaw.score) : 0,
     },
-    awayClub: {
-      id: String(awayId),
+    awayTeam: {
+      clubId: String(awayId),
       name: awayRaw.name,
       score: awayRaw.score != null ? Number(awayRaw.score) : 0,
     },
@@ -282,16 +282,23 @@ function normalizeMatch(m) {
 // Aggregate recent matches for default club list
 app.get('/api/ea/matches', async (_req, res) => {
   try {
-    const data = await eaApi.fetchClubLeagueMatches(CLUB_IDS);
     const map = new Map();
-    Object.values(data || {}).forEach(arr => {
-      if (Array.isArray(arr)) {
-        arr.forEach(m => {
-          if (!map.has(m.matchId)) map.set(m.matchId, m);
-        });
+    for (const id of CLUB_IDS) {
+      try {
+        const arr = await eaApi.fetchRecentLeagueMatches(id);
+        if (Array.isArray(arr)) {
+          arr.forEach(m => {
+            if (!map.has(m.matchId)) map.set(m.matchId, m);
+          });
+        }
+      } catch (err) {
+        console.error('EA matches fetch failed for club', id, err.message || err);
       }
-    });
-    res.json(Array.from(map.values()));
+    }
+    const normalized = Array.from(map.values())
+      .map(normalizeMatch)
+      .filter(Boolean);
+    res.json(normalized);
   } catch (err) {
     console.error('EA matches fetch failed', err.message || err);
     res
@@ -358,8 +365,8 @@ app.post('/api/saveMatches', async (req, res) => {
           match.timestamp,
           JSON.stringify(
             match.clubs || {
-              home: match.homeClub,
-              away: match.awayClub,
+              home: match.homeTeam,
+              away: match.awayTeam,
             }
           ),
           JSON.stringify(match.players),

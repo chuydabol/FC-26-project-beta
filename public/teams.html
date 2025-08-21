@@ -986,13 +986,15 @@ async function refreshMatches(){
     const res = await fetch('/api/ea/matches');
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
-    matchesCache = Array.isArray(data) ? data : [];
-    renderMatches();
-    await fetch('/api/saveMatches', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(matchesCache)
-    });
+    if(Array.isArray(data) && data.length){
+      matchesCache = data;
+      renderMatches();
+      await fetch('/api/saveMatches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(matchesCache)
+      });
+    }
   } catch(err){
     console.error('Error fetching matches:', err);
   }
@@ -1005,28 +1007,16 @@ function renderMatches(){
     return;
   }
   matchesCache.forEach(match => {
-
-    const home = match.homeClub;
-    const away = match.awayClub;
+    const home = match.homeTeam;
+    const away = match.awayTeam;
     if (!home || !away) return;
-
-    const clubs = Object.values(match.clubs || {});
-    if (clubs.length < 2) return;
-    const [clubA, clubB] = clubs;
-
     const date = fmtDate(match.timestamp * 1000);
     const card = document.createElement('div');
     card.className = 'match-card';
     card.innerHTML = `
-
       <h3>Match ${escapeHtml(match.matchId)}</h3>
       <p>Date: ${date}</p>
       <p>${escapeHtml(home.name)} ${home.score} - ${away.score} ${escapeHtml(away.name)}</p>
-
-      <h3>Match ${match.matchId}</h3>
-      <p>Date: ${date}</p>
-      <p>${clubA.name} ${clubA.score} - ${clubB.score} ${clubB.name}</p>
-
     `;
     fixturesEl.appendChild(card);
   });
