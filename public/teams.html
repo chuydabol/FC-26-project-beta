@@ -889,14 +889,9 @@ async function loadPlayers(){
 const oldList = card.querySelector('.player-list');
 if (oldList) oldList.remove();
 
-let grid = card.querySelector('.players-grid');
-if (!grid) {
-  grid = document.createElement('div');
-  grid.className = 'players-grid';
-  card.appendChild(grid);
-} else {
-  grid.innerHTML = '';
-}
+const grid = card.querySelector('.players-grid');
+if (!grid) return;
+grid.innerHTML = '';
 
       const members = playersByClub[clubId] || [];
       members.forEach(p=>{
