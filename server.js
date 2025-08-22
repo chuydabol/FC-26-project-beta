@@ -19,7 +19,6 @@ try {
   };
 }
 const path = require('path');
-const { pool, initDb } = require('./db');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
@@ -439,30 +438,36 @@ if (process.env.NODE_ENV !== 'test' && CRON_ENABLED) {
   });
 }
 
-if (require.main === module) {
-  (async () => {
-    try {
-      await initDb();
-      const PORT = process.env.PORT || 3001;
-      app.listen(PORT, () => {
-        console.log(`Server running on ${PORT}`);
-        if (process.env.NODE_ENV !== 'test') {
-          (async () => {
-            try {
-              await refreshAllMatches();
-              console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
-            } catch (err) {
-              logger.error({ err }, `[${new Date().toISOString()}] ❌ Initial sync error`);
-            }
-          })();
+
+
+async function bootstrap() {
+  if (process.env.MIGRATE_ON_BOOT === '1') {
+    console.log('[migrate] starting');
+    await runMigrations();
+    console.log('[migrate] done');
+  }
+
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server on :${PORT}`);
+    if (process.env.NODE_ENV !== 'test') {
+      (async () => {
+        try {
+          await refreshAllMatches();
+          console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
+        } catch (err) {
+          logger.error({ err }, `[${new Date().toISOString()}] ❌ Initial sync error`);
         }
-      });
-    } catch (err) {
-      logger.error({ err }, 'Failed to initialize database');
-      process.exit(1);
+      })();
     }
-  })();
+  });
+}
+
+if (require.main === module) {
+  bootstrap().catch(err => {
+    console.error('[bootstrap] failed', err);
+    process.exit(1);
+  });
 }
 
 module.exports = app;
-
