@@ -888,8 +888,6 @@ function tierFromOvr(ovr){
   return {frame:'obsidian_elite.png',className:'tier-obsidian'};
 }
 
-
-<<<<<<< codex/update-squad-expansion-rendering-logic-m5o0gv
 async function populateSquad(card, clubId){
   let squad = card.querySelector('.team-squad');
   if (!squad){
@@ -924,33 +922,6 @@ async function populateSquad(card, clubId){
     const pc = document.createElement('div');
     pc.className = `player-card ${t.className}`;
     pc.innerHTML = `
-=======
-async function loadPlayers(){
-  try{
-    const d = await apiGet('/api/players');
-    playersByClub = d.byClub || {};
-    document.querySelectorAll('.team-card').forEach(card=>{
-      const clubId = card.getAttribute('data-club-id');
-      let grid = card.querySelector('.players-grid');
-      if (!grid){
-        grid = document.createElement('div');
-        grid.className = 'players-grid';
-        card.appendChild(grid);
-      }
-      grid.innerHTML = '';
-
-      const members = playersByClub[clubId] || [];
-      members.forEach(p=>{
-        const nameRaw = p.name||p.playername||p.proName||p.personaName;
-        const name = nameRaw ? nameRaw : `Unknown_${p.playerId||p.playerid||''}`;
-        const pos = p.position||p.pos||'';
-        const stats = parseVpro(p.vproattr);
-        const t = tierFromOvr(stats?stats.ovr:null);
-        const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-        const pc = document.createElement('div');
-        pc.className = `player-card ${t.className}`;
-        pc.innerHTML = `
->>>>>>> main
           <img src="/assets/cards/${t.frame}" class="card-frame" />
           <div class="card-overlay">
             <div class="player-overall">${s.ovr}</div>
@@ -968,7 +939,6 @@ async function loadPlayers(){
     grid.appendChild(pc);
   });
 }
-
 
 async function loadPlayers(){
   try{
