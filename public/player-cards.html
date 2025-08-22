@@ -5,88 +5,122 @@
 <title>Player Cards</title>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet" />
 <style>
-.player-card {
-  position: relative;
-  width: 260px;
-  height: 370px;
-  margin: 10px;
-}
-
-.player-card .card-frame {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 12px;
-}
-
-.player-card .card-overlay {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 12px;
-  color: #fff;
-  text-shadow: 0 0 6px black;
-}
-
-.player-overall {
-  font-size: 32px;
-  font-weight: 900;
-}
-
-.player-name {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.player-position {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-
-.player-stats {
-  font-size: 14px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
-  text-align: left;
-}
+body{background:#000;color:#fff;font-family:'Montserrat',sans-serif;margin:0;padding:20px}
+.teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin-top:18px}
+.team-card{background:rgba(139,0,0,.1);border-radius:12px;box-shadow:0 6px 18px rgba(139,0,0,.3);overflow:hidden;display:flex;flex-direction:column;padding:14px}
+.team-logo{width:100%;aspect-ratio:5/3;height:auto;object-fit:contain;border-radius:10px;background:#330000;padding:8px}
+.team-meta{display:flex;align-items:center;justify-content:center;margin-top:10px}
+.team-meta .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.players-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
+.player-card{position:relative;width:200px;height:280px;flex:0 1 auto}
+.card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black}
+.player-overall{font-size:28px;font-weight:900}
+.player-name{font-size:16px;font-weight:bold}
+.player-position{font-size:14px;font-weight:600;margin-bottom:8px}
+.player-stats{font-size:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px;text-align:left}
 </style>
 </head>
 <body>
-<div id="cards" style="display:flex;flex-wrap:wrap;"></div>
+<div class="teams-grid" id="teamsGrid"></div>
 <script>
-async function load() {
-  const res = await fetch('/api/player-cards');
-  const data = await res.json();
-  const container = document.getElementById('cards');
-  data.players.forEach(p => {
-    const card = document.createElement('div');
-    card.className = `player-card ${p.className}`;
-    card.innerHTML = `
-      <img src="/assets/cards/${p.frame}" class="card-frame" />
-      <div class="card-overlay">
-        <div class="player-overall">${p.stats.ovr}</div>
-        <div class="player-name">${p.name || ''}</div>
-        <div class="player-position">${p.position || ''}</div>
-        <div class="player-stats">
-          <span>PAC ${p.stats.pac}</span>
-          <span>SHO ${p.stats.sho}</span>
-          <span>PAS ${p.stats.pas}</span>
-          <span>DRI ${p.stats.dri}</span>
-          <span>DEF ${p.stats.def}</span>
-          <span>PHY ${p.stats.phy}</span>
-        </div>
-      </div>
-    `;
-    container.appendChild(card);
+const CLUBS=[
+  {id:'2491998',name:'Royal Republic',logo:'/assets/logos/royal-republic-logo.png'},
+  {id:'1527486',name:'Gungan FC',logo:'/assets/logos/gungan-fc.png'},
+  {id:'1969494',name:'Club Frijol',logo:'/assets/logos/club-frijol.png'},
+  {id:'2086022',name:'Brehemen',logo:'/assets/logos/brehemen.png'},
+  {id:'2462194',name:'Costa Chica FC',logo:'/assets/logos/costa-chica-fc.png'},
+  {id:'5098824',name:'Sporting de la ma',logo:'/assets/logos/sporting-de-la-ma.png'},
+  {id:'4869810',name:'Afc Tekki',logo:'/assets/logos/afc-tekki.png'},
+  {id:'576007',name:'Ethabella FC',logo:'/assets/logos/ethabella-fc.png'},
+  {id:'4933507',name:'Loss Toyz',logo:'/assets/logos/loss-toyz.png'},
+  {id:'4824736',name:'GoldenGoals FC',logo:'/assets/logos/goldengoals-fc.png'},
+  {id:'481847',name:'Rooney tunes',logo:'/assets/logos/rooney-tunes.png'},
+  {id:'3050467',name:'invincible afc',logo:'/assets/logos/invincible-afc.png'},
+  {id:'4154835',name:'khalch Fc',logo:'/assets/logos/khalch-fc.png'},
+  {id:'3638105',name:'Real mvc',logo:'/assets/logos/real-mvc.png'},
+  {id:'55408',name:'Elite VT',logo:'/assets/logos/elite-vt.png'},
+  {id:'4819681',name:'EVERYTHING DEAD',logo:'/assets/logos/everything-dead.png'},
+  {id:'35642',name:'EBK FC',logo:'/assets/logos/ebk-fc.png'}
+];
+
+const teamsGrid=document.getElementById('teamsGrid');
+const teamGrids={};
+CLUBS.forEach(c=>{
+  const card=document.createElement('div');
+  card.className='team-card';
+  card.dataset.clubId=c.id;
+  card.innerHTML=`
+    <img class="team-logo" src="${c.logo}" alt="${c.name} logo" onerror="this.onerror=null;this.src='https://via.placeholder.com/800x480.png?text=${encodeURIComponent(c.name)}';" />
+    <div class="team-meta"><span class="name">${c.name}</span></div>
+    <div class="players-grid"></div>`;
+  teamsGrid.appendChild(card);
+  teamGrids[c.id]=card.querySelector('.players-grid');
+});
+
+function parseVpro(vproattr){
+  const parts=String(vproattr||'').split('|').map(n=>parseInt(n,10));
+  if(parts.length<26||parts.some(n=>isNaN(n))) return null;
+  const avg=a=>Math.round(a.reduce((x,y)=>x+y,0)/a.length);
+  const pac=avg([parts[0],parts[1]]);
+  const sho=avg([parts[4],parts[5],parts[6]]);
+  const pas=avg([parts[9],parts[10],parts[12]]);
+  const dri=avg([parts[2],parts[7],parts[8]]);
+  const def=avg([parts[19],parts[20]]);
+  const phy=avg([parts[23],parts[24],parts[25]]);
+  const ovr=Math.round(pac*0.2+sho*0.2+pas*0.2+dri*0.2+def*0.1+phy*0.1);
+  return {pac,sho,pas,dri,def,phy,ovr};
+}
+
+function tierFromOvr(ovr){
+  if(ovr==null) return {frame:'iron_rookie.png',className:'tier-iron'};
+  if(ovr<70) return {frame:'iron_rookie.png',className:'tier-iron'};
+  if(ovr<=84) return {frame:'steel_card.png',className:'tier-steel'};
+  if(ovr<=94) return {frame:'crimson_card.png',className:'tier-crimson'};
+  return {frame:'obsidian_elite.png',className:'tier-obsidian'};
+}
+
+function escapeHtml(str){
+  return String(str||'').replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
+}
+
+async function load(){
+  const res=await fetch('/api/players');
+  const data=await res.json();
+  Object.entries(data.byClub||{}).forEach(([clubId,players])=>{
+    const grid=teamGrids[clubId];
+    if(!grid) return;
+    players.forEach(p=>{
+      const nameRaw=p.name||p.playername||p.proName||p.personaName;
+      const name=nameRaw?nameRaw:`Unknown_${p.playerId||p.playerid||''}`;
+      const pos=p.position||p.pos||'';
+      const stats=parseVpro(p.vproattr);
+      const t=tierFromOvr(stats?stats.ovr:null);
+      const s=stats||{pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+      const card=document.createElement('div');
+      card.className=`player-card ${t.className}`;
+      card.innerHTML=`
+        <img src="/assets/cards/${t.frame}" class="card-frame" />
+        <div class="card-overlay">
+          <div class="player-overall">${s.ovr}</div>
+          <div class="player-name">${escapeHtml(name)}</div>
+          <div class="player-position">${escapeHtml(pos)}</div>
+          <div class="player-stats">
+            <span>PAC ${s.pac}</span>
+            <span>SHO ${s.sho}</span>
+            <span>PAS ${s.pas}</span>
+            <span>DRI ${s.dri}</span>
+            <span>DEF ${s.def}</span>
+            <span>PHY ${s.phy}</span>
+          </div>
+        </div>`;
+      grid.appendChild(card);
+    });
   });
 }
+
 load();
 </script>
 </body>
 </html>
+
