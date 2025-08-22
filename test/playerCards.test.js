@@ -16,6 +16,7 @@ test('parseVpro computes stats and overall', () => {
   });
 });
 
+
 test('parseVpro tolerates missing attributes', () => {
   const stats = parseVpro(null);
   assert.deepStrictEqual(stats, {
