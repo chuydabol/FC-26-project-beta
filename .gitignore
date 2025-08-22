@@ -1,1 +1,4 @@
 node_modules
+
+# Card frame images
+public/assets/cards/*.png
