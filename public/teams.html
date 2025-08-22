@@ -883,12 +883,13 @@ async function loadPlayers(){
     playersByClub = d.byClub || {};
     document.querySelectorAll('.team-card').forEach(card=>{
       const clubId = card.getAttribute('data-club-id');
-const oldList = card.querySelector('.player-list');
-if (oldList) oldList.remove();
-
-const grid = card.querySelector('.players-grid');
-if (!grid) return;
-grid.innerHTML = '';
+      let grid = card.querySelector('.players-grid');
+      if (!grid){
+        grid = document.createElement('div');
+        grid.className = 'players-grid';
+        card.appendChild(grid);
+      }
+      grid.innerHTML = '';
 
       const members = playersByClub[clubId] || [];
       members.forEach(p=>{
