@@ -3,7 +3,7 @@ const assert = require('assert');
 
 process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 
-const pool = require('../db');
+const { pool } = require('../db');
 
 async function withServer(fn) {
   const app = require('../server');

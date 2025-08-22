@@ -19,9 +19,11 @@ try {
   };
 }
 const path = require('path');
-const pool = require('./db');
+const { pool, initDb } = require('./db');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
+const { q } = require('./services/pgwrap');
+const { runMigrations } = require('./services/migrate');
 const { isNumericId } = require('./utils');
 
 // Help node:test mocks that intercept global.fetch in environments without real modules
@@ -48,6 +50,8 @@ try {
     }
   };
 }
+
+const CRON_ENABLED = process.env.CRON_ENABLED !== '0';
 
 // Explicit club list used for league operations
 const CLUB_IDS = [
@@ -155,11 +159,11 @@ async function refreshClubMatches(clubId) {
     const tsMs = Number(m.timestamp) * 1000;
     let lastSql, lastParams;
     try {
-      lastSql = `INSERT INTO matches (match_id, ts_ms, raw)
+      lastSql = `INSERT INTO public.matches (match_id, ts_ms, raw)
          VALUES ($1, $2, $3::jsonb)
          ON CONFLICT (match_id) DO NOTHING`;
       lastParams = [matchId, tsMs, m];
-      await pool.query(lastSql, lastParams);
+      await q(lastSql, lastParams);
 
       const entries = Object.entries(m.clubs || {});
       if (entries.length === 2) {
@@ -169,15 +173,16 @@ async function refreshClubMatches(clubId) {
         const [awayId, awayData] = awayEntry;
         const homeGoals = Number(homeData?.score ?? homeData?.goals ?? 0);
         const awayGoals = Number(awayData?.score ?? awayData?.goals ?? 0);
-        lastSql = `INSERT INTO match_participants (match_id, club_id, is_home, goals)
-           VALUES ($1,$2,TRUE,$3),($1,$4,FALSE,$5)
+        lastSql = `INSERT INTO public.match_participants (match_id, club_id, is_home, goals)
+           VALUES ($1,$2,TRUE,$3), ($1,$4,FALSE,$5)
            ON CONFLICT (match_id, club_id) DO NOTHING`;
         lastParams = [matchId, homeId, homeGoals, awayId, awayGoals];
-        await pool.query(lastSql, lastParams);
-        lastSql = `INSERT INTO clubs (club_id, club_name) VALUES ($1,$2),($3,$4)
-           ON CONFLICT (club_id) DO NOTHING`;
+        await q(lastSql, lastParams);
+        lastSql = `INSERT INTO public.clubs (club_id, club_name) VALUES
+           ($1,$2), ($3,$4)
+           ON CONFLICT (club_id) DO UPDATE SET club_name = EXCLUDED.club_name`;
         lastParams = [homeId, homeData?.name || '', awayId, awayData?.name || ''];
-        await pool.query(lastSql, lastParams);
+        await q(lastSql, lastParams);
       }
     } catch (err) {
       logger.error({ err, sql: lastSql, params: lastParams }, `[EA] Failed inserting match ${matchId} for club ${clubId}`);
@@ -192,6 +197,21 @@ async function refreshAllMatches() {
 }
 
 const app = express();
+
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+
+if (process.env.MIGRATE_ON_BOOT === '1') {
+  (async () => {
+    try {
+      console.log('[migrate] starting');
+      await runMigrations();
+      console.log('[migrate] done');
+    } catch (e) {
+      console.error('[migrate] failed:', e);
+      process.exit(1);
+    }
+  })();
+}
 app.set('trust proxy', 1);
 app.use(cors({ origin: '*' }));
 app.use(
@@ -228,6 +248,22 @@ app.post('/api/admin/logout', (req, res) => {
 
 app.get('/api/admin/me', (req, res) => {
   res.json({ admin: !!req.session?.isAdmin });
+});
+
+app.post('/admin/migrate', async (req, res) => {
+  if (req.get('x-admin-token') !== ADMIN_TOKEN) return res.status(401).end();
+  try { await runMigrations(); res.json({ ok: true }); }
+  catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+
+app.get('/admin/verify-schema', async (req, res) => {
+  if (req.get('x-admin-token') !== ADMIN_TOKEN) return res.status(401).end();
+  const qStr = `SELECT
+    to_regclass('public.matches') AS matches,
+    to_regclass('public.match_participants') AS match_participants,
+    to_regclass('public.clubs') AS clubs`;
+  const r = await q(qStr);
+  res.json(r.rows[0]);
 });
 
 // Proxy to fetch club members from EA API (avoids browser CORS)
@@ -300,7 +336,7 @@ app.get('/api/ea/matches/:clubId', async (req, res) => {
 app.get('/api/teams', async (_req, res) => {
   const sql = 'SELECT * FROM teams ORDER BY updated_at DESC LIMIT 20';
   try {
-    const { rows } = await pool.query(sql);
+    const { rows } = await q(sql);
     res.json({ ok: true, teams: rows });
   } catch (err) {
     logger.error({ err, sql, params: [] }, 'Failed to load teams');
@@ -319,14 +355,14 @@ app.get('/api/matches', async (_req, res) => {
             'goals', mp.goals
           )
         ) AS clubs_obj
-       FROM matches m
-       JOIN match_participants mp ON mp.match_id = m.match_id
-       JOIN clubs c ON c.club_id = mp.club_id
+       FROM public.matches m
+       JOIN public.match_participants mp ON mp.match_id = m.match_id
+       JOIN public.clubs c ON c.club_id = mp.club_id
        GROUP BY m.match_id, m.ts_ms
        ORDER BY m.ts_ms DESC
        LIMIT 100`;
   try {
-    const { rows } = await pool.query(sql);
+    const { rows } = await q(sql);
     res.status(200).json({
       matches: rows.map(r => ({
         id: r.match_id,
@@ -391,7 +427,7 @@ app.get('/api/players', async (req, res) => {
 });
 
 // Auto update every 10 minutes
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && CRON_ENABLED) {
   cron.schedule('*/10 * * * *', async () => {
     console.log(`[${new Date().toISOString()}] Auto update starting...`);
     try {
@@ -406,7 +442,7 @@ if (process.env.NODE_ENV !== 'test') {
 if (require.main === module) {
   (async () => {
     try {
-      await pool.initDb();
+      await initDb();
       const PORT = process.env.PORT || 3001;
       app.listen(PORT, () => {
         console.log(`Server running on ${PORT}`);
