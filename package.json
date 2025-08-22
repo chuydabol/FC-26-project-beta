@@ -6,7 +6,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "NODE_ENV=test node --test"
+    "test": "NODE_ENV=test node --test",
+    "migrate": "node scripts/migrate.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

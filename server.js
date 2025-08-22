@@ -23,6 +23,7 @@ const pool = require('./db');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
 const { isNumericId } = require('./utils');
+const { runMigrations } = require('./scripts/migrate');
 
 // Help node:test mocks that intercept global.fetch in environments without real modules
 if (process.env.NODE_ENV === 'test') {
@@ -406,7 +407,9 @@ if (process.env.NODE_ENV !== 'test') {
 if (require.main === module) {
   (async () => {
     try {
-      await pool.initDb();
+      if (process.env.MIGRATE_ON_BOOT === '1') {
+        await runMigrations();
+      }
       const PORT = process.env.PORT || 3001;
       app.listen(PORT, () => {
         console.log(`Server running on ${PORT}`);
@@ -422,7 +425,7 @@ if (require.main === module) {
         }
       });
     } catch (err) {
-      logger.error({ err }, 'Failed to initialize database');
+      logger.error({ err }, 'Failed to start server');
       process.exit(1);
     }
   })();
