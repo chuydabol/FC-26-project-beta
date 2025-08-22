@@ -888,71 +888,83 @@ function tierFromOvr(ovr){
   return {frame:'obsidian_elite.png',className:'tier-obsidian'};
 }
 
-// ✅ Unified function to populate player cards inside expandable squad section
-async function populateSquad(card, clubId) {
-  // Ensure team-squad container exists
+
+<<<<<<< codex/update-squad-expansion-rendering-logic-m5o0gv
+async function populateSquad(card, clubId){
   let squad = card.querySelector('.team-squad');
-  if (!squad) {
+  if (!squad){
     squad = document.createElement('div');
     squad.className = 'team-squad';
     card.appendChild(squad);
   }
-
-  // Ensure players-grid exists inside squad
   let grid = squad.querySelector('.players-grid');
-  if (!grid) {
+  if (!grid){
     grid = document.createElement('div');
     grid.className = 'players-grid';
     squad.appendChild(grid);
-  } else {
-    grid.innerHTML = '';
   }
-
-  // Remove any old player-list (legacy)
   const oldList = squad.querySelector('.player-list');
   if (oldList) oldList.remove();
-
-  // Load members for this club
+  grid.innerHTML = '';
   let members = playersByClub[clubId] || [];
-  if (!members.length && /^\d+$/.test(String(clubId))) {
-    try {
+  if (!members.length && /^\d+$/.test(String(clubId))){
+    try{
       const d = await apiGet(`/api/players?clubId=${encodeURIComponent(clubId)}`);
       members = (d.byClub && d.byClub[clubId]) || [];
       playersByClub[clubId] = members;
-    } catch {
-      members = [];
-    }
+    }catch{ members = []; }
   }
-
-  // Render each player card
-  members.forEach(p => {
-    const nameRaw = p.name || p.playername || p.proName || p.personaName;
-    const name = nameRaw ? nameRaw : `Unknown_${p.playerId || p.playerid || ''}`;
-    const pos = p.position || p.pos || '';
-
-    // Map vproattr → stats
+  members.forEach(p=>{
+    const nameRaw = p.name||p.playername||p.proName||p.personaName;
+    const name = nameRaw ? nameRaw : `Unknown_${p.playerId||p.playerid||''}`;
+    const pos = p.position||p.pos||'';
     const stats = parseVpro(p.vproattr);
-    const t = tierFromOvr(stats ? stats.ovr : null);
-    const s = stats || { pac: '??', sho: '??', pas: '??', dri: '??', def: '??', phy: '??', ovr: '??' };
-
-    // Build card
+    const t = tierFromOvr(stats?stats.ovr:null);
+    const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
     const pc = document.createElement('div');
     pc.className = `player-card ${t.className}`;
     pc.innerHTML = `
-      <img src="/assets/cards/${t.frame}" class="card-frame" />
-      <div class="card-overlay">
-        <div class="player-overall">${s.ovr}</div>
-        <div class="player-name">${escapeHtml(name)}</div>
-        <div class="player-position">${escapeHtml(pos)}</div>
-        <div class="player-stats">
-          <span>PAC ${s.pac}</span>
-          <span>SHO ${s.sho}</span>
-          <span>PAS ${s.pas}</span>
-          <span>DRI ${s.dri}</span>
-          <span>DEF ${s.def}</span>
-          <span>PHY ${s.phy}</span>
-        </div>
-      </div>`;
+=======
+async function loadPlayers(){
+  try{
+    const d = await apiGet('/api/players');
+    playersByClub = d.byClub || {};
+    document.querySelectorAll('.team-card').forEach(card=>{
+      const clubId = card.getAttribute('data-club-id');
+      let grid = card.querySelector('.players-grid');
+      if (!grid){
+        grid = document.createElement('div');
+        grid.className = 'players-grid';
+        card.appendChild(grid);
+      }
+      grid.innerHTML = '';
+
+      const members = playersByClub[clubId] || [];
+      members.forEach(p=>{
+        const nameRaw = p.name||p.playername||p.proName||p.personaName;
+        const name = nameRaw ? nameRaw : `Unknown_${p.playerId||p.playerid||''}`;
+        const pos = p.position||p.pos||'';
+        const stats = parseVpro(p.vproattr);
+        const t = tierFromOvr(stats?stats.ovr:null);
+        const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+        const pc = document.createElement('div');
+        pc.className = `player-card ${t.className}`;
+        pc.innerHTML = `
+>>>>>>> main
+          <img src="/assets/cards/${t.frame}" class="card-frame" />
+          <div class="card-overlay">
+            <div class="player-overall">${s.ovr}</div>
+            <div class="player-name">${escapeHtml(name)}</div>
+            <div class="player-position">${escapeHtml(pos)}</div>
+            <div class="player-stats">
+              <span>PAC ${s.pac}</span>
+              <span>SHO ${s.sho}</span>
+              <span>PAS ${s.pas}</span>
+              <span>DRI ${s.dri}</span>
+              <span>DEF ${s.def}</span>
+              <span>PHY ${s.phy}</span>
+            </div>
+          </div>`;
     grid.appendChild(pc);
   });
 }
