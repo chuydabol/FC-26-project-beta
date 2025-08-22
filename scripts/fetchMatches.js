@@ -1,5 +1,5 @@
 const eaApi = require('../services/eaApi');
-const pool = require('../db');
+const { pool } = require('../db');
 
 async function main() {
   const ids = (process.env.EA_CLUB_IDS || '')
@@ -20,7 +20,7 @@ async function main() {
       const tsMs = Number(m.timestamp) * 1000;
       try {
         const { rowCount } = await pool.query(
-          `INSERT INTO matches (match_id, ts_ms, raw)
+          `INSERT INTO public.matches (match_id, ts_ms, raw)
            VALUES ($1,$2,$3::jsonb)
            ON CONFLICT (match_id) DO NOTHING`,
           [matchId, tsMs, m]
@@ -35,14 +35,14 @@ async function main() {
             const homeGoals = Number(homeData?.score ?? homeData?.goals ?? 0);
             const awayGoals = Number(awayData?.score ?? awayData?.goals ?? 0);
             await pool.query(
-              `INSERT INTO match_participants (match_id, club_id, is_home, goals)
+              `INSERT INTO public.match_participants (match_id, club_id, is_home, goals)
                VALUES ($1,$2,TRUE,$3),($1,$4,FALSE,$5)
                ON CONFLICT (match_id, club_id) DO NOTHING`,
               [matchId, homeId, homeGoals, awayId, awayGoals]
             );
             await pool.query(
-              `INSERT INTO clubs (club_id, club_name) VALUES ($1,$2),($3,$4)
-               ON CONFLICT (club_id) DO NOTHING`,
+              `INSERT INTO public.clubs (club_id, club_name) VALUES ($1,$2),($3,$4)
+               ON CONFLICT (club_id) DO UPDATE SET club_name = EXCLUDED.club_name`,
               [homeId, homeData?.name || '', awayId, awayData?.name || '']
             );
           }

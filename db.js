@@ -9,6 +9,9 @@ const pool = new Pool({
     "postgresql://upcl_user:2wMTWrulMhUoAYk5Z9lUpgaYYZobJYGf@dpg-d2hslce3jp1c738nvgg0-a/upcl",
 });
 
+// Ensure we default to the public schema
+pool.on('connect', c => c.query('SET search_path TO public'));
+
 function ensureTable(sql, name) {
   return pool
     .query(sql)
@@ -134,5 +137,4 @@ async function initDb() {
   );
 }
 
-module.exports = pool;
-module.exports.initDb = initDb;
+module.exports = { pool, initDb };
