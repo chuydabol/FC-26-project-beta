@@ -25,6 +25,26 @@ const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { isNumericId } = require('./utils');
 
+// SQL statements for saving EA matches
+const SQL_INSERT_MATCH = `
+  INSERT INTO public.matches (match_id, ts_ms, raw)
+  VALUES ($1, $2, $3::jsonb)
+  ON CONFLICT (match_id) DO NOTHING
+`;
+
+const SQL_UPSERT_CLUB = `
+  INSERT INTO public.clubs (club_id, club_name)
+  VALUES ($1, $2)
+  ON CONFLICT (club_id) DO UPDATE SET club_name = EXCLUDED.club_name
+`;
+
+const SQL_UPSERT_PARTICIPANT = `
+  INSERT INTO public.match_participants (match_id, club_id, is_home, goals)
+  VALUES ($1, $2, $3, $4)
+  ON CONFLICT (match_id, club_id) DO UPDATE
+  SET is_home = EXCLUDED.is_home, goals = EXCLUDED.goals
+`;
+
 // Help node:test mocks that intercept global.fetch in environments without real modules
 if (process.env.NODE_ENV === 'test') {
   const _includes = String.prototype.includes;
@@ -151,40 +171,28 @@ async function fetchClubMatches(clubId) {
   }
 }
 
+async function saveEaMatch(match) {
+  const matchId = String(match.matchId);
+  const tsMs = Number(match.timestamp) * 1000;
+  await q(SQL_INSERT_MATCH, [matchId, tsMs, match]);
+
+  const clubs = match.clubs || {};
+  for (const clubId of Object.keys(clubs)) {
+    const c = clubs[clubId];
+    const name = c?.details?.name || `Club ${clubId}`;
+    const goals = Number(c?.goals || 0);
+    await q(SQL_UPSERT_CLUB, [clubId, name]);
+    await q(SQL_UPSERT_PARTICIPANT, [matchId, clubId, null, goals]);
+  }
+}
+
 async function refreshClubMatches(clubId) {
   const matches = await fetchClubMatches(clubId);
   for (const m of matches) {
-    const matchId = String(m.matchId);
-    const tsMs = Number(m.timestamp) * 1000;
-    let lastSql, lastParams;
     try {
-      lastSql = `INSERT INTO public.matches (match_id, ts_ms, raw)
-         VALUES ($1, $2, $3::jsonb)
-         ON CONFLICT (match_id) DO NOTHING`;
-      lastParams = [matchId, tsMs, m];
-      await q(lastSql, lastParams);
-
-      const entries = Object.entries(m.clubs || {});
-      if (entries.length === 2) {
-        const [[idA, clubA], [idB, clubB]] = entries;
-        const homeId = BigInt(idA) < BigInt(idB) ? idA : idB;
-        const [homeData, awayData] = homeId === idA ? [clubA, clubB] : [clubB, clubA];
-        const awayId = homeId === idA ? idB : idA;
-        const homeGoals = parseInt(homeData?.goals ?? homeData?.score ?? '0', 10);
-        const awayGoals = parseInt(awayData?.goals ?? awayData?.score ?? '0', 10);
-        lastSql = `INSERT INTO public.match_participants (match_id, club_id, is_home, goals)
-           VALUES ($1,$2,TRUE,$3), ($1,$4,FALSE,$5)
-           ON CONFLICT (match_id, club_id) DO UPDATE SET goals = EXCLUDED.goals`;
-        lastParams = [matchId, homeId, homeGoals, awayId, awayGoals];
-        await q(lastSql, lastParams);
-        lastSql = `INSERT INTO public.clubs (club_id, club_name) VALUES
-           ($1,$2), ($3,$4)
-           ON CONFLICT (club_id) DO UPDATE SET club_name = EXCLUDED.club_name`;
-        lastParams = [idA, clubA?.details?.name || '', idB, clubB?.details?.name || ''];
-        await q(lastSql, lastParams);
-      }
+      await saveEaMatch(m);
     } catch (err) {
-      logger.error({ err, sql: lastSql, params: lastParams }, `[EA] Failed inserting match ${matchId} for club ${clubId}`);
+      logger.error({ err }, `[EA] Failed inserting match ${m.matchId} for club ${clubId}`);
     }
   }
 }
@@ -198,19 +206,6 @@ async function refreshAllMatches() {
 const app = express();
 
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-
-if (process.env.MIGRATE_ON_BOOT === '1') {
-  (async () => {
-    try {
-      console.log('[migrate] starting');
-      await runMigrations();
-      console.log('[migrate] done');
-    } catch (e) {
-      console.error('[migrate] failed:', e);
-      process.exit(1);
-    }
-  })();
-}
 app.set('trust proxy', 1);
 app.use(cors({ origin: '*' }));
 app.use(
@@ -445,6 +440,12 @@ async function bootstrap() {
     console.log('[migrate] starting');
     await runMigrations();
     console.log('[migrate] done');
+  }
+  try {
+    const { rows } = await q('SELECT current_database() AS db, current_schema() AS schema');
+    console.log(`[db] connected to ${rows[0].db} schema ${rows[0].schema}`);
+  } catch (err) {
+    console.error('[db] failed to query active database', err);
   }
 
   const PORT = process.env.PORT || 3000;

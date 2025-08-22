@@ -21,11 +21,18 @@ ALTER TABLE public.matches DROP COLUMN IF EXISTS club_id;
 CREATE TABLE IF NOT EXISTS public.match_participants (
   match_id  TEXT   NOT NULL REFERENCES public.matches(match_id) ON DELETE CASCADE,
   club_id   TEXT   NOT NULL REFERENCES public.clubs(club_id),
-  is_home   BOOLEAN NOT NULL,
-  goals     INT     NOT NULL DEFAULT 0,
+  is_home   BOOLEAN,
+  goals     INT,
   PRIMARY KEY (match_id, club_id)
 );
 
+-- Ensure nullable columns with no defaults
+ALTER TABLE public.match_participants
+  ALTER COLUMN is_home DROP NOT NULL,
+  ALTER COLUMN goals DROP NOT NULL,
+  ALTER COLUMN goals DROP DEFAULT;
+
 -- Indexes
-CREATE INDEX IF NOT EXISTS idx_matches_ts_ms_desc ON public.matches (ts_ms DESC);
+DROP INDEX IF EXISTS idx_matches_ts_ms_desc;
+CREATE INDEX IF NOT EXISTS idx_matches_ts_ms ON public.matches (ts_ms DESC);
 CREATE INDEX IF NOT EXISTS idx_mp_club_ts        ON public.match_participants (club_id, match_id);
