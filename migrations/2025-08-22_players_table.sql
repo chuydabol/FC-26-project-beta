@@ -4,5 +4,5 @@ CREATE TABLE IF NOT EXISTS public.players (
   club_id   TEXT NOT NULL,
   name      TEXT,
   position  TEXT,
-  vproattr  TEXT
+  vproattr  JSONB NOT NULL DEFAULT '{}'::jsonb
 );

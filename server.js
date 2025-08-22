@@ -48,7 +48,7 @@ const SQL_UPSERT_PARTICIPANT = `
 
 const SQL_UPSERT_PLAYER = `
   INSERT INTO public.players (player_id, club_id, name, position, vproattr)
-  VALUES ($1, $2, COALESCE($3, 'Unknown Player'), $4, $5)
+  VALUES ($1, $2, COALESCE($3, 'Unknown Player'), $4, COALESCE($5, '{}'::jsonb))
   ON CONFLICT (player_id) DO UPDATE
     SET name     = COALESCE(EXCLUDED.name, players.name),
         position = COALESCE(EXCLUDED.position, players.position),
