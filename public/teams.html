@@ -72,9 +72,6 @@ h2{margin:0 0 10px}
 .team-meta{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
 .team-meta .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .team-meta .record{font-weight:700;font-size:14px}
-.player-list{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:14px;list-style:none;padding:0}
-.player-list li{display:flex;justify-content:space-between;border-bottom:1px solid #220000;padding:2px 0}
-.player-list li:last-child{border-bottom:0}
 .players-grid {
   display: flex;
   flex-wrap: wrap;
@@ -379,7 +376,7 @@ h2{margin:0 0 10px}
           <strong>Squad</strong>
           <div id="squadTools" style="display:none;gap:8px"><button id="btnBootstrapSlots" title="Create S01..S15">Bootstrap slots</button></div>
         </div>
-        <div id="squadBody" class="muted" style="margin-top:6px">Loading…</div>
+        <div id="squadBody" class="players-grid" style="margin-top:6px"></div>
       </div>
     </div>
 
@@ -981,7 +978,7 @@ async function loadSquad(clubId){
   const panel = document.getElementById('squadPanel');
   const body  = document.getElementById('squadBody');
   panel.style.display = 'block';
-  body.textContent = 'Loading…';
+  body.innerHTML = 'Loading…';
   document.getElementById('squadTools').style.display = 'none';
   try{
     let members = playersByClub[clubId] || [];
@@ -1001,17 +998,40 @@ async function loadSquad(clubId){
       body.innerHTML = '<div class="muted">No players registered.</div>';
       return;
     }
-    body.innerHTML = members.map(m=>{
-      const n = m.name || m.playername || m.proName || m.personaName || '';
-      return `<div class="m-card" style="margin:6px 0">${escapeHtml(n)}</div>`;
-    }).join('');
+    body.innerHTML = '';
+    members.forEach(p=>{
+      const nameRaw = p.name || p.playername || p.proName || p.personaName;
+      const name = nameRaw ? nameRaw : `Unknown_${p.playerId||p.playerid||''}`;
+      const pos = p.position || p.pos || '';
+      const stats = parseVpro(p.vproattr);
+      const t = tierFromOvr(stats?stats.ovr:null);
+      const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+      const card = document.createElement('div');
+      card.className = `player-card ${t.className}`;
+      card.innerHTML = `
+        <img src="/assets/cards/${t.frame}" class="card-frame" />
+        <div class="card-overlay">
+          <div class="player-overall">${s.ovr}</div>
+          <div class="player-name">${escapeHtml(name)}</div>
+          <div class="player-position">${escapeHtml(pos)}</div>
+          <div class="player-stats">
+            <span>PAC ${s.pac}</span>
+            <span>SHO ${s.sho}</span>
+            <span>PAS ${s.pas}</span>
+            <span>DRI ${s.dri}</span>
+            <span>DEF ${s.def}</span>
+            <span>PHY ${s.phy}</span>
+          </div>
+        </div>`;
+      body.appendChild(card);
+    });
   }catch(e){
     if (e.status === 504) {
-      body.textContent = 'EA API timed out. Try again.';
+      body.innerHTML = 'EA API timed out. Try again.';
     } else if (e.status === 502) {
-      body.textContent = 'EA API request failed.';
+      body.innerHTML = 'EA API request failed.';
     } else {
-      body.textContent = 'Failed to load squad.';
+      body.innerHTML = 'Failed to load squad.';
     }
   }
 }
