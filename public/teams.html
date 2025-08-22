@@ -75,6 +75,15 @@ h2{margin:0 0 10px}
 .player-list li{display:flex;justify-content:space-between;border-bottom:1px solid #220000;padding:2px 0}
 .player-list li:last-child{border-bottom:0}
 
+.players-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
+.player-card{position:relative;width:200px;height:280px;flex:0 1 auto}
+.card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black}
+.player-overall{font-size:28px;font-weight:900}
+.player-name{font-size:16px;font-weight:bold}
+.player-position{font-size:14px;font-weight:600;margin-bottom:8px}
+.player-stats{font-size:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px;text-align:left}
+
 /* Generic card */
 .m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
 
@@ -820,25 +829,71 @@ const detailTitle = document.getElementById('detail-title');
 const detailSub   = document.getElementById('detail-sub');
 const backBtn = document.getElementById('backBtn');
 
+function parseVpro(vproattr){
+  const parts=String(vproattr||'').split('|').map(n=>parseInt(n,10));
+  if(parts.length<26||parts.some(n=>isNaN(n))) return null;
+  const avg=a=>Math.round(a.reduce((x,y)=>x+y,0)/a.length);
+  const pac=avg([parts[0],parts[1]]);
+  const sho=avg([parts[4],parts[5],parts[6]]);
+  const pas=avg([parts[9],parts[10],parts[12]]);
+  const dri=avg([parts[2],parts[7],parts[8]]);
+  const def=avg([parts[19],parts[20]]);
+  const phy=avg([parts[23],parts[24],parts[25]]);
+  const ovr=Math.round(pac*0.2+sho*0.2+pas*0.2+dri*0.2+def*0.1+phy*0.1);
+  return {pac,sho,pas,dri,def,phy,ovr};
+}
+
+function tierFromOvr(ovr){
+  if(ovr==null) return {frame:'iron_rookie.png',className:'tier-iron'};
+  if(ovr<70) return {frame:'iron_rookie.png',className:'tier-iron'};
+  if(ovr<=84) return {frame:'steel_card.png',className:'tier-steel'};
+  if(ovr<=94) return {frame:'crimson_card.png',className:'tier-crimson'};
+  return {frame:'obsidian_elite.png',className:'tier-obsidian'};
+}
+
 async function loadPlayers(){
   try{
     const d = await apiGet('/api/players');
     playersByClub = d.byClub || {};
-    document.querySelectorAll('.team-card').forEach(card => {
+    document.querySelectorAll('.team-card').forEach(card=>{
       const clubId = card.getAttribute('data-club-id');
-      const existing = card.querySelector('.player-list');
-      if (existing) existing.remove();
+      const oldList = card.querySelector('.player-list');
+      if(oldList) oldList.remove();
+      let grid = card.querySelector('.players-grid');
+      if(!grid){
+        grid = document.createElement('div');
+        grid.className = 'players-grid';
+        card.appendChild(grid);
+      } else {
+        grid.innerHTML='';
+      }
       const members = playersByClub[clubId] || [];
-      const ul = document.createElement('ul');
-      ul.className = 'player-list';
-      members.forEach(p => {
-        const n = p.name || p.playername || p.personaName || '';
-        const pos = p.position || p.preferredPosition || '';
-        const li = document.createElement('li');
-        li.textContent = `${n} — ${pos}`;
-        ul.appendChild(li);
+      members.forEach(p=>{
+        const nameRaw = p.name||p.playername||p.proName||p.personaName;
+        const name = nameRaw ? nameRaw : `Unknown_${p.playerId||p.playerid||''}`;
+        const pos = p.position||p.pos||'';
+        const stats = parseVpro(p.vproattr);
+        const t = tierFromOvr(stats?stats.ovr:null);
+        const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+        const pc = document.createElement('div');
+        pc.className = `player-card ${t.className}`;
+        pc.innerHTML = `
+          <img src="/assets/cards/${t.frame}" class="card-frame" />
+          <div class="card-overlay">
+            <div class="player-overall">${s.ovr}</div>
+            <div class="player-name">${escapeHtml(name)}</div>
+            <div class="player-position">${escapeHtml(pos)}</div>
+            <div class="player-stats">
+              <span>PAC ${s.pac}</span>
+              <span>SHO ${s.sho}</span>
+              <span>PAS ${s.pas}</span>
+              <span>DRI ${s.dri}</span>
+              <span>DEF ${s.def}</span>
+              <span>PHY ${s.phy}</span>
+            </div>
+          </div>`;
+        grid.appendChild(pc);
       });
-      card.appendChild(ul);
     });
   }catch(e){
     console.error('Failed to load players', e);
