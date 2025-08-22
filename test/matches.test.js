@@ -5,17 +5,17 @@ process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 
 const { pool } = require('../db');
 const queryStub = mock.method(pool, 'query', async sql => {
-  if (/FROM matches/i.test(sql)) {
+  if (/FROM\s+public\.matches/i.test(sql)) {
     return {
       rows: [
-        {
-          match_id: '1',
-          ts_ms: 1000,
-          clubs_obj: {
-            '1': { details: { name: 'A' }, goals: 1 },
-            '2': { details: { name: 'B' }, goals: 2 }
+          {
+            matchId: '1',
+            ts_ms: 1000,
+            clubs_obj: {
+              '1': { details: { name: 'A' }, goals: 1 },
+              '2': { details: { name: 'B' }, goals: 2 }
+            }
           }
-        }
       ]
     };
   }
@@ -40,14 +40,14 @@ test('serves recent matches from db', async () => {
     const body = await res.json();
     assert.deepStrictEqual(body, {
       matches: [
-        {
-          id: '1',
-          timestamp: 1000,
-          clubs: {
-            '1': { details: { name: 'A' }, goals: 1 },
-            '2': { details: { name: 'B' }, goals: 2 }
+          {
+            matchId: '1',
+            timestamp: 1000,
+            clubs: {
+              '1': { details: { name: 'A' }, goals: 1 },
+              '2': { details: { name: 'B' }, goals: 2 }
+            }
           }
-        }
       ]
     });
   });
