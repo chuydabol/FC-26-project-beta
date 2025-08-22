@@ -166,21 +166,21 @@ async function refreshClubMatches(clubId) {
 
       const entries = Object.entries(m.clubs || {});
       if (entries.length === 2) {
-        const homeEntry = entries.find(([, d]) => String(d?.home) === '1') || entries[0];
-        const awayEntry = entries.find(([id]) => id !== homeEntry[0]) || entries[1];
-        const [homeId, homeData] = homeEntry;
-        const [awayId, awayData] = awayEntry;
-        const homeGoals = Number(homeData?.score ?? homeData?.goals ?? 0);
-        const awayGoals = Number(awayData?.score ?? awayData?.goals ?? 0);
+        const [[idA, clubA], [idB, clubB]] = entries;
+        const homeId = BigInt(idA) < BigInt(idB) ? idA : idB;
+        const [homeData, awayData] = homeId === idA ? [clubA, clubB] : [clubB, clubA];
+        const awayId = homeId === idA ? idB : idA;
+        const homeGoals = parseInt(homeData?.goals ?? homeData?.score ?? '0', 10);
+        const awayGoals = parseInt(awayData?.goals ?? awayData?.score ?? '0', 10);
         lastSql = `INSERT INTO public.match_participants (match_id, club_id, is_home, goals)
            VALUES ($1,$2,TRUE,$3), ($1,$4,FALSE,$5)
-           ON CONFLICT (match_id, club_id) DO NOTHING`;
+           ON CONFLICT (match_id, club_id) DO UPDATE SET goals = EXCLUDED.goals`;
         lastParams = [matchId, homeId, homeGoals, awayId, awayGoals];
         await q(lastSql, lastParams);
         lastSql = `INSERT INTO public.clubs (club_id, club_name) VALUES
            ($1,$2), ($3,$4)
            ON CONFLICT (club_id) DO UPDATE SET club_name = EXCLUDED.club_name`;
-        lastParams = [homeId, homeData?.name || '', awayId, awayData?.name || ''];
+        lastParams = [idA, clubA?.details?.name || '', idB, clubB?.details?.name || ''];
         await q(lastSql, lastParams);
       }
     } catch (err) {
