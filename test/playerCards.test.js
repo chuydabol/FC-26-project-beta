@@ -16,6 +16,20 @@ test('parseVpro computes stats and overall', () => {
   });
 });
 
+
+test('parseVpro tolerates missing attributes', () => {
+  const stats = parseVpro(null);
+  assert.deepStrictEqual(stats, {
+    pac: 0,
+    sho: 0,
+    pas: 0,
+    dri: 0,
+    def: 0,
+    phy: 0,
+    ovr: 0
+  });
+});
+
 test('tierFromStats maps to expected tiers', () => {
   assert.strictEqual(tierFromStats({ ovr: 60, matches: 2 }).tier, 'iron');
   assert.strictEqual(tierFromStats({ ovr: 80, matches: 10 }).tier, 'steel');

@@ -50,9 +50,16 @@ const SQL_UPSERT_PLAYER = `
   INSERT INTO public.players (player_id, club_id, name, position, vproattr)
   VALUES ($1, $2, $3, $4, $5)
   ON CONFLICT (player_id) DO UPDATE
+
+    SET club_id = EXCLUDED.club_id,
+        name = COALESCE(EXCLUDED.name, players.name),
+        position = COALESCE(EXCLUDED.position, players.position),
+        vproattr = COALESCE(EXCLUDED.vproattr, players.vproattr);
+
     SET vproattr = EXCLUDED.vproattr,
         position = EXCLUDED.position,
         name = EXCLUDED.name;
+
 `;
 
 // Help node:test mocks that intercept global.fetch in environments without real modules
@@ -199,6 +206,17 @@ async function saveEaMatch(match, clubId) {
     for (const [playerId, p] of Object.entries(match.players)) {
       const pClub = String(p?.clubId || p?.club_id || '');
       if (pClub && pClub !== String(clubId)) continue;
+
+      const name = p?.name || `Unknown_${playerId}`;
+      const position = p?.preferredPosition || 'UNK';
+      const vproattr = p?.vproattr || null;
+      await q(SQL_UPSERT_PLAYER, [
+        playerId,
+        String(clubId),
+        name,
+        position,
+        vproattr
+
       await q(SQL_UPSERT_PLAYER, [
         playerId,
         String(clubId),
