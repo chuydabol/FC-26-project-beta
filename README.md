@@ -26,3 +26,13 @@ server, for example:
 ```bash
 LOG_LEVEL=debug node server.js
 ```
+
+## Card Assets
+
+Place card frame PNGs in `public/assets/cards/` with the following names:
+- `iron_rookie.png`
+- `steel_card.png`
+- `crimson_card.png`
+- `obsidian_elite.png`
+
+These files are ignored in git and must be supplied manually.

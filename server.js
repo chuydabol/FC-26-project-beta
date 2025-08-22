@@ -24,6 +24,7 @@ const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { isNumericId } = require('./utils');
+const { parseVpro, tierFromStats } = require('./services/playerCards');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -43,6 +44,16 @@ const SQL_UPSERT_PARTICIPANT = `
   VALUES ($1, $2, $3, $4)
   ON CONFLICT (match_id, club_id) DO UPDATE
   SET is_home = EXCLUDED.is_home, goals = EXCLUDED.goals
+`;
+
+const SQL_UPSERT_PLAYER = `
+  INSERT INTO public.players (player_id, club_id, name, position, vproattr)
+  VALUES ($1, $2, $3, $4, $5)
+  ON CONFLICT (player_id) DO UPDATE
+    SET club_id = EXCLUDED.club_id,
+        name = COALESCE(EXCLUDED.name, players.name),
+        position = COALESCE(EXCLUDED.position, players.position),
+        vproattr = COALESCE(EXCLUDED.vproattr, players.vproattr);
 `;
 
 // Help node:test mocks that intercept global.fetch in environments without real modules
@@ -171,18 +182,35 @@ async function fetchClubMatches(clubId) {
   }
 }
 
-async function saveEaMatch(match) {
+async function saveEaMatch(match, clubId) {
   const matchId = String(match.matchId);
   const tsMs = Number(match.timestamp) * 1000;
   await q(SQL_INSERT_MATCH, [matchId, tsMs, match]);
 
   const clubs = match.clubs || {};
-  for (const clubId of Object.keys(clubs)) {
-    const c = clubs[clubId];
-    const name = c?.details?.name || `Club ${clubId}`;
+  for (const cid of Object.keys(clubs)) {
+    const c = clubs[cid];
+    const name = c?.details?.name || `Club ${cid}`;
     const goals = Number(c?.goals || 0);
-    await q(SQL_UPSERT_CLUB, [clubId, name]);
-    await q(SQL_UPSERT_PARTICIPANT, [matchId, clubId, null, goals]);
+    await q(SQL_UPSERT_CLUB, [cid, name]);
+    await q(SQL_UPSERT_PARTICIPANT, [matchId, cid, null, goals]);
+  }
+
+  if (clubId && match.players) {
+    for (const [playerId, p] of Object.entries(match.players)) {
+      const pClub = String(p?.clubId || p?.club_id || '');
+      if (pClub && pClub !== String(clubId)) continue;
+      const name = p?.name || `Unknown_${playerId}`;
+      const position = p?.preferredPosition || 'UNK';
+      const vproattr = p?.vproattr || null;
+      await q(SQL_UPSERT_PLAYER, [
+        playerId,
+        String(clubId),
+        name,
+        position,
+        vproattr
+      ]);
+    }
   }
 }
 
@@ -190,7 +218,7 @@ async function refreshClubMatches(clubId) {
   const matches = await fetchClubMatches(clubId);
   for (const m of matches) {
     try {
-      await saveEaMatch(m);
+      await saveEaMatch(m, clubId);
     } catch (err) {
       logger.error({ err }, `[EA] Failed inserting match ${m.matchId} for club ${clubId}`);
     }
@@ -418,6 +446,46 @@ app.get('/api/players', async (req, res) => {
   const payload = { byClub, union, clubIds };
   _playersCache = { at: Date.now(), data: payload };
   res.json(payload);
+});
+
+app.get('/api/player-cards', async (_req, res) => {
+  const sql = `SELECT p.player_id, p.club_id, p.name, p.position, p.vproattr,
+                      COUNT(m.match_id) AS matches,
+                      SUM((m.raw->'players'->p.player_id->>'goals')::int) AS goals,
+                      SUM((m.raw->'players'->p.player_id->>'assists')::int) AS assists
+               FROM public.players p
+               LEFT JOIN public.matches m ON m.raw->'players' ? p.player_id
+               GROUP BY p.player_id, p.club_id, p.name, p.position, p.vproattr`;
+  const { rows } = await q(sql);
+  const players = rows.map(r => ({
+    playerId: r.player_id,
+    clubId: r.club_id,
+    name: r.name,
+    position: r.position,
+    vproattr: r.vproattr,
+    matches: Number(r.matches) || 0,
+    goals: Number(r.goals) || 0,
+    assists: Number(r.assists) || 0,
+    stats: parseVpro(r.vproattr)
+  }));
+
+  const sorted = players.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
+  const topCount = Math.max(1, Math.floor(players.length * 0.05));
+  const threshold = sorted[topCount - 1] ? sorted[topCount - 1].stats.ovr : Infinity;
+
+  for (const p of players) {
+    const t = tierFromStats({
+      ovr: p.stats.ovr,
+      matches: p.matches,
+      goals: p.goals,
+      assists: p.assists
+    }, threshold);
+    p.tier = t.tier;
+    p.frame = t.frame;
+    p.className = t.className;
+  }
+
+  res.json({ players });
 });
 
 // Auto update every 10 minutes
