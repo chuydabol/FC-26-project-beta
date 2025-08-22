@@ -4,12 +4,19 @@ const { pool } = require('../db');
 
 async function runSql(sql) {
   const client = await pool.connect();
+  const hasTx = /\bBEGIN\b/i.test(sql);
   try {
-    await client.query('BEGIN');
-    await client.query(sql);              // SQL files contain NO BEGIN/COMMIT
-    await client.query('COMMIT');
+    if (hasTx) {
+      await client.query(sql);
+    } else {
+      await client.query('BEGIN');
+      await client.query(sql);
+      await client.query('COMMIT');
+    }
   } catch (err) {
-    await client.query('ROLLBACK');
+    if (!hasTx) {
+      await client.query('ROLLBACK');
+    }
     throw err;
   } finally {
     client.release();
@@ -24,10 +31,6 @@ async function runMigrations() {
 
   for (const f of files) {
     const sql = fs.readFileSync(path.join(dir, f), 'utf8');
-    // Safety: warn if a file still has BEGIN/COMMIT
-    if (/^\s*BEGIN\b/i.test(sql) || /^\s*COMMIT\b/i.test(sql)) {
-      console.warn(`[migrate] WARNING: ${f} contains BEGIN/COMMIT; remove them.`);
-    }
     console.log('[migrate] applying', f);
     await runSql(sql);
   }
