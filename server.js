@@ -346,7 +346,7 @@ app.get('/api/teams', async (_req, res) => {
 // Recent matches served from Postgres
 app.get('/api/matches', async (_req, res) => {
   const sql = `SELECT
-        m.match_id,
+        m.match_id AS "matchId",
         m.ts_ms,
         jsonb_object_agg(mp.club_id,
           jsonb_build_object(
@@ -364,7 +364,7 @@ app.get('/api/matches', async (_req, res) => {
     const { rows } = await q(sql);
     res.status(200).json({
       matches: rows.map(r => ({
-        id: r.match_id,
+        matchId: r.matchId,
         timestamp: Number(r.ts_ms),
         clubs: r.clubs_obj,
       }))
