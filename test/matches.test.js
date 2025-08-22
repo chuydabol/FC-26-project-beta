@@ -5,7 +5,7 @@ process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 
 const { pool } = require('../db');
 const queryStub = mock.method(pool, 'query', async sql => {
-  if (/FROM matches/i.test(sql)) {
+  if (/FROM\s+public\.matches/i.test(sql)) {
     return {
       rows: [
         {
