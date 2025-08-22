@@ -75,8 +75,14 @@ h2{margin:0 0 10px}
 .player-list{margin-top:10px;display:flex;flex-direction:column;gap:4px;font-size:14px;list-style:none;padding:0}
 .player-list li{display:flex;justify-content:space-between;border-bottom:1px solid #220000;padding:2px 0}
 .player-list li:last-child{border-bottom:0}
-
-.players-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px;width:100%;}
+.players-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px; /* pick 12px instead of 10px for consistency */
+  width: 100%;
+}
 .player-card{position:relative;width:200px;height:280px;flex:0 1 auto}
 .card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
 .card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black}
@@ -880,9 +886,18 @@ async function loadPlayers(){
     playersByClub = d.byClub || {};
     document.querySelectorAll('.team-card').forEach(card=>{
       const clubId = card.getAttribute('data-club-id');
-      const grid = card.querySelector('.players-grid');
-      if(!grid) return;
-      grid.innerHTML='';
+const oldList = card.querySelector('.player-list');
+if (oldList) oldList.remove();
+
+let grid = card.querySelector('.players-grid');
+if (!grid) {
+  grid = document.createElement('div');
+  grid.className = 'players-grid';
+  card.appendChild(grid);
+} else {
+  grid.innerHTML = '';
+}
+
       const members = playersByClub[clubId] || [];
       members.forEach(p=>{
         const nameRaw = p.name||p.playername||p.proName||p.personaName;
