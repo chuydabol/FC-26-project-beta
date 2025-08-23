@@ -22,7 +22,6 @@ const path = require('path');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
-const { pool } = require('./db');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
 const { getPlayerAttributes } = require('./services/playerAttributes');
@@ -418,48 +417,13 @@ app.get('/api/update-matches', async (_req, res) => {
 
 // Aggregate players from league
 app.get('/api/players', async (_req, res) => {
-  const byClub = {};
-  for (const clubId of CLUB_IDS) {
-    try {
-      const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
-      let members = [];
-      if (Array.isArray(raw)) {
-        members = raw;
-      } else if (Array.isArray(raw?.members)) {
-        members = raw.members;
-      } else if (raw?.members && typeof raw.members === 'object') {
-        members = Object.values(raw.members);
-      }
-
-      const players = members.map(m => {
-        const id = String(m.playerId || m.playerid || '');
-        const name = m.name || m.proName || '';
-        const position = m.proPos || m.position || m.preferredPosition || '';
-        const vproattr = m.vProAttr || m.vproattr || '';
-        return { player_id: id, name, position, vproattr };
-      });
-      byClub[clubId] = players;
-
-      // save to DB per club
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-        for (const p of players) {
-          await client.query(SQL_UPSERT_PLAYER, [p.player_id, clubId, p.name, p.position, p.vproattr, 0, 0]);
-        }
-        await client.query('COMMIT');
-      } catch (dbErr) {
-        await client.query('ROLLBACK');
-        console.error(`[DB] Failed inserting players for club ${clubId}: ${dbErr.message}`);
-      } finally {
-        client.release();
-      }
-    } catch (err) {
-      console.error(`[EA] Skipping club ${clubId}: ${err.message}`);
-      byClub[clubId] = [];
-    }
+  try {
+    const { rows } = await q('SELECT * FROM players');
+    res.json({ players: rows });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch players');
+    res.status(500).json({ error: 'Failed to fetch players' });
   }
-  res.json({ byClub });
 });
 
 // Roster with attribute lookup
