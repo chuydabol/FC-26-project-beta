@@ -47,13 +47,15 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, position)
-  VALUES ($1, $2, $3, $4)
-  ON CONFLICT (player_id) DO UPDATE
-    SET name     = COALESCE(EXCLUDED.name, players.name),
-        position = COALESCE(NULLIF(EXCLUDED.position,'UNK'), players.position),
-        club_id  = EXCLUDED.club_id,
-        last_seen = now()
+  INSERT INTO public.players (player_id, club_id, name, position, vproattr, goals, assists, last_seen)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+  ON CONFLICT (player_id, club_id) DO UPDATE SET
+    name = EXCLUDED.name,
+    position = EXCLUDED.position,
+    vproattr = EXCLUDED.vproattr,
+    goals = EXCLUDED.goals,
+    assists = EXCLUDED.assists,
+    last_seen = NOW()
 `;
 
 const SQL_UPSERT_PLAYERCARD = `
@@ -206,7 +208,9 @@ async function saveEaMatch(match) {
           pdata.proPos ||
           'UNK';
         const vproattr = pdata.vproattr || null;
-        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos]);
+        const goals = Number(pdata.goals || 0);
+        const assists = Number(pdata.assists || 0);
+        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, vproattr, goals, assists]);
         if (vproattr) {
           const stats = parseVpro(vproattr);
           await q(SQL_UPSERT_PLAYERCARD, [pid, name, pos, vproattr, stats.ovr]);
@@ -496,7 +500,11 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       if (!id) continue;
       const name = m.name || m.playername || 'Player_' + id;
       const pos = m.position || m.pos || m.proPos || 'UNK';
-      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos]);
+      const card = cardMap.get(String(id)) || {};
+      const vproattr = card.vproattr || null;
+      const goals = Number(m.goals || 0);
+      const assists = Number(m.assists || 0);
+      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, vproattr, goals, assists]);
     }
 
     const players = members.map(m => {

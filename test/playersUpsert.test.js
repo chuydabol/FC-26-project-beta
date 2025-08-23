@@ -7,33 +7,39 @@ const { q } = require('../services/pgwrap');
 const { pool } = require('../db');
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, position)
-  VALUES ($1, $2, $3, $4)
-  ON CONFLICT (player_id) DO UPDATE
-    SET name     = COALESCE(EXCLUDED.name, players.name),
-        position = COALESCE(NULLIF(EXCLUDED.position,'UNK'), players.position),
-        club_id  = EXCLUDED.club_id,
-        last_seen = now()
+  INSERT INTO public.players (player_id, club_id, name, position, vproattr, goals, assists, last_seen)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+  ON CONFLICT (player_id, club_id)
+  DO UPDATE SET
+    name = EXCLUDED.name,
+    position = EXCLUDED.position,
+    vproattr = EXCLUDED.vproattr,
+    goals = EXCLUDED.goals,
+    assists = EXCLUDED.assists,
+    last_seen = NOW();
 `;
 
-test('duplicate player_id upserts without 42P10', async () => {
-  const seen = new Set();
+test('upserts player per club without 42P10 and updates attributes', async () => {
+  const store = new Map();
   const queryStub = mock.method(pool, 'query', async (sql, params) => {
     if (/INSERT INTO public\.players/i.test(sql)) {
-      const pid = params[0];
-      if (seen.has(pid) && !/ON CONFLICT \(player_id\)/i.test(sql)) {
+      const key = `${params[0]}:${params[1]}`;
+      if (store.has(key) && !/ON CONFLICT \(player_id, club_id\)/i.test(sql)) {
         const err = new Error('missing conflict clause');
         err.code = '42P10';
         throw err;
       }
-      seen.add(pid);
+      const [pid, cid, name, position, vproattr, goals, assists] = params;
+      store.set(key, { pid, cid, name, position, vproattr, goals, assists });
     }
     return { rows: [] };
   });
 
-  await q(SQL_UPSERT_PLAYER, ['1', '10', 'Alice', 'ST']);
-  await q(SQL_UPSERT_PLAYER, ['1', '10', 'Alice', 'ST']);
+  await q(SQL_UPSERT_PLAYER, ['1', '10', 'Alice', 'ST', 'attr1', 1, 2]);
+  await q(SQL_UPSERT_PLAYER, ['1', '10', 'Alicia', 'CM', 'attr2', 3, 4]);
 
   queryStub.mock.restore();
-  assert.ok(true); // reached without throwing
+  const row = store.get('1:10');
+  assert.strictEqual(row.name, 'Alicia');
+  assert.strictEqual(row.vproattr, 'attr2');
 });
