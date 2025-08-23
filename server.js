@@ -46,11 +46,12 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, vproattr)
-  VALUES ($1, $2, $3, $4)
+  INSERT INTO public.players (player_id, club_id, name, position, vproattr)
+  VALUES ($1, $2, $3, $4, $5)
   ON CONFLICT (player_id) DO UPDATE
-    SET vproattr = EXCLUDED.vproattr,
-        name     = COALESCE(EXCLUDED.name, players.name),
+    SET name     = COALESCE(EXCLUDED.name, players.name),
+        position = COALESCE(NULLIF(EXCLUDED.position,'UNK'), players.position),
+        vproattr = COALESCE(EXCLUDED.vproattr, players.vproattr),
         last_seen = now()
 `;
 
@@ -186,9 +187,14 @@ async function saveEaMatch(match) {
           pdata.playername ||
           pdata.proName ||
           pdata.personaName ||
-          `Player ${pid}`;
+          'Player_' + (pdata.playerId || pdata.playerid || pid);
+        const pos =
+          pdata.position ||
+          pdata.pos ||
+          pdata.proPos ||
+          'UNK';
         const vproattr = pdata.vproattr || null;
-        await q(SQL_UPSERT_PLAYER, [pid, cid, name, vproattr]);
+        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, vproattr]);
       }
     }
   }
@@ -429,11 +435,21 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     }
     const dbMap = new Map(dbRows.map(r => [r.name, r]));
 
+    for (const m of members) {
+      const id = m.playerId || m.playerid;
+      if (!id) continue;
+      const name = m.name || m.playername || 'Player_' + id;
+      const pos = m.position || m.pos || m.proPos || 'UNK';
+      const row = dbMap.get(m.name) || {};
+      const vpro = row.vproattr || null;
+      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, vpro]);
+    }
+
     const players = members.map(m => {
       const row = dbMap.get(m.name) || {};
       const stats = row.vproattr ? parseVpro(row.vproattr) : null;
       return {
-        playerId: row.player_id || null,
+        playerId: m.playerId || m.playerid || row.player_id || null,
         clubId,
         name: m.name,
         position: m.position || m.preferredPosition || '',
