@@ -871,10 +871,12 @@ async function openTeamView(clubId){
   try{
     const res = await fetch(`/api/teams/${clubId}/players`);
     const data = await res.json();
-    members = data.players || [];
-  }catch(e){console.error(e);}
-  members.forEach(p => {
-    const stats = p.stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+    members = data.members || [];
+  }catch(e){console.error(e);} 
+  members.forEach(m => {
+    const stats = m.vproattr
+      ? parseVpro(m.vproattr)
+      : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' };
     const tier = tierFromOvr(stats.ovr);
     const pc = document.createElement('div');
     pc.className = `player-card ${tier.className}`;
@@ -882,8 +884,8 @@ async function openTeamView(clubId){
       <img src="/assets/cards/${tier.frame}" class="card-frame" />
       <div class="card-overlay">
         <div class="player-overall">${stats.ovr}</div>
-        <div class="player-name">${escapeHtml(p.name||'Unknown')}</div>
-        <div class="player-position">${escapeHtml(p.position||'')}</div>
+        <div class="player-name">${escapeHtml(m.name||'Unknown')}</div>
+        <div class="player-position">${escapeHtml(m.proPos||'')}</div>
         <div class="player-stats">
           <span>PAC ${stats.pac}</span>
           <span>SHO ${stats.sho}</span>

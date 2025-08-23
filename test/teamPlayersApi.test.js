@@ -3,8 +3,6 @@ const assert = require('assert');
 
 process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 
-const eaApi = require('../services/eaApi');
-const attrs = require('../services/playerAttributes');
 const app = require('../server');
 
 async function withServer(fn) {
@@ -17,29 +15,30 @@ async function withServer(fn) {
   }
 }
 
-test('serves team players with attribute lookup', async () => {
-  const fetchStub = mock.method(eaApi, 'fetchPlayersForClubWithRetry', async () => ({
-    members: [
-      { playerId: '1', name: 'Alice', proPos: 'ST' },
-      { playerId: '2', name: 'Bob', proPos: 'GK' }
-    ]
-  }));
-  const attrStub = mock.method(attrs, 'getPlayerAttributes', async id => {
-    if (id === '1') return { pac:90, sho:80, pas:70, dri:85, def:40, phy:75, ovr:82 };
-    return null;
+test('proxies EA members stats', async () => {
+  const realFetch = global.fetch;
+  const fetchStub = mock.method(global, 'fetch', async (url, opts) => {
+    if (String(url).startsWith('https://proclubs.ea.com')) {
+      return {
+        ok: true,
+        json: async () => ({
+          members: [
+            { playerId: '1', name: 'Alice', proPos: 'ST', proOverall: 82 },
+            { playerId: '2', name: 'Bob', proPos: 'GK', proOverall: 70 }
+          ]
+        })
+      };
+    }
+    return realFetch(url, opts);
   });
 
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/teams/10/players`);
     assert.strictEqual(res.status, 200);
     const body = await res.json();
-    assert.strictEqual(body.players.length, 2);
-    const alice = body.players.find(p => p.playerId === '1');
-    const bob = body.players.find(p => p.playerId === '2');
-    assert(alice.stats && alice.stats.ovr === 82);
-    assert.strictEqual(bob.stats, null);
+    assert.strictEqual(body.members.length, 2);
+    assert(fetchStub.mock.calls.some(c => String(c.arguments[0]).includes('clubId=10')));
   });
 
   fetchStub.mock.restore();
-  attrStub.mock.restore();
 });

@@ -125,13 +125,13 @@ async function upgradeClubPlayers(clubId){
     const d=await fetch(`/api/teams/${encodeURIComponent(clubId)}/players`).then(r=>r.json());
     const grid=document.querySelector(`.team-card[data-club-id="${clubId}"] .players-grid`);
     if(!grid) return;
-    (d.players||[]).forEach(p=>{
-      const id=p.playerId||p.player_id;
+    (d.members||[]).forEach(m=>{
+      const id=m.playerId||m.playerid;
       let card=grid.querySelector(`.player-card[data-player-id="${id}"]`);
       if(!card){
-        card=Array.from(grid.querySelectorAll('.player-card')).find(el=>el.dataset.playerName===p.name);
+        card=Array.from(grid.querySelectorAll('.player-card')).find(el=>el.dataset.playerName===m.name);
       }
-      const stats=p.stats||parseVpro(p.vproattr);
+      const stats=m.vproattr?parseVpro(m.vproattr):null;
       if(card&&stats) updatePlayerCard(card,stats);
     });
   }catch(e){

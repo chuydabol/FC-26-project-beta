@@ -24,7 +24,6 @@ const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
-const { getPlayerAttributes } = require('./services/playerAttributes');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -426,42 +425,17 @@ app.get('/api/players', async (_req, res) => {
   }
 });
 
-// Roster with attribute lookup
+// Proxy to EA team members stats
 app.get('/api/teams/:clubId/players', async (req, res) => {
   const { clubId } = req.params;
-  if (!/^\d+$/.test(String(clubId))) {
-    return res.status(400).json({ error: 'Invalid clubId' });
-  }
+  const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
   try {
-    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
-    let members = [];
-    if (Array.isArray(raw)) {
-      members = raw;
-    } else if (Array.isArray(raw?.members)) {
-      members = raw.members;
-    } else if (raw?.members && typeof raw.members === 'object') {
-      members = Object.values(raw.members);
-    }
-
-    const players = await Promise.all(
-      members.map(async m => {
-        const playerId = m.playerId || m.playerid;
-        const name = m.name || m.proName || '';
-        const position = m.proPos || m.position || m.preferredPosition || '';
-        let stats = null;
-        if (playerId) {
-          try {
-            stats = await getPlayerAttributes(String(playerId), clubId);
-          } catch (_) {
-            stats = null;
-          }
-        }
-        return { playerId: playerId || null, name, position, stats };
-      })
-    );
-    res.json({ players });
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!r.ok) throw new Error(`EA API error ${r.status}`);
+    const data = await r.json();
+    res.json({ members: data.members || [] });
   } catch (err) {
-    logger.error({ err }, 'Failed to load team players');
+    console.error('Failed to fetch players:', err.message);
     res.status(500).json({ error: 'Failed to load team players' });
   }
 });
