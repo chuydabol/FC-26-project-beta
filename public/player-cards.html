@@ -45,7 +45,6 @@ const CLUBS=[
 ];
 
 const teamsGrid=document.getElementById('teamsGrid');
-const teamGrids={};
 CLUBS.forEach(c=>{
   const card=document.createElement('div');
   card.className='team-card';
@@ -55,46 +54,75 @@ CLUBS.forEach(c=>{
     <div class="team-meta"><span class="name">${c.name}</span></div>
     <div class="players-grid"></div>`;
   teamsGrid.appendChild(card);
-  teamGrids[c.id]=card.querySelector('.players-grid');
 });
 
 function escapeHtml(str){
   return String(str||'').replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
 }
 
-async function renderClub(c){
-  try{
-    const res=await fetch(`/api/clubs/${c.id}/player-cards`);
-    const data=await res.json();
-    (data.players||[]).forEach(p=>{
-      const grid=teamGrids[c.id];
-      const s=p.stats||{pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-      const frame=p.frame||'iron_rookie.png';
-      const cls=p.className||'tier-iron';
-      const card=document.createElement('div');
-      card.className=`player-card ${cls}`;
-      card.innerHTML=`
-        <img src="/assets/cards/${frame}" class="card-frame" />
-        <div class="card-overlay">
-          <div class="player-overall">${s.ovr}</div>
-          <div class="player-name">${escapeHtml(p.name)}</div>
-          <div class="player-position">${escapeHtml(p.position||'')}
-          </div>
-          <div class="player-stats">
-            <span>PAC ${s.pac}</span>
-            <span>SHO ${s.sho}</span>
-            <span>PAS ${s.pas}</span>
-            <span>DRI ${s.dri}</span>
-            <span>DEF ${s.def}</span>
-            <span>PHY ${s.phy}</span>
-          </div>
-        </div>`;
-      grid.appendChild(card);
-    });
-  }catch(e){console.error(e)}
+function parseVpro(vproattr){
+  const parts=String(vproattr||'').split('|').map(n=>parseInt(n,10));
+  if(parts.length<26||parts.some(n=>isNaN(n))) return null;
+  const avg=a=>Math.round(a.reduce((x,y)=>x+y,0)/a.length);
+  const pac=avg([parts[0],parts[1]]);
+  const sho=avg([parts[4],parts[5],parts[6]]);
+  const pas=avg([parts[9],parts[10],parts[12]]);
+  const dri=avg([parts[2],parts[7],parts[8]]);
+  const def=avg([parts[19],parts[20]]);
+  const phy=avg([parts[23],parts[24],parts[25]]);
+  const ovr=Math.round(pac*0.2+sho*0.2+pas*0.2+dri*0.2+def*0.1+phy*0.1);
+  return {pac,sho,pas,dri,def,phy,ovr};
 }
 
-CLUBS.forEach(renderClub);
+function tierFromOvr(ovr){
+  if(ovr==null) return {frame:'iron_rookie.png',className:'tier-iron'};
+  const n=Number(ovr)||0;
+  if(n<70) return {frame:'iron_rookie.png',className:'tier-iron'};
+  if(n<=84) return {frame:'steel_card.png',className:'tier-steel'};
+  if(n<=94) return {frame:'crimson_card.png',className:'tier-crimson'};
+  return {frame:'obsidian_elite.png',className:'tier-obsidian'};
+}
+
+function buildPlayerCard(p, stats, tier){
+  const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+  const t = tier || tierFromOvr(stats?stats.ovr:null);
+  const card=document.createElement('div');
+  card.className=`player-card ${t.className}`;
+  card.innerHTML=`
+    <img src="/assets/cards/${t.frame}" class="card-frame" />
+    <div class="card-overlay">
+      <div class="player-overall">${s.ovr}</div>
+      <div class="player-name">${escapeHtml(p.name||'Unknown')}</div>
+      <div class="player-position">${escapeHtml(p.position||'')}</div>
+      <div class="player-stats">
+        <span>PAC ${s.pac}</span>
+        <span>SHO ${s.sho}</span>
+        <span>PAS ${s.pas}</span>
+        <span>DRI ${s.dri}</span>
+        <span>DEF ${s.def}</span>
+        <span>PHY ${s.phy}</span>
+      </div>
+    </div>`;
+  return card;
+}
+
+async function loadPlayers(){
+  const data = await fetch('https://fc-26-project-beta.onrender.com/api/players').then(r=>r.json());
+  document.querySelectorAll('.team-card').forEach(card=>{
+    const clubId = card.getAttribute('data-club-id');
+    const members = (data.players||[]).filter(p=>String(p.club_id)===clubId);
+    const grid = card.querySelector('.players-grid');
+    grid.innerHTML='';
+    members.forEach(p=>{
+      const stats = parseVpro(p.vproattr);
+      const tier = tierFromOvr(stats?stats.ovr:null);
+      const el = buildPlayerCard(p, stats, tier);
+      grid.appendChild(el);
+    });
+  });
+}
+
+loadPlayers();
 </script>
 </body>
 </html>
