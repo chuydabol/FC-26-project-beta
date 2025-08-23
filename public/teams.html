@@ -849,9 +849,10 @@ function parseVpro(vproattr){
 
 function tierFromOvr(ovr){
   if(ovr==null) return {frame:'iron_rookie.png',className:'tier-iron'};
-  if(ovr<70) return {frame:'iron_rookie.png',className:'tier-iron'};
-  if(ovr<=84) return {frame:'steel_card.png',className:'tier-steel'};
-  if(ovr<=94) return {frame:'crimson_card.png',className:'tier-crimson'};
+  const n=Number(ovr)||0;
+  if(n<70) return {frame:'iron_rookie.png',className:'tier-iron'};
+  if(n<=84) return {frame:'steel_card.png',className:'tier-steel'};
+  if(n<=94) return {frame:'crimson_card.png',className:'tier-crimson'};
   return {frame:'obsidian_elite.png',className:'tier-obsidian'};
 }
 async function openTeamView(clubId){
@@ -866,27 +867,33 @@ async function openTeamView(clubId){
     <div class="players-grid"></div>`;
   document.getElementById('teamBackBtn').addEventListener('click', closeTeamView);
   const grid = teamView.querySelector('.players-grid');
-  let members = playersByClub[clubId] || [];
+  let members = [];
+  try{
+    const res = await fetch(`/api/teams/${clubId}/players`);
+    const data = await res.json();
+    members = data.players || [];
+  }catch(e){console.error(e);}
   members.forEach(p => {
-    const stats = parseVpro(p.vproattr) || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-    const t = tierFromOvr(stats.ovr);
-    grid.innerHTML += `
-      <div class="player-card ${t.className}">
-        <img src="/assets/cards/${t.frame}" class="card-frame" />
-        <div class="card-overlay">
-          <div class="player-overall">${stats.ovr}</div>
-          <div class="player-name">${escapeHtml(p.name||'Unknown')}</div>
-          <div class="player-position">${escapeHtml(p.position||'')}</div>
-          <div class="player-stats">
-            <span>PAC ${stats.pac}</span>
-            <span>SHO ${stats.sho}</span>
-            <span>PAS ${stats.pas}</span>
-            <span>DRI ${stats.dri}</span>
-            <span>DEF ${stats.def}</span>
-            <span>PHY ${stats.phy}</span>
-          </div>
+    const stats = p.stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+    const tier = tierFromOvr(stats.ovr);
+    const pc = document.createElement('div');
+    pc.className = `player-card ${tier.className}`;
+    pc.innerHTML = `
+      <img src="/assets/cards/${tier.frame}" class="card-frame" />
+      <div class="card-overlay">
+        <div class="player-overall">${stats.ovr}</div>
+        <div class="player-name">${escapeHtml(p.name||'Unknown')}</div>
+        <div class="player-position">${escapeHtml(p.position||'')}</div>
+        <div class="player-stats">
+          <span>PAC ${stats.pac}</span>
+          <span>SHO ${stats.sho}</span>
+          <span>PAS ${stats.pas}</span>
+          <span>DRI ${stats.dri}</span>
+          <span>DEF ${stats.def}</span>
+          <span>PHY ${stats.phy}</span>
         </div>
       </div>`;
+    grid.appendChild(pc);
   });
 }
 
