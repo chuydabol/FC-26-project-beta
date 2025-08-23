@@ -17,7 +17,7 @@ async function withServer(fn) {
 }
 
 test('proxies EA members stats', async () => {
-  const fetchStub = mock.method(eaApi, 'fetchPlayersForClubWithRetry', async clubId => ({
+  const fetchStub = mock.method(eaApi, 'fetchClubMembersWithRetry', async clubId => ({
     members: [
       { playerId: '1', name: 'Alice', proPos: 'ST', proOverall: 82 },
       { playerId: '2', name: 'Bob', proPos: 'GK', proOverall: 70 }
@@ -36,7 +36,7 @@ test('proxies EA members stats', async () => {
 });
 
 test('returns empty array if EA call fails', async () => {
-  const fetchStub = mock.method(eaApi, 'fetchPlayersForClubWithRetry', async () => {
+  const fetchStub = mock.method(eaApi, 'fetchClubMembersWithRetry', async () => {
     throw new Error('EA down');
   });
 

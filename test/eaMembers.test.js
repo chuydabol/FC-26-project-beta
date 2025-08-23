@@ -17,7 +17,7 @@ async function withServer(fn) {
 }
 
 test('normalizes array response', async () => {
-  const stub = mock.method(eaApi, 'fetchPlayersForClub', async () => [{ name: 'A' }]);
+  const stub = mock.method(eaApi, 'fetchClubMembersWithRetry', async () => [{ name: 'A' }]);
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/ea/clubs/123/members`);
     const body = await res.json();
@@ -27,7 +27,11 @@ test('normalizes array response', async () => {
 });
 
 test('normalizes object map response', async () => {
-  const stub = mock.method(eaApi, 'fetchPlayersForClub', async () => ({ members: { a:{ name:'A'}, b:{ name:'B'} } }));
+  const stub = mock.method(
+    eaApi,
+    'fetchClubMembersWithRetry',
+    async () => ({ members: { a: { name: 'A' }, b: { name: 'B' } } })
+  );
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/ea/clubs/123/members`);
     const body = await res.json();
