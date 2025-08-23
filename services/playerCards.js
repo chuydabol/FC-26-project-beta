@@ -21,6 +21,20 @@ function parseVpro(vproattr = '') {
   return { pac, sho, pas, dri, def, phy, ovr };
 }
 
+function tierFromOvr(ovr = 0) {
+  const n = Number(ovr) || 0;
+  if (n < 70) {
+    return { frame: 'iron_rookie.png', className: 'tier-iron' };
+  }
+  if (n <= 84) {
+    return { frame: 'steel_card.png', className: 'tier-steel' };
+  }
+  if (n <= 94) {
+    return { frame: 'crimson_card.png', className: 'tier-crimson' };
+  }
+  return { frame: 'obsidian_elite.png', className: 'tier-obsidian' };
+}
+
 function tierFromStats(
   { ovr = 0, matches = 0, goals = 0, assists = 0, isCaptain = false },
   topOvrThreshold = Infinity
@@ -41,4 +55,4 @@ function tierFromStats(
   return { tier: 'iron', frame: 'iron_rookie.png', className: 'tier-iron' };
 }
 
-module.exports = { parseVpro, tierFromStats };
+module.exports = { parseVpro, tierFromStats, tierFromOvr };

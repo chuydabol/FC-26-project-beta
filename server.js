@@ -24,6 +24,7 @@ const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
+const { getPlayerAttributes } = require('./services/playerAttributes');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -418,6 +419,46 @@ app.get('/api/players', async (_req, res) => {
   } catch (err) {
     logger.error({ err }, 'Failed to fetch players');
     res.status(500).json({ error: 'Failed to fetch players' });
+  }
+});
+
+// Roster with attribute lookup
+app.get('/api/teams/:clubId/players', async (req, res) => {
+  const { clubId } = req.params;
+  if (!/^\d+$/.test(String(clubId))) {
+    return res.status(400).json({ error: 'Invalid clubId' });
+  }
+  try {
+    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
+    let members = [];
+    if (Array.isArray(raw)) {
+      members = raw;
+    } else if (Array.isArray(raw?.members)) {
+      members = raw.members;
+    } else if (raw?.members && typeof raw.members === 'object') {
+      members = Object.values(raw.members);
+    }
+
+    const players = await Promise.all(
+      members.map(async m => {
+        const playerId = m.playerId || m.playerid;
+        const name = m.name || m.proName || '';
+        const position = m.proPos || m.position || m.preferredPosition || '';
+        let stats = null;
+        if (playerId) {
+          try {
+            stats = await getPlayerAttributes(String(playerId), clubId);
+          } catch (_) {
+            stats = null;
+          }
+        }
+        return { playerId: playerId || null, name, position, stats };
+      })
+    );
+    res.json({ players });
+  } catch (err) {
+    logger.error({ err }, 'Failed to load team players');
+    res.status(500).json({ error: 'Failed to load team players' });
   }
 });
 
