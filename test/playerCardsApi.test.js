@@ -27,12 +27,12 @@ test('serves player cards for specific club', async () => {
     ]
   }));
 
-  const queryStub = mock.method(pool, 'query', async (sql, params) => {
-    if (/FROM public\.players/i.test(sql)) {
-      return { rows: [{ player_id: '1', name: 'Alice', vproattr: sampleVpro }] };
-    }
-    return { rows: [] };
-  });
+    const queryStub = mock.method(pool, 'query', async (sql, params) => {
+      if (/FROM public\.playercards/i.test(sql)) {
+        return { rows: [{ player_id: '1', name: 'Alice', position: 'ST', vproattr: sampleVpro, ovr: 83 }] };
+      }
+      return { rows: [] };
+    });
 
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/clubs/10/player-cards`);

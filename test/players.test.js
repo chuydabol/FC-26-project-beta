@@ -6,7 +6,7 @@ process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 const { pool } = require('../db');
 const queryStub = mock.method(pool, 'query', async sql => {
   if (/SELECT \* FROM players/i.test(sql)) {
-    return { rows: [ { player_id: '1', club_id: '10', name: 'Test', position: 'ST', vproattr: '1|2', last_seen: '2020-01-01' } ] };
+    return { rows: [ { player_id: '1', club_id: '10', name: 'Test', position: 'ST', last_seen: '2020-01-01' } ] };
   }
   return { rows: [] };
 });
@@ -27,9 +27,9 @@ test('serves players from database', async () => {
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/players`);
     const body = await res.json();
-    assert.deepStrictEqual(body, {
-      players: [ { player_id: '1', club_id: '10', name: 'Test', position: 'ST', vproattr: '1|2', last_seen: '2020-01-01' } ]
-    });
+      assert.deepStrictEqual(body, {
+        players: [ { player_id: '1', club_id: '10', name: 'Test', position: 'ST', last_seen: '2020-01-01' } ]
+      });
   });
   queryStub.mock.restore();
 });
