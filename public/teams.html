@@ -907,10 +907,10 @@ async function loadPlayers(){
   try{
     const d = await apiGet('/api/players');
     playersByClub = {};
-    for (const clubId in (d.byClub || {})) {
-      const members = (d.byClub && d.byClub[clubId]) || [];
-      playersByClub[clubId] = members;
-    }
+    (d.players||[]).forEach(p=>{
+      const cid=String(p.club_id);
+      (playersByClub[cid] ||= []).push(p);
+    });
   }catch(e){
     console.error('Failed to load players', e);
   }
