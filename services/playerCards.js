@@ -21,18 +21,24 @@ function parseVpro(vproattr = '') {
   return { pac, sho, pas, dri, def, phy, ovr };
 }
 
-function tierFromStats({ ovr, matches = 0, goals = 0, assists = 0 }, topOvrThreshold = Infinity) {
-  const ga = Number(goals) + Number(assists);
-  if (ovr >= topOvrThreshold) {
-    return { tier: 'obsidian', frame: 'obsidian_elite.png', className: 'tier-obsidian' };
-  }
-  if (matches < 5 || ovr < 70) {
+function tierFromStats(
+  { ovr = 0, matches = 0, goals = 0, assists = 0, isCaptain = false },
+  topOvrThreshold = Infinity
+) {
+  if (!ovr || matches < 5) {
     return { tier: 'iron', frame: 'iron_rookie.png', className: 'tier-iron' };
   }
-  if (ovr >= 85 && ga > 10) {
+  if (isCaptain || ovr >= topOvrThreshold) {
+    return { tier: 'obsidian', frame: 'obsidian_elite.png', className: 'tier-obsidian' };
+  }
+  const ga = Number(goals) + Number(assists);
+  if (ga > 10) {
     return { tier: 'crimson', frame: 'crimson_card.png', className: 'tier-crimson' };
   }
-  return { tier: 'steel', frame: 'steel_card.png', className: 'tier-steel' };
+  if (matches >= 5) {
+    return { tier: 'steel', frame: 'steel_card.png', className: 'tier-steel' };
+  }
+  return { tier: 'iron', frame: 'iron_rookie.png', className: 'tier-iron' };
 }
 
 module.exports = { parseVpro, tierFromStats };

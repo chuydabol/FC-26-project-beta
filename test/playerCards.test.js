@@ -34,5 +34,5 @@ test('tierFromStats maps to expected tiers', () => {
   assert.strictEqual(tierFromStats({ ovr: 60, matches: 2 }).tier, 'iron');
   assert.strictEqual(tierFromStats({ ovr: 80, matches: 10 }).tier, 'steel');
   assert.strictEqual(tierFromStats({ ovr: 88, matches: 12, goals: 6, assists: 6 }).tier, 'crimson');
-  assert.strictEqual(tierFromStats({ ovr: 99 }, 90).tier, 'obsidian');
+  assert.strictEqual(tierFromStats({ ovr: 99, matches: 20 }, 90).tier, 'obsidian');
 });

@@ -46,13 +46,11 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, position, vproattr)
-  VALUES ($1, $2, $3, $4, $5)
+  INSERT INTO public.players (player_id, club_id, name, vproattr)
+  VALUES ($1, $2, $3, $4)
   ON CONFLICT (player_id) DO UPDATE
-    SET club_id  = EXCLUDED.club_id,
-        name     = EXCLUDED.name,
-        position = EXCLUDED.position,
-        vproattr = EXCLUDED.vproattr,
+    SET vproattr = EXCLUDED.vproattr,
+        name     = COALESCE(EXCLUDED.name, players.name),
         last_seen = now()
 `;
 
@@ -189,9 +187,8 @@ async function saveEaMatch(match) {
           pdata.proName ||
           pdata.personaName ||
           `Player ${pid}`;
-        const position = pdata.position || '';
         const vproattr = pdata.vproattr || null;
-        await q(SQL_UPSERT_PLAYER, [pid, cid, name, position, vproattr]);
+        await q(SQL_UPSERT_PLAYER, [pid, cid, name, vproattr]);
       }
     }
   }
@@ -403,45 +400,76 @@ app.get('/api/players', async (_req, res) => {
   }
 });
 
-app.get('/api/player-cards', async (_req, res) => {
-  const sql = `SELECT p.player_id, p.club_id, p.name, p.position, p.vproattr,
-                      COUNT(m.match_id) AS matches,
-                      SUM((m.raw->'players'->p.player_id->>'goals')::int) AS goals,
-                      SUM((m.raw->'players'->p.player_id->>'assists')::int) AS assists
-               FROM public.players p
-               LEFT JOIN public.matches m ON m.raw->'players' ? p.player_id
-               GROUP BY p.player_id, p.club_id, p.name, p.position, p.vproattr`;
-  const { rows } = await q(sql);
-  const players = rows.map(r => ({
-    playerId: r.player_id,
-    clubId: r.club_id,
-    name: r.name,
-    position: r.position,
-    vproattr: r.vproattr,
-    matches: Number(r.matches) || 0,
-    goals: Number(r.goals) || 0,
-    assists: Number(r.assists) || 0,
-    stats: parseVpro(r.vproattr)
-  }));
-
-  const sorted = players.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
-  const topCount = Math.max(1, Math.floor(players.length * 0.05));
-  const threshold = sorted[topCount - 1] ? sorted[topCount - 1].stats.ovr : Infinity;
-
-  for (const p of players) {
-    const t = tierFromStats({
-      ovr: p.stats.ovr,
-      matches: p.matches,
-      goals: p.goals,
-      assists: p.assists
-    }, threshold);
-    p.tier = t.tier;
-    p.frame = t.frame;
-    p.className = t.className;
+// Player cards for a specific club
+app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
+  const { clubId } = req.params;
+  if (!/^\d+$/.test(String(clubId))) {
+    return res.status(400).json({ error: 'Invalid clubId' });
   }
 
-  res.json({ players });
+  try {
+    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
+    let members = [];
+    if (Array.isArray(raw)) {
+      members = raw;
+    } else if (Array.isArray(raw?.members)) {
+      members = raw.members;
+    } else if (raw?.members && typeof raw.members === 'object') {
+      members = Object.values(raw.members);
+    }
+
+    const names = members.map(m => m.name).filter(Boolean);
+    let dbRows = [];
+    if (names.length) {
+      const { rows } = await q(
+        `SELECT player_id, name, vproattr FROM public.players WHERE club_id = $2 AND name = ANY($1::text[])`,
+        [names, clubId]
+      );
+      dbRows = rows;
+    }
+    const dbMap = new Map(dbRows.map(r => [r.name, r]));
+
+    const players = members.map(m => {
+      const row = dbMap.get(m.name) || {};
+      const stats = row.vproattr ? parseVpro(row.vproattr) : null;
+      return {
+        playerId: row.player_id || null,
+        clubId,
+        name: m.name,
+        position: m.position || m.preferredPosition || '',
+        matches: Number(m.gamesPlayed) || 0,
+        goals: Number(m.goals) || 0,
+        assists: Number(m.assists) || 0,
+        isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
+        stats,
+      };
+    });
+
+    const withStats = players.filter(p => p.stats && p.stats.ovr);
+    const sorted = withStats.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
+    const topCount = Math.max(1, Math.floor(withStats.length * 0.05));
+    const threshold = sorted[topCount - 1] ? sorted[topCount - 1].stats.ovr : Infinity;
+
+    for (const p of players) {
+      const t = tierFromStats({
+        ovr: p.stats?.ovr || 0,
+        matches: p.matches,
+        goals: p.goals,
+        assists: p.assists,
+        isCaptain: p.isCaptain,
+      }, threshold);
+      p.tier = t.tier;
+      p.frame = t.frame;
+      p.className = t.className;
+    }
+
+    res.json({ players });
+  } catch (err) {
+    logger.error({ err }, 'Failed to load player cards');
+    res.status(500).json({ error: 'Failed to load player cards' });
+  }
 });
+
 
 // Auto update every 10 minutes
 if (process.env.NODE_ENV !== 'test' && CRON_ENABLED) {
