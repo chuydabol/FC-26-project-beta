@@ -20,7 +20,7 @@ async function withServer(fn) {
 }
 
 test('serves player cards for specific club', async () => {
-  const fetchStub = mock.method(eaApi, 'fetchPlayersForClubWithRetry', async () => ({
+  const fetchStub = mock.method(eaApi, 'fetchClubMembersWithRetry', async () => ({
     members: [
       { name: 'Alice', gamesPlayed: '10', goals: '5', assists: '3', position: 'ST' },
       { name: 'Bob', gamesPlayed: '2', goals: '1', assists: '0', position: 'GK' }
@@ -38,9 +38,9 @@ test('serves player cards for specific club', async () => {
     const res = await fetch(`http://localhost:${port}/api/clubs/10/player-cards`);
     assert.strictEqual(res.status, 200);
     const body = await res.json();
-    assert.strictEqual(body.players.length, 2);
-    const alice = body.players.find(p => p.name === 'Alice');
-    const bob = body.players.find(p => p.name === 'Bob');
+    assert.strictEqual(body.members.length, 2);
+    const alice = body.members.find(p => p.name === 'Alice');
+    const bob = body.members.find(p => p.name === 'Bob');
     assert(alice.stats && alice.stats.ovr > 0);
     assert.strictEqual(alice.tier, 'obsidian');
     assert.strictEqual(bob.stats, null);

@@ -159,31 +159,14 @@ async function fetchClubMembers(clubId) {
 }
 
 async function fetchPlayersForClub(clubId) {
-  if (!clubId) throw new Error('clubId required');
-  const url =
-    `https://proclubs.ea.com/api/fc/clubs/${encodeURIComponent(
-      clubId
-    )}/members?platform=common-gen5`;
-  try {
-    const res = await eaFetch(url);
-    return res.json();
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      throw { error: 'EA API request timed out' };
-    }
-    if (err.status) {
-      throw { error: 'EA API error', status: err.status };
-    }
-    if (err && err.error) throw err;
-    throw { error: 'EA API error' };
-  }
+  return fetchClubMembers(clubId);
 }
 
-async function fetchPlayersForClubWithRetry(clubId, retries = 2) {
+async function fetchClubMembersWithRetry(clubId, retries = 2) {
   let attempt = 0;
   while (true) {
     try {
-      return await module.exports.fetchPlayersForClub(clubId);
+      return await fetchClubMembers(clubId);
     } catch (err) {
       attempt++;
       if (attempt > retries) throw err;
@@ -191,6 +174,8 @@ async function fetchPlayersForClubWithRetry(clubId, retries = 2) {
     }
   }
 }
+
+const fetchPlayersForClubWithRetry = fetchClubMembersWithRetry;
 
 async function fetchClubInfo(clubId) {
   if (!clubId) throw new Error('clubId required');
@@ -232,6 +217,7 @@ module.exports = {
   fetchRecentLeagueMatches,
   fetchClubMembers,
   fetchPlayersForClub,
+  fetchClubMembersWithRetry,
   fetchPlayersForClubWithRetry,
   fetchClubInfo,
   fetchClubInfoWithRetry

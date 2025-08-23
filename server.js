@@ -297,11 +297,11 @@ app.get('/admin/verify-schema', async (req, res) => {
 app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
   const { clubId } = req.params;
   if (!/^\d+$/.test(String(clubId))) {
-    return res.status(400).json({ error: 'Invalid clubId' });
+    return res.status(400).json({ members: [] });
   }
 
   try {
-    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
+    const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
     let members = [];
     if (Array.isArray(raw)) {
       members = raw;
@@ -312,13 +312,7 @@ app.get('/api/ea/clubs/:clubId/members', async (req, res) => {
     }
     return res.json({ members });
   } catch (err) {
-    const msg = err?.error || err?.message || 'EA API error';
-    const status = /abort|timeout|timed out|ETIMEDOUT/i.test(String(msg))
-      ? 504
-      : 502;
-    return res
-      .status(status)
-      .json({ error: 'EA API request failed', details: msg });
+    return res.json({ members: [] });
   }
 });
 
@@ -429,7 +423,7 @@ app.get('/api/players', async (_req, res) => {
 app.get('/api/teams/:clubId/players', async (req, res) => {
   const { clubId } = req.params;
   try {
-    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
+    const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
     let members = [];
     if (Array.isArray(raw)) {
       members = raw;
@@ -449,11 +443,11 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
 app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
   const { clubId } = req.params;
   if (!/^\d+$/.test(String(clubId))) {
-    return res.status(400).json({ error: 'Invalid clubId' });
+    return res.status(400).json({ members: [] });
   }
 
   try {
-    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
+    const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
     let members = [];
     if (Array.isArray(raw)) {
       members = raw;
@@ -486,7 +480,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, vproattr, goals, assists]);
     }
 
-    const players = members.map(m => {
+    const membersDetailed = members.map(m => {
       const id = m.playerId || m.playerid;
       const card = cardMap.get(String(id)) || {};
       const stats = card.vproattr ? parseVpro(card.vproattr) : null;
@@ -503,12 +497,12 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       };
     });
 
-    const withStats = players.filter(p => p.stats && p.stats.ovr);
+    const withStats = membersDetailed.filter(p => p.stats && p.stats.ovr);
     const sorted = withStats.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
     const topCount = Math.max(1, Math.floor(withStats.length * 0.05));
     const threshold = sorted[topCount - 1] ? sorted[topCount - 1].stats.ovr : Infinity;
 
-    for (const p of players) {
+    for (const p of membersDetailed) {
       const t = tierFromStats({
         ovr: p.stats?.ovr || 0,
         matches: p.matches,
@@ -521,10 +515,10 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       p.className = t.className;
     }
 
-    res.json({ players });
+    res.json({ members: membersDetailed });
   } catch (err) {
     logger.error({ err }, 'Failed to load player cards');
-    res.status(500).json({ error: 'Failed to load player cards' });
+    res.status(500).json({ members: [] });
   }
 });
 
