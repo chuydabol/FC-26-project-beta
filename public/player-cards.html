@@ -88,6 +88,8 @@ function buildPlayerCard(p, stats, tier){
   const t = tier || tierFromOvr(stats?stats.ovr:null);
   const card=document.createElement('div');
   card.className=`player-card ${t.className}`;
+  if(p.player_id||p.playerId) card.dataset.playerId=String(p.player_id||p.playerId);
+  if(p.name) card.dataset.playerName=p.name;
   card.innerHTML=`
     <img src="/assets/cards/${t.frame}" class="card-frame" />
     <div class="card-overlay">
@@ -106,6 +108,37 @@ function buildPlayerCard(p, stats, tier){
   return card;
 }
 
+function updatePlayerCard(card, stats){
+  const tier=tierFromOvr(stats.ovr);
+  card.className=`player-card ${tier.className}`;
+  const img=card.querySelector('.card-frame');
+  if(img) img.src=`/assets/cards/${tier.frame}`;
+  const over=card.querySelector('.player-overall');
+  if(over) over.textContent=stats.ovr;
+  const spans=card.querySelectorAll('.player-stats span');
+  const labels=[stats.pac,stats.sho,stats.pas,stats.dri,stats.def,stats.phy];
+  spans.forEach((span,i)=>{ span.textContent=`${['PAC','SHO','PAS','DRI','DEF','PHY'][i]} ${labels[i]}`; });
+}
+
+async function upgradeClubPlayers(clubId){
+  try{
+    const d=await fetch(`/api/teams/${encodeURIComponent(clubId)}/players`).then(r=>r.json());
+    const grid=document.querySelector(`.team-card[data-club-id="${clubId}"] .players-grid`);
+    if(!grid) return;
+    (d.players||[]).forEach(p=>{
+      const id=p.playerId||p.player_id;
+      let card=grid.querySelector(`.player-card[data-player-id="${id}"]`);
+      if(!card){
+        card=Array.from(grid.querySelectorAll('.player-card')).find(el=>el.dataset.playerName===p.name);
+      }
+      const stats=p.stats||parseVpro(p.vproattr);
+      if(card&&stats) updatePlayerCard(card,stats);
+    });
+  }catch(e){
+    console.error('upgrade failed',e);
+  }
+}
+
 async function loadPlayers(){
   const data = await fetch('https://fc-26-project-beta.onrender.com/api/players').then(r=>r.json());
   document.querySelectorAll('.team-card').forEach(card=>{
@@ -119,6 +152,7 @@ async function loadPlayers(){
       const el = buildPlayerCard(p, stats, tier);
       grid.appendChild(el);
     });
+    upgradeClubPlayers(clubId);
   });
 }
 
