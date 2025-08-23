@@ -46,13 +46,24 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, position, vproattr)
-  VALUES ($1, $2, $3, $4, $5)
+  INSERT INTO public.players (player_id, club_id, name, position)
+  VALUES ($1, $2, $3, $4)
   ON CONFLICT (player_id) DO UPDATE
     SET name     = COALESCE(EXCLUDED.name, players.name),
         position = COALESCE(NULLIF(EXCLUDED.position,'UNK'), players.position),
-        vproattr = COALESCE(EXCLUDED.vproattr, players.vproattr),
+        club_id  = EXCLUDED.club_id,
         last_seen = now()
+`;
+
+const SQL_UPSERT_PLAYERCARD = `
+  INSERT INTO public.playercards (player_id, name, position, vproattr, ovr, last_updated)
+  VALUES ($1, $2, $3, $4, $5, NOW())
+  ON CONFLICT (player_id) DO UPDATE
+    SET name = EXCLUDED.name,
+        position = EXCLUDED.position,
+        vproattr = EXCLUDED.vproattr,
+        ovr = EXCLUDED.ovr,
+        last_updated = NOW()
 `;
 
 // Help node:test mocks that intercept global.fetch in environments without real modules
@@ -194,7 +205,11 @@ async function saveEaMatch(match) {
           pdata.proPos ||
           'UNK';
         const vproattr = pdata.vproattr || null;
-        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, vproattr]);
+        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos]);
+        if (vproattr) {
+          const stats = parseVpro(vproattr);
+          await q(SQL_UPSERT_PLAYERCARD, [pid, name, pos, vproattr, stats.ovr]);
+        }
       }
     }
   }
@@ -424,32 +439,31 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       members = Object.values(raw.members);
     }
 
-    const names = members.map(m => m.name).filter(Boolean);
-    let dbRows = [];
-    if (names.length) {
+    const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
+    let cardRows = [];
+    if (ids.length) {
       const { rows } = await q(
-        `SELECT player_id, name, vproattr FROM public.players WHERE club_id = $2 AND name = ANY($1::text[])`,
-        [names, clubId]
+        `SELECT player_id, name, position, vproattr, ovr FROM public.playercards WHERE player_id = ANY($1::text[])`,
+        [ids]
       );
-      dbRows = rows;
+      cardRows = rows;
     }
-    const dbMap = new Map(dbRows.map(r => [r.name, r]));
+    const cardMap = new Map(cardRows.map(r => [r.player_id, r]));
 
     for (const m of members) {
       const id = m.playerId || m.playerid;
       if (!id) continue;
       const name = m.name || m.playername || 'Player_' + id;
       const pos = m.position || m.pos || m.proPos || 'UNK';
-      const row = dbMap.get(m.name) || {};
-      const vpro = row.vproattr || null;
-      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, vpro]);
+      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos]);
     }
 
     const players = members.map(m => {
-      const row = dbMap.get(m.name) || {};
-      const stats = row.vproattr ? parseVpro(row.vproattr) : null;
+      const id = m.playerId || m.playerid;
+      const card = cardMap.get(String(id)) || {};
+      const stats = card.vproattr ? parseVpro(card.vproattr) : null;
       return {
-        playerId: m.playerId || m.playerid || row.player_id || null,
+        playerId: id || null,
         clubId,
         name: m.name,
         position: m.position || m.preferredPosition || '',
