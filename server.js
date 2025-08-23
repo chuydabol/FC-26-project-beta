@@ -428,15 +428,20 @@ app.get('/api/players', async (_req, res) => {
 // Proxy to EA team members stats
 app.get('/api/teams/:clubId/players', async (req, res) => {
   const { clubId } = req.params;
-  const url = `https://proclubs.ea.com/api/fc/members/stats?platform=common-gen5&clubId=${clubId}`;
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!r.ok) throw new Error(`EA API error ${r.status}`);
-    const data = await r.json();
-    res.json({ members: data.members || [] });
+    const raw = await limit(() => eaApi.fetchPlayersForClubWithRetry(clubId));
+    let members = [];
+    if (Array.isArray(raw)) {
+      members = raw;
+    } else if (Array.isArray(raw?.members)) {
+      members = raw.members;
+    } else if (raw?.members && typeof raw.members === 'object') {
+      members = Object.values(raw.members);
+    }
+    res.json({ members });
   } catch (err) {
-    console.error('Failed to fetch players:', err.message);
-    res.status(500).json({ error: 'Failed to load team players' });
+    logger.error({ err, clubId }, 'Failed to load team players');
+    res.json({ members: [] });
   }
 });
 
