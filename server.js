@@ -23,7 +23,6 @@ const logger = require('./logger');
 const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
-const { isNumericId } = require('./utils');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
 
 // SQL statements for saving EA matches
@@ -48,12 +47,13 @@ const SQL_UPSERT_PARTICIPANT = `
 
 const SQL_UPSERT_PLAYER = `
   INSERT INTO public.players (player_id, club_id, name, position, vproattr)
-  VALUES ($1, $2, COALESCE($3, 'Unknown Player'), $4, COALESCE($5, '{}'::jsonb))
+  VALUES ($1, $2, $3, $4, $5)
   ON CONFLICT (player_id) DO UPDATE
-    SET name     = COALESCE(EXCLUDED.name, players.name),
-        position = COALESCE(EXCLUDED.position, players.position),
-        vproattr = COALESCE(EXCLUDED.vproattr, players.vproattr),
-        club_id  = EXCLUDED.club_id
+    SET club_id  = EXCLUDED.club_id,
+        name     = EXCLUDED.name,
+        position = EXCLUDED.position,
+        vproattr = EXCLUDED.vproattr,
+        last_seen = now()
 `;
 
 // Help node:test mocks that intercept global.fetch in environments without real modules
@@ -124,7 +124,6 @@ const CLUB_NAMES = {
   '35642': 'EBK FC'
 };
 
-const DEFAULT_CLUB_IDS = CLUB_IDS.slice();
 
 
 
@@ -151,24 +150,9 @@ function limit(fn) {
   });
 }
 
-// Cache for /api/players
-let _playersCache = { at: 0, data: null };
-const PLAYERS_TTL_MS = 60_000;
-
 // Cache for club info lookups
 const _clubInfoCache = new Map();
 const CLUB_INFO_TTL_MS = 60_000;
-
-// Fetch helper with logging
-async function fetchClubPlayers(clubId) {
-  try {
-    const data = await eaApi.fetchClubMembers(clubId);
-    return data.members || [];
-  } catch (err) {
-    logger.error({ err }, `Failed fetching club ${clubId}`);
-    return [];
-  }
-}
 
 
 
@@ -182,7 +166,7 @@ async function fetchClubMatches(clubId) {
   }
 }
 
-async function saveEaMatch(match, clubId) {
+async function saveEaMatch(match) {
   const matchId = String(match.matchId);
   const tsMs = Number(match.timestamp) * 1000;
   await q(SQL_INSERT_MATCH, [matchId, tsMs, match]);
@@ -196,22 +180,19 @@ async function saveEaMatch(match, clubId) {
     await q(SQL_UPSERT_PARTICIPANT, [matchId, cid, null, goals]);
   }
 
-  if (clubId && match.players) {
-    for (const [playerId, p] of Object.entries(match.players)) {
-      const pClub = String(p?.clubId || p?.club_id || '');
-      if (pClub && pClub !== String(clubId)) continue;
-
-      const name = p?.name || `Player ${playerId}`;
-      const position = p?.preferredPosition || 'UNK';
-      const vproattr = p?.vproattr || null;
-
-      await q(SQL_UPSERT_PLAYER, [
-        playerId,
-        String(clubId),
-        name,
-        position,
-        vproattr
-      ]);
+  if (match.players) {
+    for (const [cid, playerMap] of Object.entries(match.players)) {
+      for (const [pid, pdata] of Object.entries(playerMap)) {
+        const name =
+          pdata.name ||
+          pdata.playername ||
+          pdata.proName ||
+          pdata.personaName ||
+          `Player ${pid}`;
+        const position = pdata.position || '';
+        const vproattr = pdata.vproattr || null;
+        await q(SQL_UPSERT_PLAYER, [pid, cid, name, position, vproattr]);
+      }
     }
   }
 }
@@ -220,7 +201,7 @@ async function refreshClubMatches(clubId) {
   const matches = await fetchClubMatches(clubId);
   for (const m of matches) {
     try {
-      await saveEaMatch(m, clubId);
+      await saveEaMatch(m);
     } catch (err) {
       logger.error({ err }, `[EA] Failed inserting match ${m.matchId} for club ${clubId}`);
     }
@@ -412,42 +393,14 @@ app.get('/api/update-matches', async (_req, res) => {
 });
 
 // Aggregate players from league
-app.get('/api/players', async (req, res) => {
-  // Allow explicit override (?clubIds=1,2,3), otherwise use default league list
-  const q = req.query.clubId || req.query.clubIds || req.query.ids || '';
-  let clubIds = Array.isArray(q)
-    ? q
-    : String(q)
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-  if (!clubIds.length) clubIds = DEFAULT_CLUB_IDS.slice();
-  clubIds = clubIds.filter(isNumericId);
-
-  // serve from short cache if fresh
-  if (_playersCache.data && Date.now() - _playersCache.at < PLAYERS_TTL_MS) {
-    return res.json(_playersCache.data);
+app.get('/api/players', async (_req, res) => {
+  try {
+    const { rows } = await q('SELECT * FROM players');
+    res.json({ players: rows });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch players');
+    res.status(500).json({ error: 'Failed to fetch players' });
   }
-
-  const byClub = {};
-  const union = [];
-  const seen = new Set();
-
-  for (const id of clubIds) {
-    const members = await fetchClubPlayers(id);
-    byClub[id] = members;
-
-    for (const p of members) {
-      const name = p?.name || p?.playername || p?.personaName;
-      if (!name || seen.has(name)) continue;
-      seen.add(name);
-      union.push(p);
-    }
-  }
-
-  const payload = { byClub, union, clubIds };
-  _playersCache = { at: Date.now(), data: payload };
-  res.json(payload);
 });
 
 app.get('/api/player-cards', async (_req, res) => {

@@ -867,13 +867,6 @@ async function openTeamView(clubId){
   document.getElementById('teamBackBtn').addEventListener('click', closeTeamView);
   const grid = teamView.querySelector('.players-grid');
   let members = playersByClub[clubId] || [];
-  if (!members.length && /^\d+$/.test(String(clubId))){
-    try{
-      const d = await apiGet(`/api/players?clubId=${encodeURIComponent(clubId)}`);
-      members = (d.byClub && d.byClub[clubId]) || [];
-      playersByClub[clubId] = members;
-    }catch{ members = []; }
-  }
   members.forEach(p => {
     const stats = parseVpro(p.vproattr) || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
     const t = tierFromOvr(stats.ovr);
@@ -906,7 +899,11 @@ function closeTeamView(){
 async function loadPlayers(){
   try{
     const d = await apiGet('/api/players');
-    playersByClub = d.byClub || {};
+    playersByClub = {};
+    (d.players||[]).forEach(p=>{
+      const cid=String(p.club_id);
+      (playersByClub[cid] ||= []).push(p);
+    });
   }catch(e){
     console.error('Failed to load players', e);
   }
@@ -971,11 +968,7 @@ async function loadSquad(clubId){
   document.getElementById('squadTools').style.display = 'none';
   try{
     let members = playersByClub[clubId] || [];
-    if (!members.length && /^\d+$/.test(String(clubId))){
-      const d = await apiGet(`/api/players?clubId=${encodeURIComponent(clubId)}`).catch(()=>({}));
-      members = (d.byClub && d.byClub[clubId]) || [];
-      playersByClub[clubId] = members;
-    } else if (!members.length){
+    if (!members.length){
       const r = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/squad`, {credentials:'include'})
         .then(res => res.ok ? res.json() : { slots: [] })
         .catch(() => ({ slots: [] }));

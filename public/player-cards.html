@@ -87,19 +87,17 @@ function escapeHtml(str){
 async function load(){
   const res=await fetch('/api/players');
   const data=await res.json();
-  Object.entries(data.byClub||{}).forEach(([clubId,players])=>{
-    const grid=teamGrids[clubId];
+  (data.players||[]).forEach(p=>{
+    const grid=teamGrids[String(p.club_id)];
     if(!grid) return;
-    players.forEach(p=>{
-      const nameRaw=p.name||p.playername||p.proName||p.personaName;
-      const name=nameRaw?nameRaw:`Unknown_${p.playerId||p.playerid||''}`;
-      const pos=p.position||p.pos||'';
-      const stats=parseVpro(p.vproattr);
-      const t=tierFromOvr(stats?stats.ovr:null);
-      const s=stats||{pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-      const card=document.createElement('div');
-      card.className=`player-card ${t.className}`;
-      card.innerHTML=`
+    const name=p.name||`Unknown_${p.player_id||''}`;
+    const pos=p.position||'';
+    const stats=parseVpro(p.vproattr);
+    const t=tierFromOvr(stats?stats.ovr:null);
+    const s=stats||{pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+    const card=document.createElement('div');
+    card.className=`player-card ${t.className}`;
+    card.innerHTML=`
         <img src="/assets/cards/${t.frame}" class="card-frame" />
         <div class="card-overlay">
           <div class="player-overall">${s.ovr}</div>
@@ -114,8 +112,7 @@ async function load(){
             <span>PHY ${s.phy}</span>
           </div>
         </div>`;
-      grid.appendChild(card);
-    });
+    grid.appendChild(card);
   });
 }
 
