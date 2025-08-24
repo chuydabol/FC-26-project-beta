@@ -973,10 +973,11 @@ async function upgradeClubPlayers(clubId){
       if(!card){
         card = Array.from(grid.querySelectorAll('.player-card')).find(el=>el.dataset.playerName === m.name);
       }
+
       if(card && m.stats) {
         const tier = { className: m.className, frame: m.frame };
         updatePlayerCard(card, m.stats, tier);
-      }
+
     });
   }catch(e){
     console.error('upgrade failed', e);
