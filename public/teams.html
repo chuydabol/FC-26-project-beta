@@ -912,7 +912,7 @@ async function renderClubKits(clubId){
   const teamId = info?.teamId;
   const customKit = info?.customKit || {};
   const kitUrl = teamId ? getKitUrl(teamId) : null;
-  document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`).forEach(img=>{
+  document.querySelectorAll(`[data-club-id="${clubId}"] .player-kit`).forEach(img=>{
     if(kitUrl){
       img.src = kitUrl;
       img.onerror = () => applyGradient(img, customKit);
@@ -990,6 +990,7 @@ async function openTeamView(clubId){
     <h2>${escapeHtml(name)}</h2>
     <div class="team-wallet">Wallet: TBD</div>
     <div class="players-grid"></div>`;
+  teamView.dataset.clubId = clubId;
   document.getElementById('teamBackBtn').addEventListener('click', closeTeamView);
   const grid = teamView.querySelector('.players-grid');
   let members = [];
