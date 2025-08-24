@@ -81,6 +81,9 @@ h2{margin:0 0 10px}
 }
 .player-card{position:relative;width:200px;height:280px;flex:0 1 auto}
 .card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.player-silhouette{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;opacity:.85;z-index:1}
+.player-kit{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;z-index:2}
+.player-kit-box{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;height:70%;z-index:2;border-radius:8px}
 .card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black}
 .player-overall{font-size:28px;font-weight:900}
 .player-name{font-size:16px;font-weight:bold}
@@ -855,6 +858,43 @@ function tierFromOvr(ovr){
   if(n<=94) return {frame:'crimson_card.png',className:'tier-crimson'};
   return {frame:'obsidian_elite.png',className:'tier-obsidian'};
 }
+
+async function getClubInfo(clubId){
+  const res = await fetch(`/api/club-info/${encodeURIComponent(clubId)}`);
+  const data = await res.json();
+  return data && data[clubId];
+}
+
+function getKitUrl(teamId){
+  return `https://proclubsdatabase.s3.us-east-2.amazonaws.com/minikits/j0_${teamId}_0.png`;
+}
+
+function applyGradient(img,customKit){
+  const box=document.createElement('div');
+  box.className='player-kit-box';
+  const colors=[customKit?.kitColor1,customKit?.kitColor2,customKit?.kitColor3,customKit?.kitColor4]
+    .filter(Boolean)
+    .map(c=>`#${Number(c).toString(16).padStart(6,'0')}`);
+  box.style.background=colors.length?`linear-gradient(45deg, ${colors.join(',')})`:'#666';
+  img.replaceWith(box);
+}
+
+async function renderClubKits(clubId,root=document){
+  let info=null;
+  try{info=await getClubInfo(clubId);}catch(e){info=null;}
+  const teamId=info?.teamId;
+  const customKit=info?.customKit||{};
+  const kitUrl=teamId?getKitUrl(teamId):null;
+  (root.querySelectorAll('.player-kit')||[]).forEach(img=>{
+    if(kitUrl){
+      img.src=kitUrl;
+      img.onerror=()=>applyGradient(img,customKit);
+    }else{
+      applyGradient(img,customKit);
+    }
+  });
+}
+
 async function openTeamView(clubId){
   document.querySelector('.teams-grid').style.display = 'none';
   const teamView = document.getElementById('teamView');
@@ -882,6 +922,8 @@ async function openTeamView(clubId){
     pc.className = `player-card ${tier.className}`;
     pc.innerHTML = `
       <img src="/assets/cards/${tier.frame}" class="card-frame" />
+      <img src="/assets/silhouette.png" class="player-silhouette" />
+      <img class="player-kit" />
       <div class="card-overlay">
         <div class="player-overall">${stats.ovr}</div>
         <div class="player-name">${escapeHtml(m.name||'Unknown')}</div>
@@ -897,6 +939,7 @@ async function openTeamView(clubId){
       </div>`;
     grid.appendChild(pc);
   });
+  renderClubKits(clubId, grid);
 }
 
 function closeTeamView(){
@@ -1001,6 +1044,8 @@ async function loadSquad(clubId){
       card.className = `player-card ${t.className}`;
       card.innerHTML = `
         <img src="/assets/cards/${t.frame}" class="card-frame" />
+        <img src="/assets/silhouette.png" class="player-silhouette" />
+        <img class="player-kit" />
         <div class="card-overlay">
           <div class="player-overall">${s.ovr}</div>
           <div class="player-name">${escapeHtml(name)}</div>
@@ -1016,6 +1061,7 @@ async function loadSquad(clubId){
         </div>`;
       body.appendChild(card);
     });
+    renderClubKits(clubId, body);
   }catch(e){
     if (e.status === 504) {
       body.innerHTML = 'EA API timed out. Try again.';
