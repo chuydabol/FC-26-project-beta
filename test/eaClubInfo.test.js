@@ -25,3 +25,13 @@ test('fetches club info from EA', async () => {
   });
   stub.mock.restore();
 });
+
+test('fetches club info via backend proxy', async () => {
+  const stub = mock.method(eaApi, 'fetchClubInfoWithRetry', async () => ({ name: 'Club', customLogo: 'L' }));
+  await withServer(async port => {
+    const res = await fetch(`http://localhost:${port}/api/club-info/123`);
+    const body = await res.json();
+    assert.deepStrictEqual(body, { club: { name: 'Club', customLogo: 'L' } });
+  });
+  stub.mock.restore();
+});
