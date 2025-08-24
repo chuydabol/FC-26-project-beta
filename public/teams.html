@@ -906,13 +906,13 @@ function applyGradient(img, customKit){
   img.replaceWith(box);
 }
 
-async function renderClubKits(clubId){
+async function renderClubKits(clubId, root = document){
   let info=null;
   try{ info = await getClubInfo(clubId); }catch(e){ info=null; }
   const teamId = info?.teamId;
   const customKit = info?.customKit || {};
   const kitUrl = teamId ? getKitUrl(teamId) : null;
-  document.querySelectorAll(`[data-club-id="${clubId}"] .player-kit`).forEach(img=>{
+  root.querySelectorAll(`[data-club-id="${clubId}"] .player-kit`).forEach(img=>{
     if(kitUrl){
       img.src = kitUrl;
       img.onerror = () => applyGradient(img, customKit);
@@ -1013,7 +1013,7 @@ async function openTeamView(clubId){
     const card = buildPlayerCard({ ...m, position }, stats, tier);
     grid.appendChild(card);
   });
-  renderClubKits(clubId);
+  renderClubKits(clubId, teamView);
 }
 
 function closeTeamView(){
