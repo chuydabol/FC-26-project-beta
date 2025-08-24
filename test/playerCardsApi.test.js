@@ -28,8 +28,8 @@ test('serves player cards for specific club', async () => {
   }));
 
     const queryStub = mock.method(pool, 'query', async (sql, params) => {
-      if (/FROM public\.playercards/i.test(sql)) {
-        return { rows: [{ player_id: '1', name: 'Alice', position: 'ST', vproattr: sampleVpro, ovr: 83 }] };
+      if (/FROM public\.players/i.test(sql)) {
+        return { rows: [{ name: 'Alice', position: 'ST', vproattr: sampleVpro, goals: 5, assists: 3 }] };
       }
       return { rows: [] };
     });

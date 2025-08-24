@@ -458,6 +458,34 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
     } else if (raw?.members && typeof raw.members === 'object') {
       members = Object.values(raw.members);
     }
+
+    const names = members
+      .map(m => m.name || m.playername || m.proName || m.personaName)
+      .filter(Boolean);
+    let pRows = [];
+    if (names.length) {
+      const { rows } = await q(
+        `SELECT name, position, vproattr FROM public.players WHERE club_id = $1 AND name = ANY($2::text[])`,
+        [clubId, names]
+      );
+      pRows = rows;
+    }
+    const attrMap = new Map(pRows.map(r => [r.name, r]));
+
+    members = members.map(m => {
+      const name = m.name || m.playername || m.proName || m.personaName;
+      const rec = attrMap.get(name) || {};
+      const merged = { ...m };
+      if (rec.position) merged.position = rec.position;
+      if (rec.vproattr) {
+        merged.vproattr = rec.vproattr;
+        merged.stats = parseVpro(rec.vproattr);
+      } else {
+        merged.stats = null;
+      }
+      return merged;
+    });
+
     res.json({ members });
   } catch (err) {
     logger.error({ err, clubId }, 'Failed to load team players');
@@ -483,41 +511,32 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       members = Object.values(raw.members);
     }
 
-    const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
-    let cardRows = [];
-    if (ids.length) {
+    const names = members
+      .map(m => m.name || m.playername || m.proName || m.personaName)
+      .filter(Boolean);
+    let pRows = [];
+    if (names.length) {
       const { rows } = await q(
-        `SELECT player_id, name, position, vproattr, ovr FROM public.playercards WHERE player_id = ANY($1::text[])`,
-        [ids]
+        `SELECT name, position, vproattr, goals, assists FROM public.players WHERE club_id = $1 AND name = ANY($2::text[])`,
+        [clubId, names]
       );
-      cardRows = rows;
+      pRows = rows;
     }
-    const cardMap = new Map(cardRows.map(r => [r.player_id, r]));
-
-    for (const m of members) {
-      const id = m.playerId || m.playerid;
-      if (!id) continue;
-      const name = m.name || m.playername || 'Player_' + id;
-      const pos = m.position || m.pos || m.proPos || 'UNK';
-      const card = cardMap.get(String(id)) || {};
-      const vproattr = card.vproattr || null;
-      const goals = Number(m.goals || 0);
-      const assists = Number(m.assists || 0);
-      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, vproattr, goals, assists]);
-    }
+    const dataMap = new Map(pRows.map(r => [r.name, r]));
 
     const membersDetailed = members.map(m => {
       const id = m.playerId || m.playerid;
-      const card = cardMap.get(String(id)) || {};
-      const stats = card.vproattr ? parseVpro(card.vproattr) : null;
+      const name = m.name || m.playername || m.proName || m.personaName || `Player_${id}`;
+      const rec = dataMap.get(name) || {};
+      const stats = rec.vproattr ? parseVpro(rec.vproattr) : null;
       return {
         playerId: id || null,
         clubId,
-        name: m.name,
-        position: m.position || m.preferredPosition || '',
+        name,
+        position: rec.position || m.position || m.preferredPosition || '',
         matches: Number(m.gamesPlayed) || 0,
-        goals: Number(m.goals) || 0,
-        assists: Number(m.assists) || 0,
+        goals: rec.goals ?? (Number(m.goals) || 0),
+        assists: rec.assists ?? (Number(m.assists) || 0),
         isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
         stats,
       };
