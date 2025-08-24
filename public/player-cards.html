@@ -59,15 +59,11 @@ CLUBS.forEach(c=>{
   teamsGrid.appendChild(card);
 });
 
-const EA_HEADERS={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64)","Accept":"application/json","Referer":"https://www.ea.com/"};
-
 async function getClubInfo(clubId){
-  const url=`https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=${clubId}`;
-  const res=await fetch(url,{headers:EA_HEADERS});
+  const res=await fetch(`/api/club-info/${encodeURIComponent(clubId)}`);
   const data=await res.json();
-  return data&&data[clubId];
+  return data && data[clubId]; // <-- not data.club, EA returns keyed by clubId
 }
-
 
 async function getTeamId(clubId){
   const info=await getClubInfo(clubId);
@@ -200,6 +196,9 @@ async function loadPlayers(){
     });
     renderClubKits(clubId);
     upgradeClubPlayers(clubId);
+  });
+  document.querySelectorAll('.team-card').forEach(card=>{
+    renderClubKits(card.getAttribute('data-club-id'));
   });
 }
 

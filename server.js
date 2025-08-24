@@ -343,6 +343,31 @@ app.get('/api/ea/clubs/:clubId/info', async (req, res) => {
   }
 });
 
+// Simplified proxy for club info to avoid direct EA calls from the client
+app.get('/api/club-info/:clubId', async (req, res) => {
+  const { clubId } = req.params;
+  if (!/^\d+$/.test(String(clubId))) {
+    return res.status(400).json({ error: 'Invalid clubId' });
+  }
+
+  const cached = _clubInfoCache.get(clubId);
+  if (cached && Date.now() - cached.at < CLUB_INFO_TTL_MS) {
+    return res.json({ club: cached.data });
+  }
+
+  try {
+    const info = await limit(() => eaApi.fetchClubInfoWithRetry(clubId));
+    _clubInfoCache.set(clubId, { at: Date.now(), data: info });
+    return res.json({ club: info });
+  } catch (err) {
+    const msg = err?.error || err?.message || 'EA API error';
+    const status = /abort|timeout|timed out|ETIMEDOUT/i.test(String(msg)) ? 504 : 502;
+    return res
+      .status(status)
+      .json({ error: 'EA API request failed', details: msg });
+  }
+});
+
 // Fetch recent matches for a single club directly from EA
 app.get('/api/ea/matches/:clubId', async (req, res) => {
   const { clubId } = req.params;
