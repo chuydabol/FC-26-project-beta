@@ -62,7 +62,12 @@ CLUBS.forEach(c=>{
 async function getClubInfo(clubId){
   const res=await fetch(`/api/club-info/${encodeURIComponent(clubId)}`);
   const data=await res.json();
-  return data&&data.club;
+  return data && data[clubId]; // <-- not data.club, EA returns keyed by clubId
+}
+
+async function getTeamId(clubId){
+  const info=await getClubInfo(clubId);
+  return info?.teamId;
 }
 
 function applyGradient(img,customKit){
@@ -189,6 +194,7 @@ async function loadPlayers(){
       const el = buildPlayerCard(p, stats, tier);
       grid.appendChild(el);
     });
+    renderClubKits(clubId);
     upgradeClubPlayers(clubId);
   });
   document.querySelectorAll('.team-card').forEach(card=>{
