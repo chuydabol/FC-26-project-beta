@@ -14,7 +14,10 @@ body{background:#000;color:#fff;font-family:'Montserrat',sans-serif;margin:0;pad
 .players-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center}
 .player-card{position:relative;width:200px;height:280px;flex:0 1 auto}
 .card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
-.card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black}
+.player-silhouette{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;opacity:.85;z-index:1}
+.player-kit{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;z-index:2}
+.player-kit-box{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;height:70%;z-index:2;border-radius:8px}
+.card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black;z-index:3}
 .player-overall{font-size:28px;font-weight:900}
 .player-name{font-size:16px;font-weight:bold}
 .player-position{font-size:14px;font-weight:600;margin-bottom:8px}
@@ -56,6 +59,41 @@ CLUBS.forEach(c=>{
   teamsGrid.appendChild(card);
 });
 
+const EA_HEADERS={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64)","Accept":"application/json","Referer":"https://www.ea.com/"};
+
+async function getClubInfo(clubId){
+  const url=`https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=${clubId}`;
+  const res=await fetch(url,{headers:EA_HEADERS});
+  const data=await res.json();
+  return data&&data[clubId];
+}
+
+function applyGradient(img,customKit){
+  const box=document.createElement('div');
+  box.className='player-kit-box';
+  const colors=[customKit?.kitColor1,customKit?.kitColor2,customKit?.kitColor3,customKit?.kitColor4]
+    .filter(Boolean)
+    .map(c=>`#${Number(c).toString(16).padStart(6,'0')}`);
+  box.style.background=colors.length?`linear-gradient(45deg, ${colors.join(',')})`:'#666';
+  img.replaceWith(box);
+}
+
+async function renderClubKits(clubId){
+  let info=null;
+  try{info=await getClubInfo(clubId);}catch(e){info=null;}
+  const teamId=info?.teamId;
+  const customKit=info?.customKit||{};
+  const kitUrl=teamId?`https://proclubsdatabase.s3.us-east-2.amazonaws.com/minikits/j0_${teamId}_0.png`:null;
+  document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`).forEach(img=>{
+    if(kitUrl){
+      img.src=kitUrl;
+      img.onerror=()=>applyGradient(img,customKit);
+    }else{
+      applyGradient(img,customKit);
+    }
+  });
+}
+
 function escapeHtml(str){
   return String(str||'').replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
 }
@@ -92,6 +130,8 @@ function buildPlayerCard(p, stats, tier){
   if(p.name) card.dataset.playerName=p.name;
   card.innerHTML=`
     <img src="/assets/cards/${t.frame}" class="card-frame" />
+    <img src="/assets/silhouette.png" class="player-silhouette" />
+    <img class="player-kit" />
     <div class="card-overlay">
       <div class="player-overall">${s.ovr}</div>
       <div class="player-name">${escapeHtml(p.name||'Unknown')}</div>
@@ -152,6 +192,7 @@ async function loadPlayers(){
       const el = buildPlayerCard(p, stats, tier);
       grid.appendChild(el);
     });
+    renderClubKits(clubId);
     upgradeClubPlayers(clubId);
   });
 }
