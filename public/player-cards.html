@@ -68,6 +68,12 @@ async function getClubInfo(clubId){
   return data&&data[clubId];
 }
 
+
+async function getTeamId(clubId){
+  const info=await getClubInfo(clubId);
+  return info?.teamId;
+}
+
 function applyGradient(img,customKit){
   const box=document.createElement('div');
   box.className='player-kit-box';
