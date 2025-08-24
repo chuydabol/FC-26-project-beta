@@ -70,6 +70,10 @@ async function getTeamId(clubId){
   return info?.teamId;
 }
 
+function getKitUrl(teamId){
+  return `https://proclubsdatabase.s3.us-east-2.amazonaws.com/minikits/j0_${teamId}_0.png`;
+}
+
 function applyGradient(img,customKit){
   const box=document.createElement('div');
   box.className='player-kit-box';
@@ -85,7 +89,7 @@ async function renderClubKits(clubId){
   try{info=await getClubInfo(clubId);}catch(e){info=null;}
   const teamId=info?.teamId;
   const customKit=info?.customKit||{};
-  const kitUrl=teamId?`https://proclubsdatabase.s3.us-east-2.amazonaws.com/minikits/j0_${teamId}_0.png`:null;
+  const kitUrl=teamId?getKitUrl(teamId):null;
   document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`).forEach(img=>{
     if(kitUrl){
       img.src=kitUrl;
@@ -196,9 +200,6 @@ async function loadPlayers(){
     });
     renderClubKits(clubId);
     upgradeClubPlayers(clubId);
-  });
-  document.querySelectorAll('.team-card').forEach(card=>{
-    renderClubKits(card.getAttribute('data-club-id'));
   });
 }
 
