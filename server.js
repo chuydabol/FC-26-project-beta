@@ -517,17 +517,19 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     }
     const cardMap = new Map(cardRows.map(r => [r.player_id, r]));
 
-    for (const m of members) {
-      const id = m.playerId || m.playerid;
-      if (!id) continue;
-      const name = m.name || m.playername || 'Player_' + id;
-      const pos = m.position || m.pos || m.proPos || 'UNK';
-      const card = cardMap.get(String(id)) || {};
-      const vproattr = card.vproattr || null;
-      const goals = Number(m.goals || 0);
-      const assists = Number(m.assists || 0);
-      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists]);
-    }
+    await Promise.all(
+      members.map(async m => {
+        const id = m.playerId || m.playerid;
+        if (!id) return;
+        const name = m.name || m.playername || 'Player_' + id;
+        const pos = m.position || m.pos || m.proPos || 'UNK';
+        const card = cardMap.get(String(id)) || {};
+        const vproattr = card.vproattr || null;
+        const goals = Number(m.goals || 0);
+        const assists = Number(m.assists || 0);
+        await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists]);
+      })
+    );
 
     const membersDetailed = members.map(m => {
       const id = m.playerId || m.playerid;

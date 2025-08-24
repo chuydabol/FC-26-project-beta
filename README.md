@@ -13,6 +13,10 @@ Player attribute snapshots are stored separately in a `playercards` table
 rendering cards, stats are loaded from `playercards` if available; otherwise the
 basic `players` row is used as a fallback with placeholder stats.
 
+The `/api/clubs/:clubId/player-cards` endpoint fetches club members from EA,
+merges any stored attributes, and updates the `players` table so aggregate
+queries via `GET /api/players` stay in sync.
+
 ## Logging
 
 This project uses a Pino-based logger. Logs default to the `info` level. To see
