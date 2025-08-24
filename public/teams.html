@@ -851,8 +851,6 @@ document.getElementById('mgrSubmit').onclick = async ()=>{
 // =======================
 //   TEAMS LIST / DETAIL
 // =======================
-const teamsGrid = document.getElementById('teamsGrid');
-const teamsCount = document.getElementById('teams-count');
 const detailView = document.getElementById('detail-view');
 const detailTitle = document.getElementById('detail-title');
 const detailSub   = document.getElementById('detail-sub');
@@ -949,6 +947,15 @@ function buildPlayerCard(p, stats, tier){
   return card;
 }
 
+function appendPlayerCard(card, container){
+  const allowed = (
+    (container.classList.contains('players-grid') && container.closest('.team-card')) ||
+    (container.classList.contains('players-grid') && container.closest('#teamView')) ||
+    container.id === 'squadBody'
+  );
+  if(allowed) container.appendChild(card);
+}
+
 function updatePlayerCard(card, stats){
   const tier = tierFromOvr(stats.ovr);
   card.className = `player-card ${tier.className}`;
@@ -1003,7 +1010,7 @@ async function openTeamView(clubId){
       : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' };
     const tier = tierFromOvr(stats.ovr);
     const card = buildPlayerCard({ ...m, position: m.proPos }, stats, tier);
-    grid.appendChild(card);
+    appendPlayerCard(card, grid);
     renderClubKits(clubId);
   });
   renderClubKits(clubId);
@@ -1033,7 +1040,7 @@ async function loadPlayers(){
         const stats = parseVpro(p.vproattr);
         const tier = tierFromOvr(stats?stats.ovr:null);
         const el = buildPlayerCard(p, stats, tier);
-        grid.appendChild(el);
+        appendPlayerCard(el, grid);
         renderClubKits(clubId);
       });
       renderClubKits(clubId);
@@ -1124,7 +1131,7 @@ async function loadSquad(clubId){
       const t = tierFromOvr(stats?stats.ovr:null);
       const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
       const card = buildPlayerCard({ name, position: pos, playerId: p.playerId||p.playerid }, s, t);
-      body.appendChild(card);
+      appendPlayerCard(card, body);
       renderClubKits(clubId);
     });
     renderClubKits(clubId);
