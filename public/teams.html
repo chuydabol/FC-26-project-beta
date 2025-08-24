@@ -929,6 +929,7 @@ function buildPlayerCard(p, stats, tier){
   card.className = `player-card ${t.className}`;
   if(p.player_id||p.playerId) card.dataset.playerId = String(p.player_id||p.playerId);
   if(p.name) card.dataset.playerName = p.name;
+  // Ensure kit placeholder exists for renderClubKits
   card.innerHTML = `
     <img src="/assets/cards/${t.frame}" class="card-frame" />
     <img src="/assets/silhouette.png" class="player-silhouette" />
