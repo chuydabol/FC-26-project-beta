@@ -31,12 +31,12 @@ test('getPlayerAttributes uses match data first', async () => {
   stub.mock.restore();
 });
 
-test('getPlayerAttributes falls back to players table', async () => {
+test('getPlayerAttributes falls back to playercards table', async () => {
   const stub = mock.method(pool, 'query', async sql => {
     if (/FROM public\.matches/i.test(sql)) {
       return { rows: [] };
     }
-    if (/FROM public\.players/i.test(sql)) {
+    if (/FROM public\.playercards/i.test(sql)) {
       return { rows: [{ vproattr: sample }] };
     }
     return { rows: [] };
