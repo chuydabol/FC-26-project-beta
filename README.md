@@ -8,10 +8,10 @@ Returns the latest squad members stored in Postgres.
 The response shape is `{ players: [...] }` where each player row contains
 `player_id`, `club_id`, `name`, `position` and `last_seen`.
 
-Player attribute snapshots are stored separately in a `playercards` table
-(`player_id`, `name`, `position`, `vproattr`, `ovr`, `last_updated`). When
-rendering cards, stats are loaded from `playercards` if available; otherwise the
-basic `players` row is used as a fallback with placeholder stats.
+Player attribute snapshots are stored in the `players` table via a `vproattr`
+column (`player_id`, `club_id`, `name`, `position`, `vproattr`, `goals`,
+`assists`, `last_seen`). When rendering cards, stats are parsed from this column
+and merged with live EA data.
 
 ## Logging
 
