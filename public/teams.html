@@ -1004,7 +1004,6 @@ async function openTeamView(clubId){
     const tier = tierFromOvr(stats.ovr);
     const card = buildPlayerCard({ ...m, position: m.proPos }, stats, tier);
     grid.appendChild(card);
-    renderClubKits(clubId);
   });
   renderClubKits(clubId);
 }
@@ -1034,7 +1033,6 @@ async function loadPlayers(){
         const tier = tierFromOvr(stats?stats.ovr:null);
         const el = buildPlayerCard(p, stats, tier);
         grid.appendChild(el);
-        renderClubKits(clubId);
       });
       renderClubKits(clubId);
       upgradeClubPlayers(clubId);
