@@ -997,13 +997,19 @@ async function openTeamView(clubId){
     const res = await fetch(`/api/teams/${clubId}/players`);
     const data = await res.json();
     members = data.members || [];
-  }catch(e){console.error(e);} 
+  }catch(e){console.error(e);}
+  const local = playersByClub[String(clubId)] || [];
   members.forEach(m => {
-    const stats = m.vproattr
-      ? parseVpro(m.vproattr)
-      : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' };
+    const id = String(m.playerId || m.player_id || m.playerid || '');
+    const match = local.find(p => String(p.playerId || p.player_id || p.playerid || '') === id);
+    const stats = match?.vproattr
+      ? parseVpro(match.vproattr)
+      : (m.vproattr
+        ? parseVpro(m.vproattr)
+        : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: match?.proOverall || m.proOverall || '??' });
+    const position = match?.position || match?.pos || m.proPos;
     const tier = tierFromOvr(stats.ovr);
-    const card = buildPlayerCard({ ...m, position: m.proPos }, stats, tier);
+    const card = buildPlayerCard({ ...m, position }, stats, tier);
     grid.appendChild(card);
   });
   renderClubKits(clubId);
