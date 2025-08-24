@@ -922,7 +922,7 @@ async function renderClubKits(clubId){
   });
 }
 
-function buildPlayerCard(p, stats, tier){
+function renderPlayerCard(p, stats, tier){
   const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
   const t = tier || tierFromOvr(stats?stats.ovr:null);
   const card = document.createElement('div');
@@ -1002,25 +1002,10 @@ async function openTeamView(clubId){
       ? parseVpro(m.vproattr)
       : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' };
     const tier = tierFromOvr(stats.ovr);
-    const pc = document.createElement('div');
-    pc.className = `player-card ${tier.className}`;
-    pc.innerHTML = `
-      <img src="/assets/cards/${tier.frame}" class="card-frame" />
-      <div class="card-overlay">
-        <div class="player-overall">${stats.ovr}</div>
-        <div class="player-name">${escapeHtml(m.name||'Unknown')}</div>
-        <div class="player-position">${escapeHtml(m.proPos||'')}</div>
-        <div class="player-stats">
-          <span>PAC ${stats.pac}</span>
-          <span>SHO ${stats.sho}</span>
-          <span>PAS ${stats.pas}</span>
-          <span>DRI ${stats.dri}</span>
-          <span>DEF ${stats.def}</span>
-          <span>PHY ${stats.phy}</span>
-        </div>
-      </div>`;
-    grid.appendChild(pc);
+    const card = renderPlayerCard({ ...m, position: m.proPos }, stats, tier);
+    grid.appendChild(card);
   });
+  renderClubKits(clubId);
 }
 
 function closeTeamView(){
@@ -1046,7 +1031,7 @@ async function loadPlayers(){
       members.forEach(p=>{
         const stats = parseVpro(p.vproattr);
         const tier = tierFromOvr(stats?stats.ovr:null);
-        const el = buildPlayerCard(p, stats, tier);
+        const el = renderPlayerCard(p, stats, tier);
         grid.appendChild(el);
       });
       renderClubKits(clubId);
@@ -1136,25 +1121,10 @@ async function loadSquad(clubId){
       const stats = parseVpro(p.vproattr);
       const t = tierFromOvr(stats?stats.ovr:null);
       const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-      const card = document.createElement('div');
-      card.className = `player-card ${t.className}`;
-      card.innerHTML = `
-        <img src="/assets/cards/${t.frame}" class="card-frame" />
-        <div class="card-overlay">
-          <div class="player-overall">${s.ovr}</div>
-          <div class="player-name">${escapeHtml(name)}</div>
-          <div class="player-position">${escapeHtml(pos)}</div>
-          <div class="player-stats">
-            <span>PAC ${s.pac}</span>
-            <span>SHO ${s.sho}</span>
-            <span>PAS ${s.pas}</span>
-            <span>DRI ${s.dri}</span>
-            <span>DEF ${s.def}</span>
-            <span>PHY ${s.phy}</span>
-          </div>
-        </div>`;
+      const card = renderPlayerCard({ name, position: pos, playerId: p.playerId||p.playerid }, s, t);
       body.appendChild(card);
     });
+    renderClubKits(clubId);
   }catch(e){
     if (e.status === 504) {
       body.innerHTML = 'EA API timed out. Try again.';
