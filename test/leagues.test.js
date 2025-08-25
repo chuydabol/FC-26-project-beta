@@ -80,3 +80,47 @@ test('serves league leaders', async () => {
 
   stub.mock.restore();
 });
+
+test('serves league matches including non-league opponents', async () => {
+  const stub = mock.method(pool, 'query', async sql => {
+    if (/FROM\s+public\.matches/i.test(sql)) {
+      assert.match(
+        sql,
+        /home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i
+      );
+      return {
+        rows: [
+          {
+            id: '1',
+            when: 1,
+            home: '2491998',
+            away: '999',
+            hs: 1,
+            as: 0
+          }
+        ]
+      };
+    }
+    return { rows: [] };
+  });
+
+  await withServer(async port => {
+    const res = await fetch(`http://localhost:${port}/api/leagues/test/matches`);
+    const body = await res.json();
+    assert.deepStrictEqual(body, {
+      matches: [
+        {
+          id: '1',
+          home: '2491998',
+          away: '999',
+          round: null,
+          when: 1,
+          status: 'final',
+          score: { hs: 1, as: 0 }
+        }
+      ]
+    });
+  });
+
+  stub.mock.restore();
+});

@@ -624,7 +624,7 @@ const SQL_LEAGUE_MATCHES = `
       ON home.match_id = m.match_id AND home.is_home = true
     JOIN public.match_participants away
       ON away.match_id = m.match_id AND away.is_home = false
-   WHERE home.club_id = ANY($1) AND away.club_id = ANY($1)
+   WHERE home.club_id = ANY($1) OR away.club_id = ANY($1)
    ORDER BY m.ts_ms DESC
    LIMIT 200`;
 
