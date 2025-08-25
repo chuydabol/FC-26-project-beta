@@ -196,8 +196,9 @@ async function saveEaMatch(match) {
     const c = clubs[cid];
     const name = c?.details?.name || `Club ${cid}`;
     const goals = Number(c?.goals || 0);
+    const isHome = Number(c?.details?.isHome) === 1;
     await q(SQL_UPSERT_CLUB, [cid, name]);
-    await q(SQL_UPSERT_PARTICIPANT, [matchId, cid, null, goals]);
+    await q(SQL_UPSERT_PARTICIPANT, [matchId, cid, isHome, goals]);
   }
 
   if (match.players) {
@@ -649,3 +650,4 @@ if (require.main === module) {
 }
 
 module.exports = app;
+module.exports.saveEaMatch = saveEaMatch;
