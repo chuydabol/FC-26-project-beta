@@ -626,19 +626,18 @@ async function bootstrap() {
     console.error('[db] failed to query active database', err);
   }
 
+  if (process.env.NODE_ENV !== 'test') {
+    try {
+      await refreshAllMatches();
+      console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
+    } catch (err) {
+      logger.error({ err }, `[${new Date().toISOString()}] ❌ Initial sync error`);
+    }
+  }
+
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`Server on :${PORT}`);
-    if (process.env.NODE_ENV !== 'test') {
-      (async () => {
-        try {
-          await refreshAllMatches();
-          console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
-        } catch (err) {
-          logger.error({ err }, `[${new Date().toISOString()}] ❌ Initial sync error`);
-        }
-      })();
-    }
   });
 }
 
