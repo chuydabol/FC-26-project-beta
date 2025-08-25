@@ -541,6 +541,62 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
 });
 
 
+// League standings and leaders
+const SQL_LEAGUE_STANDINGS = `
+  SELECT mp.club_id AS "clubId",
+         COUNT(*)::int AS "P",
+         SUM(CASE WHEN mp.goals > opp.goals THEN 1 ELSE 0 END)::int AS "W",
+         SUM(CASE WHEN mp.goals = opp.goals THEN 1 ELSE 0 END)::int AS "D",
+         SUM(CASE WHEN mp.goals < opp.goals THEN 1 ELSE 0 END)::int AS "L",
+         SUM(mp.goals)::int AS "GF",
+         SUM(opp.goals)::int AS "GA",
+         SUM(mp.goals - opp.goals)::int AS "GD",
+         SUM(CASE WHEN mp.goals > opp.goals THEN 3 WHEN mp.goals = opp.goals THEN 1 ELSE 0 END)::int AS "Pts"
+    FROM public.match_participants mp
+    JOIN public.match_participants opp ON mp.match_id = opp.match_id AND mp.club_id <> opp.club_id
+    JOIN public.matches m ON m.match_id = mp.match_id
+   WHERE mp.club_id = ANY($1) AND opp.club_id = ANY($1)
+   GROUP BY mp.club_id
+   ORDER BY "Pts" DESC, "GD" DESC, "GF" DESC`;
+
+const SQL_TOP_SCORERS = `
+  SELECT club_id AS "clubId", name, goals::int AS count
+    FROM public.players
+   WHERE club_id = ANY($1) AND goals > 0
+   ORDER BY count DESC, name
+   LIMIT 10`;
+
+const SQL_TOP_ASSISTERS = `
+  SELECT club_id AS "clubId", name, assists::int AS count
+    FROM public.players
+   WHERE club_id = ANY($1) AND assists > 0
+   ORDER BY count DESC, name
+   LIMIT 10`;
+
+app.get('/api/leagues/:leagueId', async (_req, res) => {
+  try {
+    const { rows } = await q(SQL_LEAGUE_STANDINGS, [CLUB_IDS]);
+    res.json({ teams: CLUB_IDS, standings: rows });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch league standings');
+    res.status(500).json({ error: 'Failed to fetch league standings' });
+  }
+});
+
+app.get('/api/leagues/:leagueId/leaders', async (_req, res) => {
+  try {
+    const [scorers, assisters] = await Promise.all([
+      q(SQL_TOP_SCORERS, [CLUB_IDS]),
+      q(SQL_TOP_ASSISTERS, [CLUB_IDS])
+    ]);
+    res.json({ scorers: scorers.rows, assisters: assisters.rows });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch league leaders');
+    res.status(500).json({ error: 'Failed to fetch league leaders' });
+  }
+});
+
+
 // Auto update every 10 minutes
 if (process.env.NODE_ENV !== 'test' && CRON_ENABLED) {
   cron.schedule('*/10 * * * *', async () => {

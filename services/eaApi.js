@@ -1,5 +1,8 @@
-const fetchFn =
-  global.fetch || ((...a) => import('node-fetch').then(m => m.default(...a)));
+async function fetchFn(...a) {
+  if (global.fetch) return global.fetch(...a);
+  const m = await import('node-fetch');
+  return m.default(...a);
+}
 const https = require('https');
 
 // Browser-like headers to avoid EA blocking the requests
