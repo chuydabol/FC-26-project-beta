@@ -7,7 +7,7 @@ const eaApi = require('../services/eaApi');
 const { pool } = require('../db');
 const app = require('../server');
 
-const sampleVpro = '091|094|094|089|072|084|064|095|066|093|064|089|091|094|082|095|083|079|068|089|091|069|091|082|067|065';
+const sampleVpro = '091|094|094|089|072|084|064|095|066|093|064|089|091|094|082|095|083|079|068|089|091|069|091|082|067|065|070';
 
 async function withServer(fn) {
   const server = app.listen(0);
