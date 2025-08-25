@@ -46,13 +46,14 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, position, goals, assists, last_seen)
-  VALUES ($1, $2, $3, $4, $5, $6, NOW())
+  INSERT INTO public.players (player_id, club_id, name, position, goals, assists, vproattr, last_seen)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
   ON CONFLICT (player_id, club_id) DO UPDATE SET
     name = EXCLUDED.name,
     position = EXCLUDED.position,
     goals = EXCLUDED.goals,
     assists = EXCLUDED.assists,
+    vproattr = EXCLUDED.vproattr,
     last_seen = NOW()
 `;
 
@@ -214,11 +215,11 @@ async function saveEaMatch(match) {
           pdata.proPos ||
           'UNK';
         const vproattr = pdata.vproattr || null;
+        const stats = vproattr ? parseVpro(vproattr) : null;
         const goals = Number(pdata.goals || 0);
         const assists = Number(pdata.assists || 0);
-        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, goals, assists]);
+        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, goals, assists, vproattr]);
         if (vproattr) {
-          const stats = parseVpro(vproattr);
           await q(SQL_UPSERT_PLAYERCARD, [pid, name, pos, vproattr, stats.ovr]);
         }
       }
@@ -462,8 +463,8 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
     let cardRows = [];
     if (ids.length) {
       const { rows } = await q(
-        `SELECT player_id, position, vproattr, ovr FROM public.playercards WHERE player_id = ANY($1::text[])`,
-        [ids]
+        `SELECT player_id, position, vproattr FROM public.players WHERE player_id = ANY($1::text[]) AND club_id = $2`,
+        [ids, clubId]
       );
       cardRows = rows;
     }
@@ -475,8 +476,6 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
       const merged = { ...m };
       if (card.position && !merged.position) merged.position = card.position;
       if (card.vproattr) merged.vproattr = card.vproattr;
-      if (!merged.ovr && card.ovr) merged.ovr = card.ovr;
-      if (!merged.proOverall && card.ovr) merged.proOverall = card.ovr;
       merged.stats = card.vproattr ? parseVpro(card.vproattr) : null;
       return merged;
     });
@@ -507,35 +506,49 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     }
 
     const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
-    let cardRows = [];
+    let playerRows = [];
     if (ids.length) {
       const { rows } = await q(
-        `SELECT player_id, name, position, vproattr, ovr FROM public.playercards WHERE player_id = ANY($1::text[])`,
-        [ids]
+        `SELECT player_id, vproattr FROM public.players WHERE player_id = ANY($1::text[]) AND club_id = $2`,
+        [ids, clubId]
       );
-      cardRows = rows;
+      playerRows = rows;
     }
-    const cardMap = new Map(cardRows.map(r => [r.player_id, r]));
+    const playerMap = new Map(playerRows.map(r => [r.player_id, r]));
 
-    await Promise.all(
-      members.map(async m => {
-        const id = m.playerId || m.playerid;
-        if (!id) return;
-        const name = m.name || m.playername || 'Player_' + id;
-        const pos = m.position || m.pos || m.proPos || 'UNK';
-        const card = cardMap.get(String(id)) || {};
-        const vproattr = card.vproattr || null;
-        const goals = Number(m.goals || 0);
-        const assists = Number(m.assists || 0);
-        await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists]);
-      })
-    );
+const membersDetailed = [];
+for (const m of members) {
+  const id = m.playerId || m.playerid;
+  if (!id) continue;
 
-    const membersDetailed = members.map(m => {
-      const id = m.playerId || m.playerid;
-      const card = cardMap.get(String(id)) || {};
-      const stats = card.vproattr ? parseVpro(card.vproattr) : null;
-      return {
+  const name = m.name || m.playername || 'Player_' + id;
+  const pos = m.position || m.pos || m.proPos || 'UNK';
+
+  const existing = playerMap.get(String(id)) || {};
+  const vproattr = m.vproattr || existing.vproattr || null;
+  const stats = vproattr ? parseVpro(vproattr) : null;
+
+  const goals = Number(m.goals || 0);
+  const assists = Number(m.assists || 0);
+
+  // Save player row
+  await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists, vproattr]);
+
+  // Save player card row (only if attributes exist)
+  if (vproattr) {
+    await q(SQL_UPSERT_PLAYERCARD, [id, name, pos, vproattr, stats.ovr]);
+  }
+
+  membersDetailed.push({
+    id,
+    name,
+    pos,
+    goals,
+    assists,
+    stats
+  });
+}
+
         playerId: id || null,
         clubId,
         name: m.name,
@@ -544,9 +557,10 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
         goals: Number(m.goals) || 0,
         assists: Number(m.assists) || 0,
         isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
+        vproattr,
         stats,
-      };
-    });
+      });
+    }
 
     const withStats = membersDetailed.filter(p => p.stats && p.stats.ovr);
     const sorted = withStats.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);

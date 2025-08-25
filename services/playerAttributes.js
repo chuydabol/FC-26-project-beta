@@ -14,8 +14,8 @@ async function getPlayerAttributes(playerId, clubId) {
   if (m.rows[0]?.vproattr) return parseVpro(m.rows[0].vproattr);
 
   const p = await pool.query(
-    `SELECT vproattr FROM public.playercards WHERE player_id = $1`,
-    [playerId]
+    `SELECT vproattr FROM public.players WHERE player_id = $1 AND club_id = $2`,
+    [playerId, clubId]
   );
   if (p.rows[0]?.vproattr) return parseVpro(p.rows[0].vproattr);
 
