@@ -96,7 +96,7 @@ test('serves league matches including non-league opponents', async () => {
             home: '2491998',
             away: '999',
             hs: 1,
-            as: 0
+            away_score: 2
           }
         ]
       };
@@ -116,7 +116,7 @@ test('serves league matches including non-league opponents', async () => {
           round: null,
           when: 1,
           status: 'final',
-          score: { hs: 1, as: 0 }
+          score: { hs: 1, as: 2 }
         }
       ]
     });
