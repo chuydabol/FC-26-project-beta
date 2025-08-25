@@ -26,7 +26,7 @@ test('serves cup fixtures', async () => {
     when_ts: 123,
     status: 'scheduled',
     hs: 1,
-    as: 2,
+    away_score: 2,
     created_at: 456,
   };
   const stub = mock.method(pool, 'query', async () => ({ rows: [row] }));
