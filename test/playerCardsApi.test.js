@@ -22,19 +22,39 @@ async function withServer(fn) {
 test('serves player cards for specific club', async () => {
   const fetchStub = mock.method(eaApi, 'fetchClubMembersWithRetry', async () => ({
     members: [
-      { name: 'Alice', gamesPlayed: '10', goals: '5', assists: '3', position: 'ST' },
-      { name: 'Bob', gamesPlayed: '2', goals: '1', assists: '0', position: 'GK' }
+      {
+        playerId: '1',
+        name: 'Alice',
+        gamesPlayed: '10',
+        goals: '5',
+        assists: '3',
+        position: 'ST'
+      },
+      {
+        playerId: '2',
+        name: 'Bob',
+        gamesPlayed: '2',
+        goals: '1',
+        assists: '0',
+        position: 'GK'
+      }
     ]
   }));
 
   const queryStub = mock.method(pool, 'query', async (sql, params) => {
-
-    if (/FROM public\.players/i.test(sql)) {
-      return { rows: [{ player_id: '1', vproattr: sampleVpro }] };
-
     if (/FROM public\.playercards/i.test(sql)) {
-      return { rows: [{ player_id: '1', name: 'Alice', position: 'ST', vproattr: sampleVpro, ovr: 83 }] };
-
+      return {
+        rows: [
+          {
+            player_id: '1',
+            club_id: '10',
+            name: 'Alice',
+            position: 'ST',
+            vproattr: sampleVpro,
+            ovr: 83
+          }
+        ]
+      };
     }
     return { rows: [] };
   });
@@ -46,16 +66,18 @@ test('serves player cards for specific club', async () => {
     assert.strictEqual(body.members.length, 2);
     const alice = body.members.find(p => p.name === 'Alice');
     const bob = body.members.find(p => p.name === 'Bob');
+    assert.strictEqual(alice.clubId, '10');
     assert(alice.stats && alice.stats.ovr > 0);
     assert.strictEqual(alice.tier, 'obsidian');
     assert.strictEqual(bob.stats, null);
     assert.strictEqual(bob.tier, 'iron');
   });
 
-  const upsertCall = queryStub.mock.calls.find(c => /INSERT INTO public\.players/i.test(c.arguments[0]));
+  const upsertCall = queryStub.mock.calls.find(
+    c => /INSERT INTO public\.players/i.test(c.arguments[0]) && c.arguments[1][0] === '1'
+  );
   assert(upsertCall, 'players table should be upserted');
-
-  assert.strictEqual(upsertCall.arguments[1][6], sampleVpro);
+  assert.strictEqual(upsertCall.arguments[1][4], sampleVpro);
 
   fetchStub.mock.restore();
   queryStub.mock.restore();
