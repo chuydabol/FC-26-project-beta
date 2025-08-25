@@ -966,7 +966,7 @@ function updatePlayerCard(card, stats){
 
 async function upgradeClubPlayers(clubId, container){
   try{
-    const d = await fetch(`/api/teams/${encodeURIComponent(clubId)}/players`).then(r=>r.json());
+    const d = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/player-cards`).then(r=>r.json());
     const grid = container || document.querySelector(`.team-card[data-club-id="${clubId}"] .players-grid`);
     if(!grid) return;
     (d.members||[]).forEach(m=>{
@@ -975,7 +975,7 @@ async function upgradeClubPlayers(clubId, container){
       if(!card){
         card = Array.from(grid.querySelectorAll('.player-card')).find(el=>el.dataset.playerName === m.name);
       }
-      const stats = m.stats || (m.vproattr ? parseVpro(m.vproattr) : null);
+      const stats = m.stats;
       if(card && stats) updatePlayerCard(card, stats);
     });
   }catch(e){
