@@ -906,13 +906,16 @@ function applyGradient(img, customKit){
   img.replaceWith(box);
 }
 
-async function renderClubKits(clubId){
+async function renderClubKits(clubId, container){
   let info=null;
   try{ info = await getClubInfo(clubId); }catch(e){ info=null; }
   const teamId = info?.teamId;
   const customKit = info?.customKit || {};
   const kitUrl = teamId ? getKitUrl(teamId) : null;
-  document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`).forEach(img=>{
+  const imgs = container
+    ? container.querySelectorAll('.player-kit')
+    : document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`);
+  imgs.forEach(img=>{
     if(kitUrl){
       img.src = kitUrl;
       img.onerror = () => applyGradient(img, customKit);
@@ -1005,7 +1008,7 @@ async function openTeamView(clubId){
     const card = buildPlayerCard({ ...m, position: m.proPos }, stats, tier);
     grid.appendChild(card);
   });
-  renderClubKits(clubId);
+  renderClubKits(clubId, teamView);
 }
 
 function closeTeamView(){
@@ -1123,9 +1126,8 @@ async function loadSquad(clubId){
       const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
       const card = buildPlayerCard({ name, position: pos, playerId: p.playerId||p.playerid }, s, t);
       body.appendChild(card);
-      renderClubKits(clubId);
     });
-    renderClubKits(clubId);
+    renderClubKits(clubId, body);
   }catch(e){
     if (e.status === 504) {
       body.innerHTML = 'EA API timed out. Try again.';
