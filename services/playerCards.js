@@ -1,15 +1,15 @@
 function parseVpro(vproattr = '') {
   const parts = String(vproattr).split('|').map(n => parseInt(n, 10));
   const avg = arr => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
-  if (parts.length < 26) {
+  if (parts.length < 27 || parts.some(n => isNaN(n))) {
     return { pac: 0, sho: 0, pas: 0, dri: 0, def: 0, phy: 0, ovr: 0 };
   }
   const pac = avg([parts[0], parts[1]]);
-  const sho = avg([parts[4], parts[5], parts[6]]);
-  const pas = avg([parts[9], parts[10], parts[12]]);
-  const dri = avg([parts[2], parts[7], parts[8]]);
-  const def = avg([parts[19], parts[20]]);
-  const phy = avg([parts[23], parts[24], parts[25]]);
+  const sho = avg([parts[4], parts[5], parts[8], parts[16], parts[17]]);
+  const pas = avg([parts[9], parts[19], parts[12], parts[15], parts[13]]);
+  const dri = avg([parts[2], parts[3], parts[7], parts[11]]);
+  const def = avg([parts[18], parts[10], parts[20], parts[21]]);
+  const phy = avg([parts[22], parts[23], parts[24], parts[25], parts[26]]);
   const ovr = Math.round(
     pac * 0.2 +
     sho * 0.2 +
