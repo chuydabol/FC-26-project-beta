@@ -475,51 +475,43 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
   try {
     const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
     let members = [];
-    if (Array.isArray(raw)) {
-      members = raw;
-    } else if (Array.isArray(raw?.members)) {
+    if (Array.isArray(raw?.members)) {
       members = raw.members;
+    } else if (Array.isArray(raw)) {
+      members = raw;
     } else if (raw?.members && typeof raw.members === 'object') {
       members = Object.values(raw.members);
     }
 
-    const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
-    let cardRows = [];
-    if (ids.length) {
-      const { rows } = await q(
-        `SELECT player_id, club_id, name, position, vproattr, ovr FROM public.playercards WHERE club_id = $1 AND player_id = ANY($2::text[])`,
-        [clubId, ids]
-      );
-      cardRows = rows;
-    }
-    const cardMap = new Map(cardRows.map(r => [r.player_id, r]));
+    const { rows } = await q(
+      `SELECT player_id, club_id, name, position, vproattr
+       FROM public.playercards
+       WHERE club_id = $1`,
+      [clubId]
+    );
 
-    for (const m of members) {
-      const id = m.playerId || m.playerid;
-      if (!id) continue;
-      const name = m.name || m.playername || 'Player_' + id;
-      const pos = m.position || m.pos || m.proPos || 'UNK';
-      const card = cardMap.get(String(id)) || {};
-      const vproattr = card.vproattr || null;
-      const goals = Number(m.goals || 0);
-      const assists = Number(m.assists || 0);
-      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, vproattr, goals, assists]);
-    }
+    const cardMap = new Map(rows.map(r => [String(r.player_id), r]));
+    const nameMap = new Map(rows.map(r => [r.name, r]));
 
     const membersDetailed = members.map(m => {
-      const id = m.playerId || m.playerid;
-      const card = cardMap.get(String(id)) || {};
-      const stats = card.vproattr ? parseVpro(card.vproattr) : null;
+      const id = String(m.playerId || m.playerid || '') || null;
+      let rec = id ? cardMap.get(id) : null;
+      if (!rec) rec = nameMap.get(m.name) || {};
+
+      const vproattr = rec.vproattr || null;
+      const stats = vproattr ? parseVpro(vproattr) : null;
+
       return {
-        playerId: id || null,
+        playerId: id,
         clubId,
-        name: m.name,
-        position: m.position || m.preferredPosition || '',
+        name: m.name || rec.name || `Player_${id}`,
+        position: rec.position || m.position || '',
         matches: Number(m.gamesPlayed) || 0,
         goals: Number(m.goals) || 0,
         assists: Number(m.assists) || 0,
         isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
-        stats,
+        vproattr,
+        stats
       };
     });
 

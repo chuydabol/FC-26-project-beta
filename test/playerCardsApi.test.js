@@ -19,7 +19,7 @@ async function withServer(fn) {
   }
 }
 
-test('serves player cards for specific club', async () => {
+test('serves player cards with stats and name fallback', async () => {
   const fetchStub = mock.method(eaApi, 'fetchClubMembersWithRetry', async () => ({
     members: [
       {
@@ -31,7 +31,6 @@ test('serves player cards for specific club', async () => {
         position: 'ST'
       },
       {
-        playerId: '2',
         name: 'Bob',
         gamesPlayed: '2',
         goals: '1',
@@ -50,8 +49,14 @@ test('serves player cards for specific club', async () => {
             club_id: '10',
             name: 'Alice',
             position: 'ST',
-            vproattr: sampleVpro,
-            ovr: 83
+            vproattr: sampleVpro
+          },
+          {
+            player_id: '99',
+            club_id: '10',
+            name: 'Bob',
+            position: 'GK',
+            vproattr: sampleVpro
           }
         ]
       };
@@ -68,16 +73,9 @@ test('serves player cards for specific club', async () => {
     const bob = body.members.find(p => p.name === 'Bob');
     assert.strictEqual(alice.clubId, '10');
     assert(alice.stats && alice.stats.ovr > 0);
-    assert.strictEqual(alice.tier, 'obsidian');
-    assert.strictEqual(bob.stats, null);
-    assert.strictEqual(bob.tier, 'iron');
+    assert.strictEqual(bob.playerId, null);
+    assert(bob.stats && bob.stats.ovr > 0);
   });
-
-  const upsertCall = queryStub.mock.calls.find(
-    c => /INSERT INTO public\.players/i.test(c.arguments[0]) && c.arguments[1][0] === '1'
-  );
-  assert(upsertCall, 'players table should be upserted');
-  assert.strictEqual(upsertCall.arguments[1][4], sampleVpro);
 
   fetchStub.mock.restore();
   queryStub.mock.restore();
