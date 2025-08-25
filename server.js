@@ -576,19 +576,35 @@ app.get('/api/cup/fixtures', async (req, res) => {
 
 // League standings and leaders
 const SQL_LEAGUE_STANDINGS = `
+  WITH matches AS (
+    SELECT home.club_id AS home,
+           away.club_id AS away,
+           home.goals AS home_goals,
+           away.goals AS away_goals
+      FROM public.matches m
+      JOIN public.match_participants home
+        ON home.match_id = m.match_id AND home.is_home = true
+      JOIN public.match_participants away
+        ON away.match_id = m.match_id AND away.is_home = false
+     WHERE home.club_id = ANY($1) OR away.club_id = ANY($1)
+  ), sides AS (
+    SELECT home AS club_id, away AS opp_id, home_goals AS gf, away_goals AS ga
+      FROM matches
+    UNION ALL
+    SELECT away AS club_id, home AS opp_id, away_goals AS gf, home_goals AS ga
+      FROM matches
+  )
   SELECT c.club_id AS "clubId",
-         COALESCE(COUNT(opp.match_id), 0)::int AS "P",
-         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL AND mp.goals > opp.goals THEN 1 ELSE 0 END), 0)::int AS "W",
-         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL AND mp.goals = opp.goals THEN 1 ELSE 0 END), 0)::int AS "D",
-         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL AND mp.goals < opp.goals THEN 1 ELSE 0 END), 0)::int AS "L",
-         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN mp.goals ELSE 0 END), 0)::int AS "GF",
-         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN opp.goals ELSE 0 END), 0)::int AS "GA",
-         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN mp.goals - opp.goals ELSE 0 END), 0)::int AS "GD",
-         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN CASE WHEN mp.goals > opp.goals THEN 3 WHEN mp.goals = opp.goals THEN 1 ELSE 0 END ELSE 0 END), 0)::int AS "Pts"
+         COALESCE(COUNT(s.club_id), 0)::int AS "P",
+         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 1 ELSE 0 END), 0)::int AS "W",
+         COALESCE(SUM(CASE WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS "D",
+         COALESCE(SUM(CASE WHEN s.gf < s.ga THEN 1 ELSE 0 END), 0)::int AS "L",
+         COALESCE(SUM(s.gf), 0)::int AS "GF",
+         COALESCE(SUM(s.ga), 0)::int AS "GA",
+         COALESCE(SUM(s.gf - s.ga), 0)::int AS "GD",
+         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 3 WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS "Pts"
     FROM public.clubs c
-    LEFT JOIN public.match_participants mp ON mp.club_id = c.club_id
-    LEFT JOIN public.matches m ON m.match_id = mp.match_id
-    LEFT JOIN public.match_participants opp ON m.match_id = opp.match_id AND opp.club_id <> mp.club_id AND opp.club_id = ANY($1)
+    LEFT JOIN sides s ON c.club_id = s.club_id
    WHERE c.club_id = ANY($1)
    GROUP BY c.club_id
    ORDER BY "Pts" DESC, "GD" DESC, "GF" DESC`;

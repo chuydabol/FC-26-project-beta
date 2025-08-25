@@ -58,6 +58,36 @@ test('standings include teams with zero matches', async () => {
   stub.mock.restore();
 });
 
+test('standings include matches against non-league opponents', async () => {
+  const stub = mock.method(pool, 'query', async sql => {
+    if (/home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i.test(sql)) {
+      assert.match(
+        sql,
+        /home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i
+      );
+      return {
+        rows: [
+          { clubId: '1', P: 1, W: 0, D: 0, L: 1, GF: 0, GA: 1, GD: -1, Pts: 0 }
+        ]
+      };
+    }
+    if (/from\s+public\.clubs/i.test(sql)) {
+      return { rows: [ { id: '1', name: 'Team 1' } ] };
+    }
+    return { rows: [] };
+  });
+
+  await withServer(async port => {
+    const res = await fetch(`http://localhost:${port}/api/leagues/test`);
+    const body = await res.json();
+    assert.deepStrictEqual(body.standings, [
+      { clubId: '1', P: 1, W: 0, D: 0, L: 1, GF: 0, GA: 1, GD: -1, Pts: 0 }
+    ]);
+  });
+
+  stub.mock.restore();
+});
+
 test('serves league leaders', async () => {
   const stub = mock.method(pool, 'query', async sql => {
     if (/goals::int/i.test(sql)) {
