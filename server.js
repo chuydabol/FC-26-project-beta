@@ -618,7 +618,7 @@ const SQL_LEAGUE_MATCHES = `
          home.club_id AS home,
          away.club_id AS away,
          home.goals AS hs,
-         away.goals AS as
+         away.goals AS away_score
     FROM public.matches m
     JOIN public.match_participants home
       ON home.match_id = m.match_id AND home.is_home = true
@@ -664,7 +664,7 @@ app.get('/api/leagues/:leagueId/matches', async (_req, res) => {
       round: null,
       when: Number(r.when) || null,
       status: 'final',
-      score: { hs: Number(r.hs || 0), as: Number(r.as || 0) },
+      score: { hs: Number(r.hs || 0), as: Number(r.away_score || 0) },
     }));
     res.json({ matches });
   } catch (err) {
