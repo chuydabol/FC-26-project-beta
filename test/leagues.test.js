@@ -1,0 +1,58 @@
+const { test, mock } = require('node:test');
+const assert = require('assert');
+
+process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
+
+const { pool } = require('../db');
+
+async function withServer(fn) {
+  const app = require('../server');
+  const server = app.listen(0);
+  try {
+    const port = server.address().port;
+    await fn(port);
+  } finally {
+    server.close();
+  }
+}
+
+test('serves league standings', async () => {
+  const stub = mock.method(pool, 'query', async sql => {
+    if (/match_participants/i.test(sql)) {
+      return { rows: [ { clubId: '1', P: 1, W: 1, D: 0, L: 0, GF: 2, GA: 1, GD: 1, Pts: 3 } ] };
+    }
+    return { rows: [] };
+  });
+
+  await withServer(async port => {
+    const res = await fetch(`http://localhost:${port}/api/leagues/test`);
+    const body = await res.json();
+    assert.ok(Array.isArray(body.teams));
+    assert.deepStrictEqual(body.standings, [ { clubId: '1', P: 1, W: 1, D: 0, L: 0, GF: 2, GA: 1, GD: 1, Pts: 3 } ]);
+  });
+
+  stub.mock.restore();
+});
+
+test('serves league leaders', async () => {
+  const stub = mock.method(pool, 'query', async sql => {
+    if (/goals::int/i.test(sql)) {
+      return { rows: [ { clubId: '1', name: 'A', count: 5 } ] };
+    }
+    if (/assists::int/i.test(sql)) {
+      return { rows: [ { clubId: '2', name: 'B', count: 3 } ] };
+    }
+    return { rows: [] };
+  });
+
+  await withServer(async port => {
+    const res = await fetch(`http://localhost:${port}/api/leagues/test/leaders`);
+    const body = await res.json();
+    assert.deepStrictEqual(body, {
+      scorers: [ { clubId: '1', name: 'A', count: 5 } ],
+      assisters: [ { clubId: '2', name: 'B', count: 3 } ]
+    });
+  });
+
+  stub.mock.restore();
+});
