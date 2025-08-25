@@ -103,26 +103,20 @@ try {
 
 const CRON_ENABLED = process.env.CRON_ENABLED !== '0';
 
-// Explicit club list used for league operations
-const CLUB_IDS = [
-  '2491998', // Royal Republic
-  '1527486', // Gungan FC
-  '1969494', // Club Frijol
-  '2086022', // Brehemen
-  '2462194', // Costa Chica FC
-  '5098824', // Sporting de la ma
-  '4869810', // Afc Tekki
-  '576007', // Ethabella FC
-  '481847', // Rooney tunes
-  '3050467', // invincible afc
-  '4933507', // Loss Toyz
-  '4824736', // GoldenGoals FC
-  '4154835', // khalch Fc
-  '3638105', // Real mvc
-  '55408', // Elite VT
-  '4819681', // EVERYTHING DEAD
-  '35642' // EBK FC
-];
+// Mapping of league IDs to their club IDs
+const LEAGUE_CLUBS_PATH = process.env.LEAGUE_CLUBS_PATH ||
+  path.join(__dirname, 'data', 'leagueClubs.json');
+let LEAGUE_CLUBS = {};
+try {
+  LEAGUE_CLUBS = require(LEAGUE_CLUBS_PATH);
+} catch (err) {
+  logger.error({ err }, 'Failed to load league club mapping');
+}
+function clubsForLeague(id) {
+  return LEAGUE_CLUBS[id] || [];
+}
+const DEFAULT_LEAGUE_ID = process.env.DEFAULT_LEAGUE_ID || 'UPCL_LEAGUE_2025';
+const CLUB_IDS = clubsForLeague(DEFAULT_LEAGUE_ID);
 
 const CLUB_NAMES = {
   '2491998': 'Royal Republic',
@@ -644,11 +638,15 @@ const SQL_LEAGUE_MATCHES = `
    ORDER BY m.ts_ms DESC
    LIMIT 200`;
 
-app.get('/api/leagues/:leagueId', async (_req, res) => {
+app.get('/api/leagues/:leagueId', async (req, res) => {
+  const clubIds = clubsForLeague(req.params.leagueId);
+  if (!clubIds.length) {
+    return res.status(404).json({ error: 'Unknown league' });
+  }
   try {
     const [standings, teams] = await Promise.all([
-      q(SQL_LEAGUE_STANDINGS, [CLUB_IDS]),
-      q(SQL_LEAGUE_TEAMS, [CLUB_IDS])
+      q(SQL_LEAGUE_STANDINGS, [clubIds]),
+      q(SQL_LEAGUE_TEAMS, [clubIds])
     ]);
     res.json({ teams: teams.rows, standings: standings.rows });
   } catch (err) {
@@ -657,11 +655,15 @@ app.get('/api/leagues/:leagueId', async (_req, res) => {
   }
 });
 
-app.get('/api/leagues/:leagueId/leaders', async (_req, res) => {
+app.get('/api/leagues/:leagueId/leaders', async (req, res) => {
+  const clubIds = clubsForLeague(req.params.leagueId);
+  if (!clubIds.length) {
+    return res.status(404).json({ error: 'Unknown league' });
+  }
   try {
     const [scorers, assisters] = await Promise.all([
-      q(SQL_TOP_SCORERS, [CLUB_IDS]),
-      q(SQL_TOP_ASSISTERS, [CLUB_IDS])
+      q(SQL_TOP_SCORERS, [clubIds]),
+      q(SQL_TOP_ASSISTERS, [clubIds])
     ]);
     res.json({ scorers: scorers.rows, assisters: assisters.rows });
   } catch (err) {
@@ -670,9 +672,13 @@ app.get('/api/leagues/:leagueId/leaders', async (_req, res) => {
   }
 });
 
-app.get('/api/leagues/:leagueId/matches', async (_req, res) => {
+app.get('/api/leagues/:leagueId/matches', async (req, res) => {
+  const clubIds = clubsForLeague(req.params.leagueId);
+  if (!clubIds.length) {
+    return res.status(404).json({ matches: [] });
+  }
   try {
-    const { rows } = await q(SQL_LEAGUE_MATCHES, [CLUB_IDS]);
+    const { rows } = await q(SQL_LEAGUE_MATCHES, [clubIds]);
     const matches = rows.map(r => ({
       id: String(r.id),
       home: r.home,

@@ -1,7 +1,9 @@
 const { test, mock } = require('node:test');
 const assert = require('assert');
+const path = require('path');
 
 process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
+process.env.LEAGUE_CLUBS_PATH = path.join(__dirname, 'fixtures', 'leagueClubs.json');
 
 const { pool } = require('../db');
 
@@ -150,6 +152,34 @@ test('serves league matches including non-league opponents', async () => {
         }
       ]
     });
+  });
+
+  stub.mock.restore();
+});
+
+test('different leagueIds return appropriate clubs', async () => {
+  const stub = mock.method(pool, 'query', async (sql, params) => {
+    if (/match_participants/i.test(sql)) {
+      const cid = params[0][0];
+      return { rows: [ { clubId: cid, P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 } ] };
+    }
+    if (/from\s+public\.clubs/i.test(sql)) {
+      const cid = params[0][0];
+      return { rows: [ { id: cid, name: `Team ${cid}` } ] };
+    }
+    return { rows: [] };
+  });
+
+  await withServer(async port => {
+    let res = await fetch(`http://localhost:${port}/api/leagues/alpha`);
+    let body = await res.json();
+    assert.deepStrictEqual(body.teams, [ { id: '1', name: 'Team 1' } ]);
+    assert.deepStrictEqual(body.standings, [ { clubId: '1', P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 } ]);
+
+    res = await fetch(`http://localhost:${port}/api/leagues/beta`);
+    body = await res.json();
+    assert.deepStrictEqual(body.teams, [ { id: '2', name: 'Team 2' } ]);
+    assert.deepStrictEqual(body.standings, [ { clubId: '2', P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 } ]);
   });
 
   stub.mock.restore();
