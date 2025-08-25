@@ -723,6 +723,15 @@ let fixturesSchedCache  = [];
 let friendliesFxCache  = [];
 let friendliesTeams    = [];
 
+function normalizeFixtures(list){
+  return (Array.isArray(list)?list:[]).map(f=>({
+    ...f,
+    when: f.when?Number(f.when):f.when,
+    createdAt: f.createdAt?Number(f.createdAt):f.createdAt,
+    score: f.score || { hs: f.hs, as: f.as }
+  }));
+}
+
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -1220,7 +1229,7 @@ function renderMatches(matches) {
 async function refreshFixturesPublic(){
   try {
     const d = await apiGet('/api/cup/fixtures?cup=UPCL');
-    fixturesPublicCache = d.fixtures || [];
+    fixturesPublicCache = normalizeFixtures(d.fixtures);
   } catch { fixturesPublicCache = []; }
 }
 function renderFixturesPublic(){
@@ -1581,7 +1590,7 @@ async function loadChampions(){
   let ccList = [];
   try {
     const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`);
-    ccList = fx.fixtures || [];
+    ccList = normalizeFixtures(fx.fixtures || []);
   } catch {}
 
   renderCcGroups(cupData.cup.groups, ccList);
@@ -1866,7 +1875,10 @@ async function loadLeague(){
   try { const leaders = await apiGet(`/api/leagues/${encodeURIComponent(LEAGUE_ID)}/leaders`); renderLeagueLeaders(leaders); } catch {}
 
   let fxList = [];
-  try { const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(LEAGUE_ID)}`); fxList = fx.fixtures || []; } catch {}
+  try {
+    const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(LEAGUE_ID)}`);
+    fxList = normalizeFixtures(fx.fixtures || []);
+  } catch {}
   renderLeagueFixtures(fxList);
 
   const adminEl = document.getElementById('leagueAdmin');
@@ -1930,7 +1942,7 @@ async function loadFriendlies(){
 
   try {
     const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`);
-    friendliesFxCache = fx.fixtures || [];
+    friendliesFxCache = normalizeFixtures(fx.fixtures || []);
   } catch { friendliesFxCache = []; }
   renderFriendliesFixtures(friendliesFxCache);
 
@@ -2005,7 +2017,11 @@ async function loadNews(){
     await refreshFixturesPublic();
     const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
     const fr = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`).catch(()=>({fixtures:[]}));
-    const computed = await computeNewsFromFixtures([...fixturesPublicCache, ...(cc.fixtures||[]), ...(fr.fixtures||[])]);
+    const computed = await computeNewsFromFixtures([
+      ...fixturesPublicCache,
+      ...normalizeFixtures(cc.fixtures||[]),
+      ...normalizeFixtures(fr.fixtures||[])
+    ]);
     wrap.innerHTML = computed.length ? computed.map(renderNewsItem).join('') : '<div class="muted">No news yet.</div>';
   }catch{ wrap.innerHTML = '<div class="muted">Failed to load news.</div>'; }
 }

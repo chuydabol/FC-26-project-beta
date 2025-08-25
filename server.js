@@ -277,9 +277,10 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 app.post('/api/admin/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ ok: true });
-  });
+  if (req.session) {
+    req.session.destroy(() => {});
+  }
+  res.json({ ok: true });
 });
 
 app.get('/api/admin/me', (req, res) => {
@@ -538,6 +539,37 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Failed to load player cards');
     res.status(500).json({ members: [] });
+  }
+});
+
+
+// Cup fixtures
+const SQL_GET_CUP_FIXTURES = `
+  SELECT id, cup, home, away, round, when_ts, status, hs, as, created_at
+    FROM cup_fixtures
+   WHERE cup = $1
+   ORDER BY created_at ASC`;
+
+app.get('/api/cup/fixtures', async (req, res) => {
+  const cup = new URL(req.url, 'http://localhost').searchParams.get('cup');
+  if (!cup) return res.status(400).json({ fixtures: [] });
+  try {
+    const { rows } = await q(SQL_GET_CUP_FIXTURES, [cup]);
+    const fixtures = rows.map(r => ({
+      id: r.id,
+      cup: r.cup,
+      home: r.home,
+      away: r.away,
+      round: r.round,
+      when: Number(r.when_ts || r.when || r.at || 0) || null,
+      status: r.status || null,
+      score: { hs: Number(r.hs ?? r.score_h ?? 0), as: Number(r.as ?? r.score_a ?? 0) },
+      createdAt: Number(r.created_at || r.createdAt || 0) || null
+    }));
+    res.json({ fixtures });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch fixtures');
+    res.status(500).json({ fixtures: [] });
   }
 });
 
