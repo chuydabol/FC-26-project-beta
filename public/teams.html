@@ -1022,7 +1022,6 @@ async function loadPlayers(){
       const grid = card.querySelector('.players-grid');
       if(!grid) return;
       try{
- codex/resolve-merge-conflicts-and-update-branch-bl14sw
         // `/api/clubs/:id/player-cards` refreshes and reads from the server's players table
 
         const res = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/player-cards`);
