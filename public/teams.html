@@ -643,7 +643,8 @@ h2{margin:0 0 10px}
 // =======================
 const API_BASE = '';
 const CC_ID = 'UPCL_CC_2025_08'; // current Champions Cup id
-const LEAGUE_ID = 'UPCL_LEAGUE_2025'; // current League id
+const LEAGUE_ID = new URLSearchParams(location.search).get('leagueId') ||
+  'UPCL_LEAGUE_2025'; // current League id
 const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
 
 // Teams
