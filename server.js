@@ -574,10 +574,18 @@ const SQL_TOP_ASSISTERS = `
    ORDER BY count DESC, name
    LIMIT 10`;
 
+const SQL_LEAGUE_TEAMS = `
+  SELECT club_id AS "id", club_name AS "name", logo
+    FROM public.clubs
+   WHERE club_id = ANY($1)`;
+
 app.get('/api/leagues/:leagueId', async (_req, res) => {
   try {
-    const { rows } = await q(SQL_LEAGUE_STANDINGS, [CLUB_IDS]);
-    res.json({ teams: CLUB_IDS, standings: rows });
+    const [standings, teams] = await Promise.all([
+      q(SQL_LEAGUE_STANDINGS, [CLUB_IDS]),
+      q(SQL_LEAGUE_TEAMS, [CLUB_IDS])
+    ]);
+    res.json({ teams: teams.rows, standings: standings.rows });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league standings');
     res.status(500).json({ error: 'Failed to fetch league standings' });
