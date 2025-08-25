@@ -58,9 +58,9 @@ const SQL_UPSERT_PLAYER = `
 `;
 
 const SQL_UPSERT_PLAYERCARD = `
-  INSERT INTO public.playercards (player_id, name, position, vproattr, ovr, last_updated)
-  VALUES ($1, $2, $3, $4, $5, NOW())
-  ON CONFLICT (player_id) DO UPDATE
+  INSERT INTO public.playercards (player_id, club_id, name, position, vproattr, ovr, last_updated)
+  VALUES ($1, $2, $3, $4, $5, $6, NOW())
+  ON CONFLICT (player_id, club_id) DO UPDATE
     SET name = EXCLUDED.name,
         position = EXCLUDED.position,
         vproattr = EXCLUDED.vproattr,
@@ -220,7 +220,7 @@ async function saveEaMatch(match) {
         await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, vproattr, goals, assists]);
         if (vproattr) {
           const stats = parseVpro(vproattr);
-          await q(SQL_UPSERT_PLAYERCARD, [pid, name, pos, vproattr, stats.ovr]);
+          await q(SQL_UPSERT_PLAYERCARD, [pid, cid, name, pos, vproattr, stats.ovr]);
         }
       }
     }
@@ -487,8 +487,8 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     let cardRows = [];
     if (ids.length) {
       const { rows } = await q(
-        `SELECT player_id, name, position, vproattr, ovr FROM public.playercards WHERE player_id = ANY($1::text[])`,
-        [ids]
+        `SELECT player_id, club_id, name, position, vproattr, ovr FROM public.playercards WHERE club_id = $1 AND player_id = ANY($2::text[])`,
+        [clubId, ids]
       );
       cardRows = rows;
     }
