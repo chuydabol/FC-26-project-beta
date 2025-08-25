@@ -545,7 +545,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
 
 // Cup fixtures
 const SQL_GET_CUP_FIXTURES = `
-  SELECT id, cup, home, away, round, when_ts, status, hs, as, created_at
+  SELECT id, cup, home, away, round, when_ts, status, hs, "as" AS away_score, created_at
     FROM cup_fixtures
    WHERE cup = $1
    ORDER BY created_at ASC`;
@@ -563,7 +563,7 @@ app.get('/api/cup/fixtures', async (req, res) => {
       round: r.round,
       when: Number(r.when_ts || r.when || r.at || 0) || null,
       status: r.status || null,
-      score: { hs: Number(r.hs ?? r.score_h ?? 0), as: Number(r.as ?? r.score_a ?? 0) },
+      score: { hs: Number(r.hs ?? r.score_h ?? 0), as: Number(r.away_score ?? r.score_a ?? 0) },
       createdAt: Number(r.created_at || r.createdAt || 0) || null
     }));
     res.json({ fixtures });
