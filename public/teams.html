@@ -881,10 +881,14 @@ function tierFromOvr(ovr){
   return {frame:'obsidian_elite.png',className:'tier-obsidian'};
 }
 
+const clubInfoCache = new Map();
 async function getClubInfo(clubId){
+  if(clubInfoCache.has(clubId)) return clubInfoCache.get(clubId);
   const res = await fetch(`/api/club-info/${encodeURIComponent(clubId)}`);
   const data = await res.json();
-  return data && data[clubId];
+  const info = data?.club || data[clubId];
+  if(info) clubInfoCache.set(clubId, info);
+  return info;
 }
 
 async function getTeamId(clubId){
@@ -992,15 +996,10 @@ async function openTeamView(clubId){
   teamView.dataset.clubId = clubId;
   document.getElementById('teamBackBtn').addEventListener('click', closeTeamView);
   const grid = teamView.querySelector('.players-grid');
-  let members = [];
-  try{
-    const res = await fetch(`/api/clubs/${clubId}/player-cards`);
-    const data = await res.json();
-    members = data.members || [];
-  }catch(e){console.error(e);}
+  const members = playersByClub[clubId] || [];
   members.forEach(m => {
-    const stats = m.stats || (m.vproattr ? parseVpro(m.vproattr) : {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:m.proOverall||m.ovr||'??'});
-    const tier = { className: m.className, frame: m.frame };
+    const stats = parseVpro(m.vproattr) || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+    const tier = tierFromOvr(stats?.ovr);
     const card = buildPlayerCard(m, stats, tier);
     grid.appendChild(card);
   });
@@ -1016,30 +1015,30 @@ function closeTeamView(){
 async function loadPlayers(){
   try{
     playersByClub = {};
+    const res = await fetch('/api/players');
+    const data = await res.json();
+    const players = data.players || [];
+    players.forEach(p => {
+      const cid = String(p.club_id || p.clubId || '');
+      if(!cid) return;
+      if(!playersByClub[cid]) playersByClub[cid] = [];
+      playersByClub[cid].push(p);
+    });
+
     const cards = document.querySelectorAll('.team-card');
-    await Promise.all(Array.from(cards).map(async card=>{
+    cards.forEach(card => {
       const clubId = card.getAttribute('data-club-id');
       const grid = card.querySelector('.players-grid');
       if(!grid) return;
-      try{
-        // `/api/clubs/:id/player-cards` refreshes and reads from the server's players table
-
-        const res = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/player-cards`);
-        const data = await res.json();
-        const members = data.members || [];
-        playersByClub[clubId] = members;
-        grid.innerHTML='';
-        members.forEach(m=>{
-          const stats = m.stats || (m.vproattr ? parseVpro(m.vproattr) : {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:m.proOverall||m.ovr||'??'});
-          const tier = { className: m.className, frame: m.frame };
-          const el = buildPlayerCard(m, stats, tier);
-          grid.appendChild(el);
-        });
-        renderClubKits(clubId);
-      }catch(e){
-        console.error('load club players failed', e);
-      }
-    }));
+      grid.innerHTML='';
+      (playersByClub[clubId]||[]).forEach(m => {
+        const stats = parseVpro(m.vproattr) || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+        const tier = tierFromOvr(stats?.ovr);
+        const el = buildPlayerCard(m, stats, tier);
+        grid.appendChild(el);
+      });
+      renderClubKits(clubId);
+    });
   }catch(e){
     console.error('Failed to load players', e);
   }
@@ -1126,7 +1125,6 @@ async function loadSquad(clubId){
       const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
       const card = buildPlayerCard({ name, position: pos, playerId: p.playerId||p.playerid }, s, t);
       body.appendChild(card);
-      renderClubKits(clubId);
     });
     renderClubKits(clubId);
   }catch(e){

@@ -79,13 +79,6 @@ if (process.env.NODE_ENV === 'test') {
   };
 }
 
-// Headers used when proxying requests to EA's API.  EA's servers expect
-// browser-like headers and will reject requests without them.
-const EA_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-  Accept: 'application/json',
-  Referer: 'https://www.ea.com/',
-};
 
 let cron;
 try {
@@ -351,21 +344,31 @@ app.get('/api/ea/clubs/:clubId/info', async (req, res) => {
   }
 });
 
-// Minimal proxy for club info. EA blocks direct browser requests via CORS so
-// the client must call this endpoint which forwards the request with the
-// required headers.
+// Minimal proxy for club info with caching. This prevents hitting the EA API
+// repeatedly when multiple players from the same club are rendered.
 app.get('/api/club-info/:clubId', async (req, res) => {
-  const clubId = req.params.clubId;
-  const url =
-    `https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=${clubId}`;
+  const { clubId } = req.params;
+  if (!/^\d+$/.test(String(clubId))) {
+    return res.status(400).json({ error: 'Invalid clubId' });
+  }
+
+  const cached = _clubInfoCache.get(clubId);
+  if (cached && Date.now() - cached.at < CLUB_INFO_TTL_MS) {
+    return res.json({ club: cached.data });
+  }
+
   try {
-    const r = await fetch(url, { headers: EA_HEADERS });
-    const json = await r.json();
-    res.json(json);
+    const info = await limit(() => eaApi.fetchClubInfoWithRetry(clubId));
+    _clubInfoCache.set(clubId, { at: Date.now(), data: info });
+    return res.json({ club: info });
   } catch (err) {
-    res
-      .status(500)
-      .json({ error: 'EA API failed', details: err.toString() });
+    const msg = err?.error || err?.message || 'EA API error';
+    const status = /abort|timeout|timed out|ETIMEDOUT/i.test(String(msg))
+      ? 504
+      : 502;
+    return res
+      .status(status)
+      .json({ error: 'EA API request failed', details: msg });
   }
 });
 
