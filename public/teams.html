@@ -519,34 +519,6 @@ h2{margin:0 0 10px}
       <div id="leagueLeaders" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"></div>
     </div>
 
-    <div class="m-card" id="leagueAdmin" style="display:none;margin-top:10px">
-      <strong>Admin tools</strong>
-      <div>
-        <strong>Create League fixture</strong>
-        <div class="grid2" style="margin-top:8px">
-          <div>
-            <label class="muted">Home</label>
-            <select id="leagueHomeSel"></select>
-          </div>
-          <div>
-            <label class="muted">Away</label>
-            <select id="leagueAwaySel"></select>
-          </div>
-          <div>
-            <label class="muted">Stage / Round</label>
-            <input id="leagueRoundInput" placeholder="e.g., Week 1">
-          </div>
-          <div>
-            <label class="muted">Date & time (optional)</label>
-            <input id="leagueWhenInput" type="datetime-local">
-          </div>
-          <div style="align-self:end">
-            <button id="leagueFormCreate">Create fixture</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="m-card" style="margin-top:10px">
       <strong>League Fixtures</strong>
       <div id="leagueFixtures" class="fx-list" style="margin-top:8px"></div>
@@ -1881,14 +1853,10 @@ async function loadLeague(){
 
   let fxList = [];
   try {
-    const fx = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(LEAGUE_ID)}`);
-    fxList = normalizeFixtures(fx.fixtures || []);
+    const fx = await apiGet(`/api/leagues/${encodeURIComponent(LEAGUE_ID)}/matches`);
+    fxList = normalizeFixtures(fx.matches || []);
   } catch {}
   renderLeagueFixtures(fxList);
-
-  const adminEl = document.getElementById('leagueAdmin');
-  if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
-  if (isAdmin) setupLeagueFixtureForm(teams);
 }
 
 function renderLeagueTable(rows){
@@ -1908,31 +1876,9 @@ function renderLeagueLeaders(data){
 function renderLeagueFixtures(list){
   const el = document.getElementById('leagueFixtures');
   list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
-  el.innerHTML = list.length ? list.map(f=>{ const H=byId(f.home), A=byId(f.away); const hn=H?.name||f.home; const an=A?.name||f.away; const whenTxt=f.when?fmtDate(f.when):'TBD'; const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'vs'; const banner=getFixtureBanner(); const editBtn = isAdmin ? `<div class="act"><button data-lq="${f.id}">Quick Edit</button></div>` : ''; return `<div class="fx" id="lffx_${f.id}"><div>${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span><span class="muted">${scoreTxt}</span><span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span></div><div class="meta"><span class="chip">UPCL League${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div></div>${editBtn}</div>`; }).join('') : `<div class="muted">No league fixtures yet.</div>`;
-  list.forEach(f=>{ const q=document.querySelector(`[data-lq="${f.id}"]`); if(q) q.onclick=()=> openResultEditor(f); });
+  el.innerHTML = list.length ? list.map(f=>{ const H=byId(f.home), A=byId(f.away); const hn=H?.name||f.home; const an=A?.name||f.away; const whenTxt=f.when?fmtDate(f.when):'TBD'; const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'vs'; const banner=getFixtureBanner(); return `<div class="fx" id="lffx_${f.id}"><div>${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span><span class="muted">${scoreTxt}</span><span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span></div><div class="meta"><span class="chip">UPCL League${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div></div></div>`; }).join('') : `<div class="muted">No league fixtures yet.</div>`;
 }
 
-
-function setupLeagueFixtureForm(teamList){
-  const homeSel=document.getElementById('leagueHomeSel');
-  const awaySel=document.getElementById('leagueAwaySel');
-  const roundInput=document.getElementById('leagueRoundInput');
-  const whenInput=document.getElementById('leagueWhenInput');
-  const createBtn=document.getElementById('leagueFormCreate');
-  if(!homeSel||!awaySel||!createBtn) return;
-  const opts=teamList.map(t=>`<option value="${t.id}">${escapeHtml(t.name||t.id)}</option>`).join('');
-  homeSel.innerHTML=`<option value="">— choose —</option>${opts}`;
-  awaySel.innerHTML=`<option value="">— choose —</option>${opts}`;
-  function ensureDifferent(){ if(homeSel.value && awaySel.value && homeSel.value===awaySel.value){ alert('Home and away cannot be the same club.'); awaySel.value=''; } }
-  homeSel.onchange=ensureDifferent; awaySel.onchange=ensureDifferent;
-  createBtn.onclick=async ()=>{
-    const home=homeSel.value; const away=awaySel.value; const round=(roundInput.value||'').trim()||'Round';
-    const when=whenInput.value?Date.parse(whenInput.value):null;
-    if(!home||!away) return alert('Pick both teams');
-    try{ await apiPost('/api/cup/fixtures', { home, away, round, cup: LEAGUE_ID, when }); alert('Fixture created'); await loadLeague(); }
-    catch(e){ alert('Create failed: '+e.message); }
-  };
-}
 
 // =======================
 //   FRIENDLIES
