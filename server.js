@@ -505,7 +505,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       members = Object.values(raw.members);
     }
 
-    const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
+  const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
     let playerRows = [];
     if (ids.length) {
       const { rows } = await q(
@@ -516,39 +516,22 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     }
     const playerMap = new Map(playerRows.map(r => [r.player_id, r]));
 
-const membersDetailed = [];
-for (const m of members) {
-  const id = m.playerId || m.playerid;
-  if (!id) continue;
-
-  const name = m.name || m.playername || 'Player_' + id;
-  const pos = m.position || m.pos || m.proPos || 'UNK';
-
-  const existing = playerMap.get(String(id)) || {};
-  const vproattr = m.vproattr || existing.vproattr || null;
-  const stats = vproattr ? parseVpro(vproattr) : null;
-
-  const goals = Number(m.goals || 0);
-  const assists = Number(m.assists || 0);
-
-  // Save player row
-  await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists, vproattr]);
-
-  // Save player card row (only if attributes exist)
-  if (vproattr) {
-    await q(SQL_UPSERT_PLAYERCARD, [id, name, pos, vproattr, stats.ovr]);
-  }
-
-  membersDetailed.push({
-    id,
-    name,
-    pos,
-    goals,
-    assists,
-    stats
-  });
-}
-
+    const membersDetailed = [];
+    for (const m of members) {
+      const id = m.playerId || m.playerid;
+      if (!id) continue;
+      const name = m.name || m.playername || 'Player_' + id;
+      const pos = m.position || m.pos || m.proPos || 'UNK';
+      const existing = playerMap.get(String(id)) || {};
+      const vproattr = m.vproattr || existing.vproattr || null;
+      const stats = vproattr ? parseVpro(vproattr) : null;
+      const goals = Number(m.goals || 0);
+      const assists = Number(m.assists || 0);
+      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists, vproattr]);
+      if (vproattr) {
+        await q(SQL_UPSERT_PLAYERCARD, [id, name, pos, vproattr, stats.ovr]);
+      }
+      membersDetailed.push({
         playerId: id || null,
         clubId,
         name: m.name,
