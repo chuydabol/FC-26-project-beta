@@ -996,9 +996,17 @@ async function openTeamView(clubId){
   teamView.dataset.clubId = clubId;
   document.getElementById('teamBackBtn').addEventListener('click', closeTeamView);
   const grid = teamView.querySelector('.players-grid');
-  const members = playersByClub[clubId] || [];
+  grid.innerHTML = '';
+  let members = [];
+  try {
+    const d = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/player-cards`).then(r=>r.json());
+    members = d.members || [];
+  } catch(e) {
+    console.error('Failed to load player cards', e);
+  }
+  if (!members.length) members = playersByClub[clubId] || [];
   members.forEach(m => {
-    const stats = parseVpro(m.vproattr) || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
+    const stats = m.vproattr ? parseVpro(m.vproattr) : null;
     const tier = tierFromOvr(stats?.ovr);
     const card = buildPlayerCard(m, stats, tier);
     grid.appendChild(card);
@@ -1024,21 +1032,25 @@ async function loadPlayers(){
       if(!playersByClub[cid]) playersByClub[cid] = [];
       playersByClub[cid].push(p);
     });
-
     const cards = document.querySelectorAll('.team-card');
-    cards.forEach(card => {
+    await Promise.all(Array.from(cards).map(async card => {
       const clubId = card.getAttribute('data-club-id');
       const grid = card.querySelector('.players-grid');
       if(!grid) return;
       grid.innerHTML='';
-      (playersByClub[clubId]||[]).forEach(m => {
-        const stats = parseVpro(m.vproattr) || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-        const tier = tierFromOvr(stats?.ovr);
-        const el = buildPlayerCard(m, stats, tier);
-        grid.appendChild(el);
-      });
+      try {
+        const d = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/player-cards`).then(r=>r.json());
+        (d.members||[]).forEach(m => {
+          const stats = m.vproattr ? parseVpro(m.vproattr) : null;
+          const tier = tierFromOvr(stats?.ovr);
+          const el = buildPlayerCard(m, stats, tier);
+          grid.appendChild(el);
+        });
+      } catch(e){
+        console.error('Failed to load player cards for club', clubId, e);
+      }
       renderClubKits(clubId);
-    });
+    }));
   }catch(e){
     console.error('Failed to load players', e);
   }
