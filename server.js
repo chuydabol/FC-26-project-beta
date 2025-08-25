@@ -498,7 +498,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       let rec = id ? cardMap.get(id) : null;
       if (!rec) rec = nameMap.get(m.name) || {};
 
-      const vproattr = rec.vproattr || null;
+      const vproattr = rec.vproattr || m.vproattr || null;
       const stats = vproattr ? parseVpro(vproattr) : null;
 
       return {
