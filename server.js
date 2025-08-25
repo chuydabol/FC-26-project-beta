@@ -607,7 +607,7 @@ const SQL_TOP_ASSISTERS = `
    LIMIT 10`;
 
 const SQL_LEAGUE_TEAMS = `
-  SELECT club_id AS "id", club_name AS "name", logo
+  SELECT club_id AS "id", club_name AS "name"
     FROM public.clubs
    WHERE club_id = ANY($1)`;
 
