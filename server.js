@@ -611,6 +611,22 @@ const SQL_LEAGUE_TEAMS = `
     FROM public.clubs
    WHERE club_id = ANY($1)`;
 
+const SQL_LEAGUE_MATCHES = `
+  SELECT m.match_id AS id,
+         m.ts_ms AS "when",
+         home.club_id AS home,
+         away.club_id AS away,
+         home.goals AS hs,
+         away.goals AS as
+    FROM public.matches m
+    JOIN public.match_participants home
+      ON home.match_id = m.match_id AND home.is_home = true
+    JOIN public.match_participants away
+      ON away.match_id = m.match_id AND away.is_home = false
+   WHERE home.club_id = ANY($1) AND away.club_id = ANY($1)
+   ORDER BY m.ts_ms DESC
+   LIMIT 200`;
+
 app.get('/api/leagues/:leagueId', async (_req, res) => {
   try {
     const [standings, teams] = await Promise.all([
@@ -634,6 +650,25 @@ app.get('/api/leagues/:leagueId/leaders', async (_req, res) => {
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league leaders');
     res.status(500).json({ error: 'Failed to fetch league leaders' });
+  }
+});
+
+app.get('/api/leagues/:leagueId/matches', async (_req, res) => {
+  try {
+    const { rows } = await q(SQL_LEAGUE_MATCHES, [CLUB_IDS]);
+    const matches = rows.map(r => ({
+      id: String(r.id),
+      home: r.home,
+      away: r.away,
+      round: null,
+      when: Number(r.when) || null,
+      status: 'final',
+      score: { hs: Number(r.hs || 0), as: Number(r.as || 0) },
+    }));
+    res.json({ matches });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch league matches');
+    res.status(500).json({ matches: [] });
   }
 });
 
