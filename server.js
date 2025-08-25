@@ -576,20 +576,21 @@ app.get('/api/cup/fixtures', async (req, res) => {
 
 // League standings and leaders
 const SQL_LEAGUE_STANDINGS = `
-  SELECT mp.club_id AS "clubId",
-         COUNT(*)::int AS "P",
-         SUM(CASE WHEN mp.goals > opp.goals THEN 1 ELSE 0 END)::int AS "W",
-         SUM(CASE WHEN mp.goals = opp.goals THEN 1 ELSE 0 END)::int AS "D",
-         SUM(CASE WHEN mp.goals < opp.goals THEN 1 ELSE 0 END)::int AS "L",
-         SUM(mp.goals)::int AS "GF",
-         SUM(opp.goals)::int AS "GA",
-         SUM(mp.goals - opp.goals)::int AS "GD",
-         SUM(CASE WHEN mp.goals > opp.goals THEN 3 WHEN mp.goals = opp.goals THEN 1 ELSE 0 END)::int AS "Pts"
-    FROM public.match_participants mp
-    JOIN public.match_participants opp ON mp.match_id = opp.match_id AND mp.club_id <> opp.club_id
-    JOIN public.matches m ON m.match_id = mp.match_id
-   WHERE mp.club_id = ANY($1) AND opp.club_id = ANY($1)
-   GROUP BY mp.club_id
+  SELECT c.club_id AS "clubId",
+         COALESCE(COUNT(opp.match_id), 0)::int AS "P",
+         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL AND mp.goals > opp.goals THEN 1 ELSE 0 END), 0)::int AS "W",
+         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL AND mp.goals = opp.goals THEN 1 ELSE 0 END), 0)::int AS "D",
+         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL AND mp.goals < opp.goals THEN 1 ELSE 0 END), 0)::int AS "L",
+         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN mp.goals ELSE 0 END), 0)::int AS "GF",
+         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN opp.goals ELSE 0 END), 0)::int AS "GA",
+         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN mp.goals - opp.goals ELSE 0 END), 0)::int AS "GD",
+         COALESCE(SUM(CASE WHEN opp.match_id IS NOT NULL THEN CASE WHEN mp.goals > opp.goals THEN 3 WHEN mp.goals = opp.goals THEN 1 ELSE 0 END ELSE 0 END), 0)::int AS "Pts"
+    FROM public.clubs c
+    LEFT JOIN public.match_participants mp ON mp.club_id = c.club_id
+    LEFT JOIN public.matches m ON m.match_id = mp.match_id
+    LEFT JOIN public.match_participants opp ON m.match_id = opp.match_id AND opp.club_id <> mp.club_id AND opp.club_id = ANY($1)
+   WHERE c.club_id = ANY($1)
+   GROUP BY c.club_id
    ORDER BY "Pts" DESC, "GD" DESC, "GF" DESC`;
 
 const SQL_TOP_SCORERS = `
