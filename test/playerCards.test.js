@@ -7,12 +7,12 @@ test('parseVpro computes stats and overall', () => {
   const stats = parseVpro(attrs);
   assert.deepStrictEqual(stats, {
     pac: 93,
-    sho: 73,
-    pas: 83,
-    dri: 85,
-    def: 90,
-    phy: 71,
-    ovr: 83
+    sho: 77,
+    pas: 92,
+    dri: 92,
+    def: 73,
+    phy: 76,
+    ovr: 86
   });
 });
 
