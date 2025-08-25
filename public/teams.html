@@ -964,10 +964,10 @@ function updatePlayerCard(card, stats){
   spans.forEach((span,i)=>{ span.textContent = `${['PAC','SHO','PAS','DRI','DEF','PHY'][i]} ${labels[i]}`; });
 }
 
-async function upgradeClubPlayers(clubId){
+async function upgradeClubPlayers(clubId, container){
   try{
     const d = await fetch(`/api/teams/${encodeURIComponent(clubId)}/players`).then(r=>r.json());
-    const grid = document.querySelector(`.team-card[data-club-id="${clubId}"] .players-grid`);
+    const grid = container || document.querySelector(`.team-card[data-club-id="${clubId}"] .players-grid`);
     if(!grid) return;
     (d.members||[]).forEach(m=>{
       const id = m.playerId || m.playerid;
@@ -1008,6 +1008,7 @@ async function openTeamView(clubId){
     const card = buildPlayerCard({ ...m, position: m.proPos }, stats, tier);
     grid.appendChild(card);
   });
+  upgradeClubPlayers(clubId, grid);
   renderClubKits(clubId, teamView);
 }
 
@@ -1038,7 +1039,7 @@ async function loadPlayers(){
         grid.appendChild(el);
       });
       renderClubKits(clubId);
-      upgradeClubPlayers(clubId);
+      upgradeClubPlayers(clubId, grid);
     });
   }catch(e){
     console.error('Failed to load players', e);
