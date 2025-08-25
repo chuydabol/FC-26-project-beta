@@ -46,14 +46,14 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, position, goals, assists, vproattr, last_seen)
+  INSERT INTO public.players (player_id, club_id, name, position, vproattr, goals, assists, last_seen)
   VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
   ON CONFLICT (player_id, club_id) DO UPDATE SET
     name = EXCLUDED.name,
     position = EXCLUDED.position,
+    vproattr = EXCLUDED.vproattr,
     goals = EXCLUDED.goals,
     assists = EXCLUDED.assists,
-    vproattr = EXCLUDED.vproattr,
     last_seen = NOW()
 `;
 
@@ -79,6 +79,13 @@ if (process.env.NODE_ENV === 'test') {
   };
 }
 
+// Headers used when proxying requests to EA's API.  EA's servers expect
+// browser-like headers and will reject requests without them.
+const EA_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+  Accept: 'application/json',
+  Referer: 'https://www.ea.com/',
+};
 
 let cron;
 try {
@@ -208,11 +215,11 @@ async function saveEaMatch(match) {
           pdata.proPos ||
           'UNK';
         const vproattr = pdata.vproattr || null;
-        const stats = vproattr ? parseVpro(vproattr) : null;
         const goals = Number(pdata.goals || 0);
         const assists = Number(pdata.assists || 0);
-        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, goals, assists, vproattr]);
+        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, vproattr, goals, assists]);
         if (vproattr) {
+          const stats = parseVpro(vproattr);
           await q(SQL_UPSERT_PLAYERCARD, [pid, name, pos, vproattr, stats.ovr]);
         }
       }
@@ -344,31 +351,21 @@ app.get('/api/ea/clubs/:clubId/info', async (req, res) => {
   }
 });
 
-// Minimal proxy for club info with caching. This prevents hitting the EA API
-// repeatedly when multiple players from the same club are rendered.
+// Minimal proxy for club info. EA blocks direct browser requests via CORS so
+// the client must call this endpoint which forwards the request with the
+// required headers.
 app.get('/api/club-info/:clubId', async (req, res) => {
-  const { clubId } = req.params;
-  if (!/^\d+$/.test(String(clubId))) {
-    return res.status(400).json({ error: 'Invalid clubId' });
-  }
-
-  const cached = _clubInfoCache.get(clubId);
-  if (cached && Date.now() - cached.at < CLUB_INFO_TTL_MS) {
-    return res.json({ club: cached.data });
-  }
-
+  const clubId = req.params.clubId;
+  const url =
+    `https://proclubs.ea.com/api/fc/clubs/info?platform=common-gen5&clubIds=${clubId}`;
   try {
-    const info = await limit(() => eaApi.fetchClubInfoWithRetry(clubId));
-    _clubInfoCache.set(clubId, { at: Date.now(), data: info });
-    return res.json({ club: info });
+    const r = await fetch(url, { headers: EA_HEADERS });
+    const json = await r.json();
+    res.json(json);
   } catch (err) {
-    const msg = err?.error || err?.message || 'EA API error';
-    const status = /abort|timeout|timed out|ETIMEDOUT/i.test(String(msg))
-      ? 504
-      : 502;
-    return res
-      .status(status)
-      .json({ error: 'EA API request failed', details: msg });
+    res
+      .status(500)
+      .json({ error: 'EA API failed', details: err.toString() });
   }
 });
 
@@ -461,28 +458,6 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
     } else if (raw?.members && typeof raw.members === 'object') {
       members = Object.values(raw.members);
     }
-
-    const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
-    let cardRows = [];
-    if (ids.length) {
-      const { rows } = await q(
-        `SELECT player_id, position, vproattr FROM public.players WHERE player_id = ANY($1::text[]) AND club_id = $2`,
-        [ids, clubId]
-      );
-      cardRows = rows;
-    }
-    const cardMap = new Map(cardRows.map(r => [r.player_id, r]));
-
-    members = members.map(m => {
-      const id = m.playerId || m.playerid;
-      const card = cardMap.get(String(id)) || {};
-      const merged = { ...m };
-      if (card.position && !merged.position) merged.position = card.position;
-      if (card.vproattr) merged.vproattr = card.vproattr;
-      merged.stats = card.vproattr ? parseVpro(card.vproattr) : null;
-      return merged;
-    });
-
     res.json({ members });
   } catch (err) {
     logger.error({ err, clubId }, 'Failed to load team players');
@@ -508,44 +483,45 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       members = Object.values(raw.members);
     }
 
-  const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
-    let playerRows = [];
+    const ids = members.map(m => m.playerId || m.playerid).filter(Boolean);
+    let cardRows = [];
     if (ids.length) {
       const { rows } = await q(
-        `SELECT player_id, vproattr FROM public.players WHERE player_id = ANY($1::text[]) AND club_id = $2`,
-        [ids, clubId]
+        `SELECT player_id, name, position, vproattr, ovr FROM public.playercards WHERE player_id = ANY($1::text[])`,
+        [ids]
       );
-      playerRows = rows;
+      cardRows = rows;
     }
-    const playerMap = new Map(playerRows.map(r => [r.player_id, r]));
+    const cardMap = new Map(cardRows.map(r => [r.player_id, r]));
 
-    const membersDetailed = (
-      await Promise.all(members.map(async m => {
-        const id = m.playerId || m.playerid;
-        if (!id) return null;
-        const name = m.name || m.playername || `Player_${id}`;
-        const pos = m.position || m.pos || m.proPos || 'UNK';
-        const existing = playerMap.get(String(id)) || {};
-        const vproattr = m.vproattr || existing.vproattr || null;
-        const stats = vproattr ? parseVpro(vproattr) : null;
-        const goals = Number(m.goals || 0);
-        const assists = Number(m.assists || 0);
-        await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists, vproattr]);
-        if (vproattr) await q(SQL_UPSERT_PLAYERCARD, [id, name, pos, vproattr, stats.ovr]);
-        return {
-          playerId: id,
-          clubId,
-          name: m.name,
-          position: m.position || m.preferredPosition || '',
-          matches: Number(m.gamesPlayed) || 0,
-          goals,
-          assists,
-          isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
-          vproattr,
-          stats,
-        };
-      }))
-    ).filter(Boolean);
+    for (const m of members) {
+      const id = m.playerId || m.playerid;
+      if (!id) continue;
+      const name = m.name || m.playername || 'Player_' + id;
+      const pos = m.position || m.pos || m.proPos || 'UNK';
+      const card = cardMap.get(String(id)) || {};
+      const vproattr = card.vproattr || null;
+      const goals = Number(m.goals || 0);
+      const assists = Number(m.assists || 0);
+      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, vproattr, goals, assists]);
+    }
+
+    const membersDetailed = members.map(m => {
+      const id = m.playerId || m.playerid;
+      const card = cardMap.get(String(id)) || {};
+      const stats = card.vproattr ? parseVpro(card.vproattr) : null;
+      return {
+        playerId: id || null,
+        clubId,
+        name: m.name,
+        position: m.position || m.preferredPosition || '',
+        matches: Number(m.gamesPlayed) || 0,
+        goals: Number(m.goals) || 0,
+        assists: Number(m.assists) || 0,
+        isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
+        stats,
+      };
+    });
 
     const withStats = membersDetailed.filter(p => p.stats && p.stats.ovr);
     const sorted = withStats.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
