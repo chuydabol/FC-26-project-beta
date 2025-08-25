@@ -516,34 +516,33 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     }
     const playerMap = new Map(playerRows.map(r => [r.player_id, r]));
 
-    const membersDetailed = [];
-    for (const m of members) {
-      const id = m.playerId || m.playerid;
-      if (!id) continue;
-      const name = m.name || m.playername || 'Player_' + id;
-      const pos = m.position || m.pos || m.proPos || 'UNK';
-      const existing = playerMap.get(String(id)) || {};
-      const vproattr = m.vproattr || existing.vproattr || null;
-      const stats = vproattr ? parseVpro(vproattr) : null;
-      const goals = Number(m.goals || 0);
-      const assists = Number(m.assists || 0);
-      await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists, vproattr]);
-      if (vproattr) {
-        await q(SQL_UPSERT_PLAYERCARD, [id, name, pos, vproattr, stats.ovr]);
-      }
-      membersDetailed.push({
-        playerId: id || null,
-        clubId,
-        name: m.name,
-        position: m.position || m.preferredPosition || '',
-        matches: Number(m.gamesPlayed) || 0,
-        goals: Number(m.goals) || 0,
-        assists: Number(m.assists) || 0,
-        isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
-        vproattr,
-        stats,
-      });
-    }
+    const membersDetailed = (
+      await Promise.all(members.map(async m => {
+        const id = m.playerId || m.playerid;
+        if (!id) return null;
+        const name = m.name || m.playername || `Player_${id}`;
+        const pos = m.position || m.pos || m.proPos || 'UNK';
+        const existing = playerMap.get(String(id)) || {};
+        const vproattr = m.vproattr || existing.vproattr || null;
+        const stats = vproattr ? parseVpro(vproattr) : null;
+        const goals = Number(m.goals || 0);
+        const assists = Number(m.assists || 0);
+        await q(SQL_UPSERT_PLAYER, [id, clubId, name, pos, goals, assists, vproattr]);
+        if (vproattr) await q(SQL_UPSERT_PLAYERCARD, [id, name, pos, vproattr, stats.ovr]);
+        return {
+          playerId: id,
+          clubId,
+          name: m.name,
+          position: m.position || m.preferredPosition || '',
+          matches: Number(m.gamesPlayed) || 0,
+          goals,
+          assists,
+          isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
+          vproattr,
+          stats,
+        };
+      }))
+    ).filter(Boolean);
 
     const withStats = membersDetailed.filter(p => p.stats && p.stats.ovr);
     const sorted = withStats.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
