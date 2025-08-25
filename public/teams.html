@@ -676,9 +676,10 @@ const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
 
 // Teams
 let teams = [];
+let staticTeams = [];
 
 function buildStaticTeams(){
-  teams = Array.from(document.querySelectorAll('.team-card')).map(card => {
+  staticTeams = Array.from(document.querySelectorAll('.team-card')).map(card => {
     const id = card.getAttribute('data-club-id');
     const name = card.querySelector('.name').textContent.trim();
     const logo = card.querySelector('.team-logo').getAttribute('src');
@@ -686,6 +687,7 @@ function buildStaticTeams(){
     card.addEventListener('click', () => openTeamView(id));
     return team;
   });
+  teams = [...staticTeams];
   document.getElementById('teams-count').textContent = teams.length;
 }
 
@@ -1868,7 +1870,10 @@ async function loadLeague(){
   let leagueData = { teams:[], standings:[] };
   try { leagueData = await apiGet(`/api/leagues/${encodeURIComponent(LEAGUE_ID)}`); } catch {}
   if (Array.isArray(leagueData.teams) && leagueData.teams.length) {
-    teams = leagueData.teams;
+    teams = leagueData.teams.map(t => {
+      const existing = staticTeams.find(s => normalizeId(s.id) === normalizeId(t.id));
+      return existing ? { ...t, logo: existing.logo } : t;
+    });
   }
   renderLeagueTable(leagueData.standings);
 
@@ -1883,7 +1888,7 @@ async function loadLeague(){
 
   const adminEl = document.getElementById('leagueAdmin');
   if (adminEl) adminEl.style.display = isAdmin ? 'block' : 'none';
-  if (isAdmin) setupLeagueFixtureForm(leagueData.teams);
+  if (isAdmin) setupLeagueFixtureForm(teams);
 }
 
 function renderLeagueTable(rows){
