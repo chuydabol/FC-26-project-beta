@@ -28,8 +28,13 @@ test('serves player cards for specific club', async () => {
   }));
 
   const queryStub = mock.method(pool, 'query', async (sql, params) => {
+
     if (/FROM public\.players/i.test(sql)) {
       return { rows: [{ player_id: '1', vproattr: sampleVpro }] };
+
+    if (/FROM public\.playercards/i.test(sql)) {
+      return { rows: [{ player_id: '1', name: 'Alice', position: 'ST', vproattr: sampleVpro, ovr: 83 }] };
+
     }
     return { rows: [] };
   });
@@ -49,6 +54,7 @@ test('serves player cards for specific club', async () => {
 
   const upsertCall = queryStub.mock.calls.find(c => /INSERT INTO public\.players/i.test(c.arguments[0]));
   assert(upsertCall, 'players table should be upserted');
+
   assert.strictEqual(upsertCall.arguments[1][6], sampleVpro);
 
   fetchStub.mock.restore();

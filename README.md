@@ -16,6 +16,10 @@ The `/api/clubs/:clubId/player-cards` endpoint fetches club members from EA,
 merges any stored attributes from `players`, and updates that table so aggregate
 queries via `GET /api/players` stay in sync.
 
+The `/api/clubs/:clubId/player-cards` endpoint fetches club members from EA,
+merges any stored attributes, and updates the `players` table so aggregate
+queries via `GET /api/players` stay in sync.
+
 ## Logging
 
 This project uses a Pino-based logger. Logs default to the `info` level. To see
