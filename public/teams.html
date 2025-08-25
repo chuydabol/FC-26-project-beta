@@ -975,7 +975,7 @@ async function upgradeClubPlayers(clubId){
       if(!card){
         card = Array.from(grid.querySelectorAll('.player-card')).find(el=>el.dataset.playerName === m.name);
       }
-      const stats = m.vproattr ? parseVpro(m.vproattr) : null;
+      const stats = m.stats || (m.vproattr ? parseVpro(m.vproattr) : null);
       if(card && stats) updatePlayerCard(card, stats);
     });
   }catch(e){
@@ -1001,9 +1001,9 @@ async function openTeamView(clubId){
     members = data.members || [];
   }catch(e){console.error(e);} 
   members.forEach(m => {
-    const stats = m.vproattr
+    const stats = m.stats || (m.vproattr
       ? parseVpro(m.vproattr)
-      : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' };
+      : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' });
     const tier = tierFromOvr(stats.ovr);
     const card = buildPlayerCard({ ...m, position: m.proPos }, stats, tier);
     grid.appendChild(card);
