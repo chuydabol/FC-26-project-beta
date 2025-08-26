@@ -13,8 +13,8 @@ const SQL_UPSERT_PLAYER = `
   DO UPDATE SET
     name = EXCLUDED.name,
     position = EXCLUDED.position,
-    goals = EXCLUDED.goals,
-    assists = EXCLUDED.assists,
+    goals = public.players.goals + EXCLUDED.goals,
+    assists = public.players.assists + EXCLUDED.assists,
     last_seen = NOW();
 `;
 
@@ -29,7 +29,15 @@ test('upserts player per club without 42P10 and updates attributes', async () =>
         throw err;
       }
       const [pid, cid, name, position, goals, assists] = params;
-      store.set(key, { pid, cid, name, position, goals, assists });
+      const existing = store.get(key) || { goals: 0, assists: 0 };
+      store.set(key, {
+        pid,
+        cid,
+        name,
+        position,
+        goals: existing.goals + goals,
+        assists: existing.assists + assists,
+      });
     }
     return { rows: [] };
   });
@@ -40,5 +48,6 @@ test('upserts player per club without 42P10 and updates attributes', async () =>
   queryStub.mock.restore();
   const row = store.get('1:10');
   assert.strictEqual(row.name, 'Alicia');
-  assert.strictEqual(row.goals, 3);
+  assert.strictEqual(row.goals, 4);
+  assert.strictEqual(row.assists, 6);
 });

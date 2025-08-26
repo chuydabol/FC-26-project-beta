@@ -161,10 +161,16 @@ test('serves league matches including non-league opponents', async () => {
 test('different leagueIds return appropriate clubs', async () => {
   const stub = mock.method(pool, 'query', async (sql, params) => {
     if (/match_participants/i.test(sql)) {
+      if (!params) return { rows: [] };
       const cid = params[0][0];
-      return { rows: [ { clubId: cid, P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 } ] };
+      return {
+        rows: [
+          { clubId: cid, P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 },
+        ],
+      };
     }
     if (/from\s+public\.clubs/i.test(sql)) {
+      if (!params) return { rows: [] };
       const cid = params[0][0];
       return { rows: [ { id: cid, name: `Team ${cid}` } ] };
     }
