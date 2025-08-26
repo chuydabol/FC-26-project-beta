@@ -666,20 +666,29 @@ app.get('/api/league', async (_req, res) => {
   const sql = `
     SELECT
       cid AS club_id,
-      SUM((raw->'clubs'->cid->>'wins')::int) AS wins,
-      SUM((raw->'clubs'->cid->>'losses')::int) AS losses,
-      SUM((raw->'clubs'->cid->>'ties')::int) AS draws,
-      SUM((raw->'clubs'->cid->>'goals')::int) AS goals_for,
-      SUM((raw->'clubs'->cid->>'score')::int) AS goals_against,
-      SUM((raw->'clubs'->cid->>'wins')::int * 3 +
-          (raw->'clubs'->cid->>'ties')::int) AS points
-    FROM matches
-    CROSS JOIN LATERAL jsonb_object_keys(raw->'clubs') cid
+      SUM((m.raw->'clubs'->cid->>'wins')::int) AS wins,
+      SUM((m.raw->'clubs'->cid->>'losses')::int) AS losses,
+      SUM((m.raw->'clubs'->cid->>'ties')::int) AS draws,
+      SUM((m.raw->'clubs'->cid->>'goals')::int) AS goals_for,
+      SUM(g.opp_goals) AS goals_against,
+      SUM((m.raw->'clubs'->cid->>'wins')::int * 3 +
+          (m.raw->'clubs'->cid->>'ties')::int) AS points
+    FROM matches m
+    CROSS JOIN LATERAL jsonb_object_keys(m.raw->'clubs') cid
+    CROSS JOIN LATERAL (
+      SELECT COALESCE(
+               (m.raw->'clubs'->opp->>'goals')::int,
+               (m.raw->'clubs'->opp->>'score')::int,
+               0
+             ) AS opp_goals
+      FROM jsonb_object_keys(m.raw->'clubs') opp
+      WHERE opp <> cid
+    ) g
     WHERE cid = ANY($1)
     GROUP BY cid
     ORDER BY points DESC,
-             (SUM((raw->'clubs'->cid->>'goals')::int) -
-              SUM((raw->'clubs'->cid->>'score')::int)) DESC,
+             (SUM((m.raw->'clubs'->cid->>'goals')::int) -
+              SUM(g.opp_goals)) DESC,
              wins DESC;
   `;
   try {
