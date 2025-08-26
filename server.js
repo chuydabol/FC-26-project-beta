@@ -187,9 +187,8 @@ function limit(fn) {
 const _clubInfoCache = new Map();
 const CLUB_INFO_TTL_MS = 60_000;
 
-// Cache to avoid refetching league matches too often
+// Track last league refresh times
 const _leagueRefreshCache = new Map();
-const LEAGUE_REFRESH_TTL_MS = 60_000;
 
 
 
@@ -268,14 +267,6 @@ async function ensureLeagueClubs(clubIds) {
     const name = CLUB_NAMES[cid] || `Club ${cid}`;
     await q(SQL_UPSERT_CLUB, [cid, name]);
   }
-}
-
-async function maybeRefreshLeagueMatches(leagueId, clubIds) {
-  const now = Date.now();
-  const last = _leagueRefreshCache.get(leagueId) || 0;
-  if (now - last < LEAGUE_REFRESH_TTL_MS) return;
-  await refreshAllMatches(clubIds);
-  _leagueRefreshCache.set(leagueId, now);
 }
 
 const app = express();
@@ -684,7 +675,8 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
   }
   try {
     await ensureLeagueClubs(clubIds);
-    await maybeRefreshLeagueMatches(req.params.leagueId, clubIds);
+    await refreshAllMatches(clubIds);
+    _leagueRefreshCache.set(req.params.leagueId, Date.now());
     const [standings, teams] = await Promise.all([
       q(SQL_LEAGUE_STANDINGS, [clubIds]),
       q(SQL_LEAGUE_TEAMS, [clubIds])
@@ -720,7 +712,8 @@ app.get('/api/leagues/:leagueId/matches', async (req, res) => {
   }
   try {
     await ensureLeagueClubs(clubIds);
-    await maybeRefreshLeagueMatches(req.params.leagueId, clubIds);
+    await refreshAllMatches(clubIds);
+    _leagueRefreshCache.set(req.params.leagueId, Date.now());
     const { rows } = await q(SQL_LEAGUE_MATCHES, [clubIds]);
     const matches = rows.map(r => ({
       id: String(r.id),
