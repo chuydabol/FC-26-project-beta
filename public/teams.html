@@ -147,6 +147,10 @@ h2{margin:0 0 10px}
 .group-table th,.group-table td{padding:6px 8px;border-bottom:1px solid #2a0000;text-align:right;font-variant-numeric:tabular-nums}
 .group-table th:first-child,.group-table td:first-child{text-align:left}
 .group-table tbody tr:hover{background:#160000}
+.league-table{width:100%;border-collapse:collapse}
+.league-table th,.league-table td{padding:6px 8px;border-bottom:1px solid #2a0000;text-align:right;font-variant-numeric:tabular-nums}
+.league-table th:first-child,.league-table td:first-child{text-align:left}
+.league-table tbody tr:hover{background:#160000}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
@@ -205,7 +209,7 @@ h2{margin:0 0 10px}
     <button id="navFixturesPublic" aria-pressed="false">Fixtures</button>
     <button id="navFixturesSched"  aria-pressed="false" style="display:none">Scheduling</button>
     <button id="navChampions" aria-pressed="false">Champions Cup</button>
-    <button id="navLeague" aria-pressed="false">UPCL League</button>
+    <button id="navLeague" aria-pressed="false">League</button>
     <button id="navFriendlies" aria-pressed="false">Friendlies</button>
     <button id="btnManagerLogin">Manager sign in</button>
     <button id="btnAdminLogin">Admin sign in</button>
@@ -502,27 +506,15 @@ h2{margin:0 0 10px}
     </div>
   </section>
 
-  <!-- UPCL LEAGUE -->
-  <section id="league-view" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <h2>UPCL League</h2>
-      <div class="chip">League ID: <span id="leagueCupId"></span></div>
-    </div>
-
-    <div class="m-card" style="margin-top:10px">
-      <strong>Standings</strong>
-      <div id="leagueTable" style="margin-top:8px"></div>
-    </div>
-
-    <div class="m-card" style="margin-top:10px">
-      <strong>Leaders</strong>
-      <div id="leagueLeaders" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"></div>
-    </div>
-
-    <div class="m-card" style="margin-top:10px">
-      <strong>League Fixtures</strong>
-      <div id="leagueFixtures" class="fx-list" style="margin-top:8px"></div>
-    </div>
+  <!-- LEAGUE STANDINGS -->
+  <section id="leagueView" style="display:none">
+    <h2>League Standings</h2>
+    <table class="league-table">
+      <thead>
+        <tr><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th></tr>
+      </thead>
+      <tbody id="leagueTableBody"></tbody>
+    </table>
   </section>
 
   <!-- FRIENDLIES -->
@@ -643,8 +635,6 @@ h2{margin:0 0 10px}
 // =======================
 const API_BASE = '';
 const CC_ID = 'UPCL_CC_2025_08'; // current Champions Cup id
-const LEAGUE_ID = new URLSearchParams(location.search).get('leagueId') ||
-  'UPCL_LEAGUE_2025'; // current League id
 const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
 
 // Teams
@@ -747,7 +737,7 @@ const marketView  = document.getElementById('market-view');
 const fxPublic    = document.getElementById('fixtures-public');
 const fxSched     = document.getElementById('fixtures-sched');
 const cupView     = document.getElementById('champions-view');
-const leagueView  = document.getElementById('league-view');
+const leagueView  = document.getElementById('leagueView');
 const friendliesView = document.getElementById('friendlies-view');
 
 function setNav(active){
@@ -1838,46 +1828,22 @@ function setupCcFixtureForm(){
 }
 
 async function loadLeague(){
-  document.getElementById('leagueCupId').textContent = LEAGUE_ID;
-
-  let leagueData = { teams:[], standings:[] };
-  try { leagueData = await apiGet(`/api/leagues/${encodeURIComponent(LEAGUE_ID)}`); } catch {}
-  if (Array.isArray(leagueData.teams) && leagueData.teams.length) {
-    teams = leagueData.teams.map(t => {
-      const existing = staticTeams.find(s => normalizeId(s.id) === normalizeId(t.id));
-      return existing ? { ...t, logo: existing.logo } : t;
-    });
-  }
-  renderLeagueTable(leagueData.standings);
-
-  try { const leaders = await apiGet(`/api/leagues/${encodeURIComponent(LEAGUE_ID)}/leaders`); renderLeagueLeaders(leaders); } catch {}
-
-  let fxList = [];
-  try {
-    const fx = await apiGet(`/api/leagues/${encodeURIComponent(LEAGUE_ID)}/matches`);
-    fxList = normalizeFixtures(fx.matches || []);
-  } catch {}
-  renderLeagueFixtures(fxList);
-}
-
-function renderLeagueTable(rows){
-  const el = document.getElementById('leagueTable');
-  if (!rows.length){ el.innerHTML = '<div class="muted">No standings yet.</div>'; return; }
-  el.innerHTML = `<table class="group-table"><thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows.map(r=>{ const T=byId(r.clubId); return `<tr><td><span class="group-team"><img src="${teamLogoUrl(T)}" alt=""><span>${escapeHtml(T?.name||r.clubId)}</span></span></td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td>${r.GD}</td><td>${r.Pts}</td></tr>`; }).join('')}</tbody></table>`;
-}
-
-function renderLeagueLeaders(data){
-  const wrap = document.getElementById('leagueLeaders');
-  const scorers = (data?.scorers||[]).map(r=>{ const T=byId(r.clubId); const club=T?.shortName||T?.name||r.clubId; return `<li>${escapeHtml(r.name)} <span class="muted">(${r.count}) - ${escapeHtml(club)}</span></li>`; }).join('');
-  const assisters = (data?.assisters||[]).map(r=>{ const T=byId(r.clubId); const club=T?.shortName||T?.name||r.clubId; return `<li>${escapeHtml(r.name)} <span class="muted">(${r.count}) - ${escapeHtml(club)}</span></li>`; }).join('');
-  if (!scorers && !assisters){ wrap.innerHTML = '<div class="muted">No stats yet.</div>'; return; }
-  wrap.innerHTML = `<div><div class="muted">Top Scorers</div><ol style="margin-top:6px;padding-left:18px">${scorers||''}</ol></div><div><div class="muted">Top Assisters</div><ol style="margin-top:6px;padding-left:18px">${assisters||''}</ol></div>`;
-}
-
-function renderLeagueFixtures(list){
-  const el = document.getElementById('leagueFixtures');
-  list.sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
-  el.innerHTML = list.length ? list.map(f=>{ const H=byId(f.home), A=byId(f.away); const hn=H?.name||f.home; const an=A?.name||f.away; const whenTxt=f.when?fmtDate(f.when):'TBD'; const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'vs'; const banner=getFixtureBanner(); return `<div class="fx" id="lffx_${f.id}"><div>${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span><span class="muted">${scoreTxt}</span><span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span></div><div class="meta"><span class="chip">UPCL League${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div></div></div>`; }).join('') : `<div class="muted">No league fixtures yet.</div>`;
+  const d = await apiGet('/api/league');
+  const body = document.getElementById('leagueTableBody');
+  body.innerHTML = '';
+  (d.standings || []).forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml((typeof CLUB_NAMES !== 'undefined' && CLUB_NAMES[row.club_id]) || row.club_id)}</td>
+      <td>${row.wins}</td>
+      <td>${row.draws}</td>
+      <td>${row.losses}</td>
+      <td>${row.goals_for}</td>
+      <td>${row.goals_against}</td>
+      <td>${row.points}</td>
+    `;
+    body.appendChild(tr);
+  });
 }
 
 

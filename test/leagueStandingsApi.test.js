@@ -23,8 +23,8 @@ test('serves league standings table', async () => {
     if (/jsonb_object_keys/i.test(sql)) {
       return {
         rows: [
-          { clubId: '1', clubName: 'Alpha', points: 3, wins: 1, losses: 0, draws: 0, goalsFor: 2, goalsAgainst: 1 },
-          { clubId: '2', clubName: 'Beta', points: 1, wins: 0, losses: 0, draws: 1, goalsFor: 1, goalsAgainst: 1 }
+          { club_id: '1', wins: 1, losses: 0, draws: 0, goals_for: 2, goals_against: 1, points: 3 },
+          { club_id: '2', wins: 0, losses: 0, draws: 1, goals_for: 1, goals_against: 1, points: 1 }
         ]
       };
     }
@@ -36,8 +36,8 @@ test('serves league standings table', async () => {
     const body = await res.json();
     assert.deepStrictEqual(body, {
       standings: [
-        { clubId: '1', clubName: 'Alpha', points: 3, wins: 1, losses: 0, draws: 0, goalsFor: 2, goalsAgainst: 1 },
-        { clubId: '2', clubName: 'Beta', points: 1, wins: 0, losses: 0, draws: 1, goalsFor: 1, goalsAgainst: 1 }
+        { club_id: '1', wins: 1, losses: 0, draws: 0, goals_for: 2, goals_against: 1, points: 3 },
+        { club_id: '2', wins: 0, losses: 0, draws: 1, goals_for: 1, goals_against: 1, points: 1 }
       ]
     });
   });
