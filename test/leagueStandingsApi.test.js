@@ -20,7 +20,7 @@ async function withServer(fn) {
 
 test('serves league standings table', async () => {
   const stub = mock.method(pool, 'query', async sql => {
-    if (/league_standings/i.test(sql)) {
+    if (/jsonb_object_keys/i.test(sql)) {
       return {
         rows: [
           { clubId: '1', clubName: 'Alpha', points: 3, wins: 1, losses: 0, draws: 0, goalsFor: 2, goalsAgainst: 1 },
