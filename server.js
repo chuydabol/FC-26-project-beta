@@ -263,6 +263,7 @@ async function refreshAllMatches(clubIds) {
   }
   if (process.env.NODE_ENV !== 'test') {
     await rebuildUpclStandings();
+    await q('REFRESH MATERIALIZED VIEW public.upcl_leaders');
   }
 }
 
@@ -637,24 +638,26 @@ const SQL_LEAGUE_STANDINGS = `
    GROUP BY c.club_id
    ORDER BY "Pts" DESC, "GD" DESC, "GF" DESC`;
 
-const SQL_TOP_SCORERS = `
-  SELECT club_id AS "clubId", name, goals::int AS count
-    FROM public.players
-   WHERE club_id = ANY($1) AND goals > 0
-   ORDER BY count DESC, name
-   LIMIT 10`;
-
-const SQL_TOP_ASSISTERS = `
-  SELECT club_id AS "clubId", name, assists::int AS count
-    FROM public.players
-   WHERE club_id = ANY($1) AND assists > 0
-   ORDER BY count DESC, name
-   LIMIT 10`;
-
 const SQL_LEAGUE_TEAMS = `
   SELECT club_id AS "id", club_name AS "name"
     FROM public.clubs
    WHERE club_id = ANY($1)`;
+
+async function getUpclLeaders(clubIds) {
+  const sql = `SELECT type, club_id AS "clubId", name, count
+                 FROM public.upcl_leaders
+                WHERE club_id = ANY($1)
+                ORDER BY type, count DESC, name`;
+  const { rows } = await q(sql, [clubIds]);
+  return {
+    scorers: rows
+      .filter(r => r.type === 'scorer')
+      .map(({ type, ...rest }) => rest),
+    assisters: rows
+      .filter(r => r.type === 'assister')
+      .map(({ type, ...rest }) => rest)
+  };
+}
 
 app.get('/api/leagues/:leagueId', async (req, res) => {
   const clubIds = clubsForLeague(req.params.leagueId);
@@ -682,11 +685,8 @@ app.get('/api/leagues/:leagueId/leaders', async (req, res) => {
     return res.status(404).json({ error: 'Unknown league' });
   }
   try {
-    const [scorers, assisters] = await Promise.all([
-      q(SQL_TOP_SCORERS, [clubIds]),
-      q(SQL_TOP_ASSISTERS, [clubIds])
-    ]);
-    res.json({ scorers: scorers.rows, assisters: assisters.rows });
+    const leaders = await getUpclLeaders(clubIds);
+    res.json(leaders);
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league leaders');
     res.status(500).json({ error: 'Failed to fetch league leaders' });

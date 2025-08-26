@@ -92,11 +92,13 @@ test('standings include matches against non-league opponents', async () => {
 
 test('serves league leaders', async () => {
   const stub = mock.method(pool, 'query', async sql => {
-    if (/goals::int/i.test(sql)) {
-      return { rows: [ { clubId: '1', name: 'A', count: 5 } ] };
-    }
-    if (/assists::int/i.test(sql)) {
-      return { rows: [ { clubId: '2', name: 'B', count: 3 } ] };
+    if (/upcl_leaders/i.test(sql)) {
+      return {
+        rows: [
+          { type: 'scorer', clubId: '1', name: 'A', count: 5 },
+          { type: 'assister', clubId: '2', name: 'B', count: 3 }
+        ]
+      };
     }
     return { rows: [] };
   });
