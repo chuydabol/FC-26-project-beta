@@ -263,6 +263,13 @@ async function refreshAllMatches(clubIds) {
   }
 }
 
+async function ensureLeagueClubs(clubIds) {
+  for (const cid of new Set(clubIds)) {
+    const name = CLUB_NAMES[cid] || `Club ${cid}`;
+    await q(SQL_UPSERT_CLUB, [cid, name]);
+  }
+}
+
 async function maybeRefreshLeagueMatches(leagueId, clubIds) {
   const now = Date.now();
   const last = _leagueRefreshCache.get(leagueId) || 0;
@@ -676,6 +683,7 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
     return res.status(404).json({ error: 'Unknown league' });
   }
   try {
+    await ensureLeagueClubs(clubIds);
     await maybeRefreshLeagueMatches(req.params.leagueId, clubIds);
     const [standings, teams] = await Promise.all([
       q(SQL_LEAGUE_STANDINGS, [clubIds]),
@@ -711,6 +719,7 @@ app.get('/api/leagues/:leagueId/matches', async (req, res) => {
     return res.status(404).json({ matches: [] });
   }
   try {
+    await ensureLeagueClubs(clubIds);
     await maybeRefreshLeagueMatches(req.params.leagueId, clubIds);
     const { rows } = await q(SQL_LEAGUE_MATCHES, [clubIds]);
     const matches = rows.map(r => ({
