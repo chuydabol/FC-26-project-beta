@@ -151,6 +151,11 @@ h2{margin:0 0 10px}
 .league-table th,.league-table td{padding:6px 8px;border-bottom:1px solid #2a0000;text-align:right;font-variant-numeric:tabular-nums}
 .league-table th:first-child,.league-table td:first-child{text-align:left}
 .league-table tbody tr:hover{background:#160000}
+.league-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
+.podium-list{display:flex;flex-direction:column;gap:12px}
+.podium-row{display:flex;align-items:center;gap:8px}
+.podium-row .player-card{width:100px;height:140px}
+.podium-info{font-size:14px}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
@@ -164,6 +169,7 @@ h2{margin:0 0 10px}
 @media (max-width: 900px){
   .teams-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
   .fx-team span{max-width:120px}
+  .league-grid{grid-template-columns:1fr}
 }
 @media (max-width: 640px){
   main{padding:14px}
@@ -508,29 +514,23 @@ h2{margin:0 0 10px}
 
   <!-- LEAGUE STANDINGS -->
   <section id="leagueView" style="display:none">
-    <h2>Top Scorers</h2>
-    <table id="leagueTopScorers" class="league-table">
-      <thead>
-        <tr><th>Player</th><th>Club</th><th>G/A</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <h2>Top Assisters</h2>
-    <table id="leagueTopAssisters" class="league-table" style="margin-top:12px">
-      <thead>
-        <tr><th>Player</th><th>Club</th><th>G/A</th></tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
-    <h2 style="margin-top:16px">League Standings</h2>
-    <table class="league-table">
-      <thead>
-        <tr><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th></tr>
-      </thead>
-      <tbody id="leagueTableBody"></tbody>
-    </table>
+    <div class="league-grid">
+      <div>
+        <h2>League Standings</h2>
+        <table class="league-table">
+          <thead>
+            <tr><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th></tr>
+          </thead>
+          <tbody id="leagueTableBody"></tbody>
+        </table>
+      </div>
+      <div>
+        <h2>Top Scorers</h2>
+        <div id="scorersPodium" class="podium-list"></div>
+        <h2 style="margin-top:16px">Top Assisters</h2>
+        <div id="assistersPodium" class="podium-list"></div>
+      </div>
+    </div>
   </section>
 
   <!-- FRIENDLIES -->
@@ -1849,29 +1849,26 @@ async function loadLeague(){
     apiGet('/api/league')
   ]);
 
-  const scorersBody = document.querySelector('#leagueTopScorers tbody');
-  scorersBody.innerHTML = '';
-  (leaders.scorers || []).forEach(row => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${escapeHtml(row.name)}</td>
-      <td>${escapeHtml((typeof CLUB_NAMES !== 'undefined' && CLUB_NAMES[row.club_id]) || row.club_id)}</td>
-      <td>${row.count}</td>
-    `;
-    scorersBody.appendChild(tr);
-  });
+  function renderPodium(el, rows, label){
+    el.innerHTML = '';
+    (rows || []).slice(0,3).forEach(row => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'podium-row';
+      const card = buildPlayerCard({ name: row.name }, null);
+      rowDiv.appendChild(card);
+      const info = document.createElement('div');
+      info.className = 'podium-info';
+      const clubName = (typeof CLUB_NAMES !== 'undefined' && CLUB_NAMES[row.club_id]) || row.club_id;
+      info.innerHTML = `<div>${escapeHtml(row.name)}</div><div class="muted">${escapeHtml(clubName)} — ${row.count} ${label}</div>`;
+      rowDiv.appendChild(info);
+      el.appendChild(rowDiv);
+      renderClubKits(row.club_id, rowDiv);
+      upgradeClubPlayers(row.club_id, rowDiv);
+    });
+  }
 
-  const assistersBody = document.querySelector('#leagueTopAssisters tbody');
-  assistersBody.innerHTML = '';
-  (leaders.assisters || []).forEach(row => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${escapeHtml(row.name)}</td>
-      <td>${escapeHtml((typeof CLUB_NAMES !== 'undefined' && CLUB_NAMES[row.club_id]) || row.club_id)}</td>
-      <td>${row.count}</td>
-    `;
-    assistersBody.appendChild(tr);
-  });
+  renderPodium(document.getElementById('scorersPodium'), leaders.scorers, 'goals');
+  renderPodium(document.getElementById('assistersPodium'), leaders.assisters, 'assists');
 
   const body = document.getElementById('leagueTableBody');
   body.innerHTML = '';
