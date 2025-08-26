@@ -646,20 +646,24 @@ const SQL_LEAGUE_TEAMS = `
    WHERE club_id = ANY($1)`;
 
 const SQL_GET_LEAGUE_TABLE = `
-  SELECT ls.club_id AS "clubId",
-         c.club_name AS "clubName",
-         ls.points AS points,
-         ls.wins AS wins,
-         ls.losses AS losses,
-         ls.draws AS draws,
-         ls.goals_for AS "goalsFor",
-         ls.goals_against AS "goalsAgainst"
-    FROM public.league_standings ls
-    JOIN public.clubs c ON c.club_id = ls.club_id
-   ORDER BY ls.points DESC,
-            (ls.goals_for - ls.goals_against) DESC,
-            ls.wins DESC,
-            c.club_name ASC`;
+  SELECT
+    club.cid::bigint AS "clubId",
+    c.club_name AS "clubName",
+    SUM((m.raw->'clubs'->club.cid->>'wins')::int * 3 +
+        (m.raw->'clubs'->club.cid->>'ties')::int) AS points,
+    SUM((m.raw->'clubs'->club.cid->>'wins')::int) AS wins,
+    SUM((m.raw->'clubs'->club.cid->>'losses')::int) AS losses,
+    SUM((m.raw->'clubs'->club.cid->>'ties')::int) AS draws,
+    SUM((m.raw->'clubs'->club.cid->>'goals')::int) AS "goalsFor",
+    SUM((m.raw->'clubs'->club.cid->>'score')::int) AS "goalsAgainst"
+   FROM public.matches m
+   CROSS JOIN LATERAL jsonb_object_keys(m.raw->'clubs') AS club(cid)
+   LEFT JOIN public.clubs c ON c.club_id = club.cid::bigint
+   GROUP BY club.cid, c.club_name
+   ORDER BY points DESC,
+            ("goalsFor" - "goalsAgainst") DESC,
+            wins DESC,
+            "clubName" ASC`;
 
 async function getUpclLeaders(clubIds) {
   const sql = `SELECT type, club_id AS "clubId", name, count
