@@ -3,7 +3,7 @@ const { q } = require('../services/pgwrap');
 const SQL_COMPUTE = `
   WITH club_match AS (
     SELECT
-      c.cid AS club_id,
+      c.cid::bigint AS club_id,
       (m.raw->'clubs'->c.cid->>'wins')::int    AS wins,
       (m.raw->'clubs'->c.cid->>'losses')::int  AS losses,
       (m.raw->'clubs'->c.cid->>'ties')::int    AS draws,
