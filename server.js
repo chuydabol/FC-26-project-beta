@@ -24,6 +24,7 @@ const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
+const { rebuildUpclStandings } = require('./scripts/rebuildUpclStandings');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -259,6 +260,9 @@ async function refreshAllMatches(clubIds) {
   const ids = clubIds && clubIds.length ? clubIds : resolveClubIds();
   for (const clubId of ids) {
     await refreshClubMatches(clubId);
+  }
+  if (process.env.NODE_ENV !== 'test') {
+    await rebuildUpclStandings();
   }
 }
 
