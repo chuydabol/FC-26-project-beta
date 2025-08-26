@@ -662,6 +662,7 @@ async function getUpclLeaders(clubIds) {
 }
 
 app.get('/api/league', async (_req, res) => {
+  const clubIds = resolveClubIds();
   const sql = `
     SELECT
       cid AS club_id,
@@ -674,6 +675,7 @@ app.get('/api/league', async (_req, res) => {
           (raw->'clubs'->cid->>'ties')::int) AS points
     FROM matches
     CROSS JOIN LATERAL jsonb_object_keys(raw->'clubs') cid
+    WHERE cid = ANY($1)
     GROUP BY cid
     ORDER BY points DESC,
              (SUM((raw->'clubs'->cid->>'goals')::int) -
@@ -681,7 +683,7 @@ app.get('/api/league', async (_req, res) => {
              wins DESC;
   `;
   try {
-    const { rows } = await q(sql);
+    const { rows } = await q(sql, [clubIds]);
     res.json({ standings: rows });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league standings');
