@@ -116,7 +116,26 @@ function clubsForLeague(id) {
   return LEAGUE_CLUBS[id] || [];
 }
 const DEFAULT_LEAGUE_ID = process.env.DEFAULT_LEAGUE_ID || 'UPCL_LEAGUE_2025';
-const CLUB_IDS = clubsForLeague(DEFAULT_LEAGUE_ID);
+
+function resolveClubIds() {
+  let ids = clubsForLeague(DEFAULT_LEAGUE_ID);
+  if (!ids.length) {
+    ids = (process.env.EA_CLUB_IDS || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+  if (!ids.length) {
+    logger.warn(
+      { leagueId: DEFAULT_LEAGUE_ID },
+      'No club IDs resolved for default league'
+    );
+  }
+  return ids;
+}
+
+// Prime club ID resolution to surface misconfiguration at startup
+resolveClubIds();
 
 const CLUB_NAMES = {
   '2491998': 'Royal Republic',
@@ -233,8 +252,9 @@ async function refreshClubMatches(clubId) {
   }
 }
 
-async function refreshAllMatches() {
-  for (const clubId of CLUB_IDS) {
+async function refreshAllMatches(clubIds) {
+  const ids = clubIds && clubIds.length ? clubIds : resolveClubIds();
+  for (const clubId of ids) {
     await refreshClubMatches(clubId);
   }
 }
@@ -422,7 +442,7 @@ app.get('/api/matches', async (_req, res) => {
 // Fetch new matches from EA and store in Postgres
 app.get('/api/update-matches', async (_req, res) => {
   try {
-    await refreshAllMatches();
+    await refreshAllMatches(resolveClubIds());
     res.json({ status: 'ok' });
   } catch (err) {
     logger.error({ err }, 'Error updating matches');
@@ -701,7 +721,7 @@ if (process.env.NODE_ENV !== 'test' && CRON_ENABLED) {
   cron.schedule('*/10 * * * *', async () => {
     console.log(`[${new Date().toISOString()}] Auto update starting...`);
     try {
-      await refreshAllMatches();
+      await refreshAllMatches(resolveClubIds());
       console.log(`[${new Date().toISOString()}] ✅ Auto update complete.`);
     } catch (err) {
       logger.error({ err }, `[${new Date().toISOString()}] ❌ Auto update failed`);
@@ -726,7 +746,7 @@ async function bootstrap() {
 
   if (process.env.NODE_ENV !== 'test') {
     try {
-      await refreshAllMatches();
+      await refreshAllMatches(resolveClubIds());
       console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
     } catch (err) {
       logger.error({ err }, `[${new Date().toISOString()}] ❌ Initial sync error`);
