@@ -25,6 +25,7 @@ const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
 const { rebuildUpclStandings } = require('./scripts/rebuildUpclStandings');
+const { rebuildLeagueStandings } = require('./scripts/rebuildLeagueStandings');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -261,6 +262,7 @@ async function refreshAllMatches(clubIds) {
   for (const clubId of ids) {
     await refreshClubMatches(clubId);
   }
+  await rebuildLeagueStandings();
   if (process.env.NODE_ENV !== 'test') {
     await rebuildUpclStandings();
     await q('REFRESH MATERIALIZED VIEW public.upcl_leaders');
@@ -643,6 +645,22 @@ const SQL_LEAGUE_TEAMS = `
     FROM public.clubs
    WHERE club_id = ANY($1)`;
 
+const SQL_GET_LEAGUE_TABLE = `
+  SELECT ls.club_id AS "clubId",
+         c.club_name AS "clubName",
+         ls.points AS points,
+         ls.wins AS wins,
+         ls.losses AS losses,
+         ls.draws AS draws,
+         ls.goals_for AS "goalsFor",
+         ls.goals_against AS "goalsAgainst"
+    FROM public.league_standings ls
+    JOIN public.clubs c ON c.club_id = ls.club_id
+   ORDER BY ls.points DESC,
+            (ls.goals_for - ls.goals_against) DESC,
+            ls.wins DESC,
+            c.club_name ASC`;
+
 async function getUpclLeaders(clubIds) {
   const sql = `SELECT type, club_id AS "clubId", name, count
                  FROM public.upcl_leaders
@@ -658,6 +676,16 @@ async function getUpclLeaders(clubIds) {
       .map(({ type, ...rest }) => rest)
   };
 }
+
+app.get('/api/league', async (_req, res) => {
+  try {
+    const { rows } = await q(SQL_GET_LEAGUE_TABLE);
+    res.json({ standings: rows });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch league standings');
+    res.status(500).json({ error: 'Failed to fetch league standings' });
+  }
+});
 
 app.get('/api/leagues/:leagueId', async (req, res) => {
   const clubIds = clubsForLeague(req.params.leagueId);
