@@ -207,7 +207,8 @@ async function fetchClubMatches(clubId) {
 async function saveEaMatch(match) {
   const matchId = String(match.matchId);
   const tsMs = Number(match.timestamp) * 1000;
-  await q(SQL_INSERT_MATCH, [matchId, tsMs, match]);
+  const { rowCount } = await q(SQL_INSERT_MATCH, [matchId, tsMs, match]);
+  if (rowCount === 0) return;
 
   const clubs = match.clubs || {};
   for (const cid of Object.keys(clubs)) {
