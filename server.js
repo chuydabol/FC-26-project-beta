@@ -187,9 +187,8 @@ function limit(fn) {
 const _clubInfoCache = new Map();
 const CLUB_INFO_TTL_MS = 60_000;
 
-// Cache to avoid refetching league matches too often
+// Track last league refresh times
 const _leagueRefreshCache = new Map();
-const LEAGUE_REFRESH_TTL_MS = 60_000;
 
 
 
@@ -268,14 +267,6 @@ async function ensureLeagueClubs(clubIds) {
     const name = CLUB_NAMES[cid] || `Club ${cid}`;
     await q(SQL_UPSERT_CLUB, [cid, name]);
   }
-}
-
-async function maybeRefreshLeagueMatches(leagueId, clubIds) {
-  const now = Date.now();
-  const last = _leagueRefreshCache.get(leagueId) || 0;
-  if (now - last < LEAGUE_REFRESH_TTL_MS) return;
-  await refreshAllMatches(clubIds);
-  _leagueRefreshCache.set(leagueId, now);
 }
 
 const app = express();
@@ -610,16 +601,14 @@ app.get('/api/cup/fixtures', async (req, res) => {
 // League standings and leaders
 const SQL_LEAGUE_STANDINGS = `
   WITH matches AS (
-    SELECT home.club_id AS home,
-           away.club_id AS away,
-           home.goals AS home_goals,
-           away.goals AS away_goals
-      FROM public.matches m
-      JOIN public.match_participants home
-        ON home.match_id = m.match_id AND home.is_home = true
-      JOIN public.match_participants away
-        ON away.match_id = m.match_id AND away.is_home = false
-     WHERE home.club_id = ANY($1) OR away.club_id = ANY($1)
+    SELECT a.club_id AS home,
+           b.club_id AS away,
+           a.goals AS home_goals,
+           b.goals AS away_goals
+      FROM public.match_participants a
+      JOIN public.match_participants b
+        ON a.match_id = b.match_id AND a.club_id < b.club_id
+     WHERE a.club_id = ANY($1) OR b.club_id = ANY($1)
   ), sides AS (
     SELECT home AS club_id, away AS opp_id, home_goals AS gf, away_goals AS ga
       FROM matches
@@ -664,16 +653,16 @@ const SQL_LEAGUE_TEAMS = `
 const SQL_LEAGUE_MATCHES = `
   SELECT m.match_id AS id,
          m.ts_ms AS "when",
-         home.club_id AS home,
-         away.club_id AS away,
-         home.goals AS hs,
-         away.goals AS away_score
+         a.club_id AS home,
+         b.club_id AS away,
+         a.goals AS hs,
+         b.goals AS away_score
     FROM public.matches m
-    JOIN public.match_participants home
-      ON home.match_id = m.match_id AND home.is_home = true
-    JOIN public.match_participants away
-      ON away.match_id = m.match_id AND away.is_home = false
-   WHERE home.club_id = ANY($1) OR away.club_id = ANY($1)
+    JOIN public.match_participants a
+      ON a.match_id = m.match_id
+    JOIN public.match_participants b
+      ON b.match_id = m.match_id AND a.club_id < b.club_id
+   WHERE a.club_id = ANY($1) OR b.club_id = ANY($1)
    ORDER BY m.ts_ms DESC
    LIMIT 200`;
 
@@ -684,7 +673,8 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
   }
   try {
     await ensureLeagueClubs(clubIds);
-    await maybeRefreshLeagueMatches(req.params.leagueId, clubIds);
+    await refreshAllMatches(clubIds);
+    _leagueRefreshCache.set(req.params.leagueId, Date.now());
     const [standings, teams] = await Promise.all([
       q(SQL_LEAGUE_STANDINGS, [clubIds]),
       q(SQL_LEAGUE_TEAMS, [clubIds])
@@ -720,7 +710,8 @@ app.get('/api/leagues/:leagueId/matches', async (req, res) => {
   }
   try {
     await ensureLeagueClubs(clubIds);
-    await maybeRefreshLeagueMatches(req.params.leagueId, clubIds);
+    await refreshAllMatches(clubIds);
+    _leagueRefreshCache.set(req.params.leagueId, Date.now());
     const { rows } = await q(SQL_LEAGUE_MATCHES, [clubIds]);
     const matches = rows.map(r => ({
       id: String(r.id),

@@ -62,10 +62,10 @@ test('standings include teams with zero matches', async () => {
 
 test('standings include matches against non-league opponents', async () => {
   const stub = mock.method(pool, 'query', async sql => {
-    if (/home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i.test(sql)) {
+    if (/a\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+b\.club_id\s*=\s*ANY\(\$1\)/i.test(sql)) {
       assert.match(
         sql,
-        /home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i
+        /a\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+b\.club_id\s*=\s*ANY\(\$1\)/i
       );
       return {
         rows: [
@@ -118,7 +118,7 @@ test('serves league matches including non-league opponents', async () => {
     if (/FROM\s+public\.matches/i.test(sql)) {
       assert.match(
         sql,
-        /home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i
+        /a\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+b\.club_id\s*=\s*ANY\(\$1\)/i
       );
       return {
         rows: [
