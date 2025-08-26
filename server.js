@@ -652,22 +652,6 @@ const SQL_LEAGUE_TEAMS = `
     FROM public.clubs
    WHERE club_id = ANY($1)`;
 
-const SQL_LEAGUE_MATCHES = `
-  SELECT m.match_id AS id,
-         m.ts_ms AS "when",
-         home.club_id AS home,
-         away.club_id AS away,
-         home.goals AS hs,
-         away.goals AS away_score
-    FROM public.matches m
-    JOIN public.match_participants home
-      ON home.match_id = m.match_id AND home.is_home = true
-    JOIN public.match_participants away
-      ON away.match_id = m.match_id AND away.is_home = false
-   WHERE home.club_id = ANY($1) OR away.club_id = ANY($1)
-   ORDER BY m.ts_ms DESC
-   LIMIT 200`;
-
 app.get('/api/leagues/:leagueId', async (req, res) => {
   const clubIds = clubsForLeague(req.params.leagueId);
   if (!clubIds.length) {
@@ -706,23 +690,18 @@ app.get('/api/leagues/:leagueId/leaders', async (req, res) => {
 });
 
 app.get('/api/leagues/:leagueId/matches', async (req, res) => {
-  const clubIds = clubsForLeague(req.params.leagueId);
-  if (!clubIds.length) {
-    return res.status(404).json({ matches: [] });
-  }
   try {
-    await ensureLeagueClubs(clubIds);
-    await refreshAllMatches(clubIds);
-    _leagueRefreshCache.set(req.params.leagueId, Date.now());
-    const { rows } = await q(SQL_LEAGUE_MATCHES, [clubIds]);
+    const { rows } = await q(SQL_GET_CUP_FIXTURES, [req.params.leagueId]);
     const matches = rows.map(r => ({
-      id: String(r.id),
+      id: r.id,
+      cup: r.cup,
       home: r.home,
       away: r.away,
-      round: null,
-      when: Number(r.when) || null,
-      status: 'final',
-      score: { hs: Number(r.hs || 0), as: Number(r.away_score || 0) },
+      round: r.round,
+      when: Number(r.when_ts || r.when || r.at || 0) || null,
+      status: r.status || null,
+      score: { hs: Number(r.hs ?? r.score_h ?? 0), as: Number(r.away_score ?? r.score_a ?? 0) },
+      createdAt: Number(r.created_at || r.createdAt || 0) || null
     }));
     res.json({ matches });
   } catch (err) {
