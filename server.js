@@ -645,26 +645,6 @@ const SQL_LEAGUE_TEAMS = `
     FROM public.clubs
    WHERE club_id = ANY($1)`;
 
-const SQL_GET_LEAGUE_TABLE = `
-  SELECT
-    club.cid::bigint AS "clubId",
-    c.club_name AS "clubName",
-    SUM((m.raw->'clubs'->club.cid->>'wins')::int * 3 +
-        (m.raw->'clubs'->club.cid->>'ties')::int) AS points,
-    SUM((m.raw->'clubs'->club.cid->>'wins')::int) AS wins,
-    SUM((m.raw->'clubs'->club.cid->>'losses')::int) AS losses,
-    SUM((m.raw->'clubs'->club.cid->>'ties')::int) AS draws,
-    SUM((m.raw->'clubs'->club.cid->>'goals')::int) AS "goalsFor",
-    SUM((m.raw->'clubs'->club.cid->>'score')::int) AS "goalsAgainst"
-   FROM public.matches m
-   CROSS JOIN LATERAL jsonb_object_keys(m.raw->'clubs') AS club(cid)
-   LEFT JOIN public.clubs c ON c.club_id = club.cid::bigint
-   GROUP BY club.cid, c.club_name
-   ORDER BY points DESC,
-            ("goalsFor" - "goalsAgainst") DESC,
-            wins DESC,
-            "clubName" ASC`;
-
 async function getUpclLeaders(clubIds) {
   const sql = `SELECT type, club_id AS "clubId", name, count
                  FROM public.upcl_leaders
@@ -682,12 +662,30 @@ async function getUpclLeaders(clubIds) {
 }
 
 app.get('/api/league', async (_req, res) => {
+  const sql = `
+    SELECT
+      cid AS club_id,
+      SUM((raw->'clubs'->cid->>'wins')::int) AS wins,
+      SUM((raw->'clubs'->cid->>'losses')::int) AS losses,
+      SUM((raw->'clubs'->cid->>'ties')::int) AS draws,
+      SUM((raw->'clubs'->cid->>'goals')::int) AS goals_for,
+      SUM((raw->'clubs'->cid->>'score')::int) AS goals_against,
+      SUM((raw->'clubs'->cid->>'wins')::int * 3 +
+          (raw->'clubs'->cid->>'ties')::int) AS points
+    FROM matches
+    CROSS JOIN LATERAL jsonb_object_keys(raw->'clubs') cid
+    GROUP BY cid
+    ORDER BY points DESC,
+             (SUM((raw->'clubs'->cid->>'goals')::int) -
+              SUM((raw->'clubs'->cid->>'score')::int)) DESC,
+             wins DESC;
+  `;
   try {
-    const { rows } = await q(SQL_GET_LEAGUE_TABLE);
+    const { rows } = await q(sql);
     res.json({ standings: rows });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league standings');
-    res.status(500).json({ error: 'Failed to fetch league standings' });
+    res.status(500).json({ error: 'Failed to fetch standings' });
   }
 });
 
