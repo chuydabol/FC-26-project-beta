@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS public.league_standings (
-  club_id TEXT PRIMARY KEY REFERENCES public.clubs(club_id),
+  club_id BIGINT PRIMARY KEY REFERENCES public.clubs(club_id),
   points INT DEFAULT 0,
   wins INT DEFAULT 0,
   losses INT DEFAULT 0,
