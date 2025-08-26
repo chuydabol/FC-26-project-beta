@@ -20,44 +20,32 @@ async function withServer(fn) {
 }
 
 test('serves player cards with stats and name fallback', async () => {
-  const fetchStub = mock.method(eaApi, 'fetchClubMembersWithRetry', async () => ({
-    members: [
-      {
-        playerId: '1',
-        name: 'Alice',
-        gamesPlayed: '10',
-        goals: '5',
-        assists: '3',
-        position: 'ST'
-      },
-      {
-        name: 'Bob',
-        gamesPlayed: '2',
-        goals: '1',
-        assists: '0',
-        position: 'GK'
-      }
-    ]
-  }));
+  const fetchStub = mock.method(eaApi, 'fetchClubMembersWithRetry', async () => {
+    throw new Error('should not call');
+  });
 
   const queryStub = mock.method(pool, 'query', async (sql, params) => {
-    if (/FROM public\.playercards/i.test(sql)) {
+    if (/FROM public\.players/i.test(sql)) {
       return {
         rows: [
           {
-            player_id: '1',
-            club_id: '10',
+            playerId: '1',
+            clubId: '10',
             name: 'Alice',
             position: 'ST',
-            vproattr: sampleVpro
-          },
-          {
-            player_id: '99',
-            club_id: '10',
-            name: 'Bob',
-            position: 'GK',
-            vproattr: sampleVpro
+            vproattr: sampleVpro,
+            goals: 5,
+            assists: 3,
+            matches: 10
           }
+        ]
+      };
+    }
+    if (/FROM public\.playercards/i.test(sql)) {
+      return {
+        rows: [
+          { playerId: '1', clubId: '10', name: 'Alice', position: 'ST', vproattr: sampleVpro },
+          { playerId: '99', clubId: '10', name: 'Bob', position: 'GK', vproattr: sampleVpro }
         ]
       };
     }
@@ -72,11 +60,15 @@ test('serves player cards with stats and name fallback', async () => {
     const alice = body.members.find(p => p.name === 'Alice');
     const bob = body.members.find(p => p.name === 'Bob');
     assert.strictEqual(alice.clubId, '10');
+    assert.strictEqual(alice.matches, 10);
+    assert.strictEqual(alice.goals, 5);
     assert(alice.stats && alice.stats.ovr > 0);
-    assert.strictEqual(bob.playerId, null);
+    assert.strictEqual(bob.playerId, '99');
+    assert.strictEqual(bob.matches, 0);
     assert(bob.stats && bob.stats.ovr > 0);
   });
 
+  assert.strictEqual(fetchStub.mock.calls.length, 0);
   fetchStub.mock.restore();
   queryStub.mock.restore();
 });
