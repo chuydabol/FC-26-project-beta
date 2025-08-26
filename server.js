@@ -47,14 +47,15 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER = `
-  INSERT INTO public.players (player_id, club_id, name, position, vproattr, goals, assists, last_seen)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+  INSERT INTO public.players (player_id, club_id, name, position, vproattr, goals, assists, matches, last_seen)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW())
   ON CONFLICT (player_id, club_id) DO UPDATE SET
     name = EXCLUDED.name,
     position = EXCLUDED.position,
-    vproattr = EXCLUDED.vproattr,
-    goals = EXCLUDED.goals,
-    assists = EXCLUDED.assists,
+    vproattr = COALESCE(EXCLUDED.vproattr, players.vproattr),
+    goals = players.goals + EXCLUDED.goals,
+    assists = players.assists + EXCLUDED.assists,
+    matches = players.matches + 1,
     last_seen = NOW()
 `;
 
@@ -504,67 +505,75 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
   }
 
   try {
-    const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
-    let members = [];
-    if (Array.isArray(raw?.members)) {
-      members = raw.members;
-    } else if (Array.isArray(raw)) {
-      members = raw;
-    } else if (raw?.members && typeof raw.members === 'object') {
-      members = Object.values(raw.members);
-    }
-
-    const { rows } = await q(
-      `SELECT player_id, club_id, name, position, vproattr
-       FROM public.playercards
-       WHERE club_id = $1`,
+    const playersRes = await q(
+      `SELECT player_id AS "playerId", club_id AS "clubId", name, position, vproattr,
+              goals, assists, matches
+         FROM public.players
+        WHERE club_id = $1`,
       [clubId]
     );
 
-    const cardMap = new Map(rows.map(r => [String(r.player_id), r]));
-    const nameMap = new Map(rows.map(r => [r.name, r]));
+    const cardsRes = await q(
+      `SELECT player_id AS "playerId", club_id AS "clubId", name, position, vproattr
+         FROM public.playercards
+        WHERE club_id = $1`,
+      [clubId]
+    );
 
-    const membersDetailed = members.map(m => {
-      const id = String(m.playerId || m.playerid || '') || null;
-      let rec = id ? cardMap.get(id) : null;
-      if (!rec) rec = nameMap.get(m.name) || {};
+    const map = new Map();
+    for (const p of playersRes.rows) {
+      map.set(String(p.playerId), { ...p });
+    }
+    for (const c of cardsRes.rows) {
+      const pid = String(c.playerId);
+      if (!map.has(pid)) {
+        map.set(pid, { ...c, goals: 0, assists: 0, matches: 0 });
+      } else if (!map.get(pid).vproattr && c.vproattr) {
+        map.get(pid).vproattr = c.vproattr;
+      }
+    }
 
-      const vproattr = rec.vproattr || null;
-      const stats = vproattr ? parseVpro(vproattr) : null;
-
-      return {
-        playerId: id,
+    let members = Array.from(map.values());
+    if (members.length === 0) {
+      let raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
+      if (Array.isArray(raw?.members)) raw = raw.members;
+      else if (raw?.members && typeof raw.members === 'object') raw = Object.values(raw.members);
+      else if (!Array.isArray(raw)) raw = [];
+      members = raw.map(m => ({
+        playerId: String(m.playerId || m.playerid || ''),
         clubId,
-        name: m.name || rec.name || `Player_${id}`,
-        position: rec.position || m.position || '',
-        matches: Number(m.gamesPlayed) || 0,
-        goals: Number(m.goals) || 0,
-        assists: Number(m.assists) || 0,
-        isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
-        vproattr,
-        stats
-      };
-    });
+        name: m.name || m.playername || `Player_${m.playerId || m.playerid || ''}`,
+        position: m.position || '',
+        goals: 0,
+        assists: 0,
+        matches: 0,
+        vproattr: null
+      }));
+    }
 
-    const withStats = membersDetailed.filter(p => p.stats && p.stats.ovr);
+    for (const p of members) {
+      const stats = p.vproattr ? parseVpro(p.vproattr) : null;
+      p.stats = stats;
+    }
+    const withStats = members.filter(p => p.stats && p.stats.ovr);
     const sorted = withStats.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
     const topCount = Math.max(1, Math.floor(withStats.length * 0.05));
     const threshold = sorted[topCount - 1] ? sorted[topCount - 1].stats.ovr : Infinity;
 
-    for (const p of membersDetailed) {
+    for (const p of members) {
       const t = tierFromStats({
         ovr: p.stats?.ovr || 0,
-        matches: p.matches,
-        goals: p.goals,
-        assists: p.assists,
-        isCaptain: p.isCaptain,
+        matches: p.matches || 0,
+        goals: p.goals || 0,
+        assists: p.assists || 0,
+        isCaptain: false,
       }, threshold);
       p.tier = t.tier;
       p.frame = t.frame;
       p.className = t.className;
     }
 
-    res.json({ members: membersDetailed });
+    res.json({ members });
   } catch (err) {
     logger.error({ err }, 'Failed to load player cards');
     res.status(500).json({ members: [] });
