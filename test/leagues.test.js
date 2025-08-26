@@ -114,24 +114,21 @@ test('serves league leaders', async () => {
 });
 
 test('serves league matches including non-league opponents', async () => {
+  const row = {
+    id: 1,
+    cup: 'test',
+    home: '2491998',
+    away: '999',
+    round: 'R1',
+    when_ts: 1,
+    status: 'scheduled',
+    hs: 1,
+    away_score: 2,
+    created_at: 2,
+  };
   const stub = mock.method(pool, 'query', async sql => {
-    if (/FROM\s+public\.matches/i.test(sql)) {
-      assert.match(
-        sql,
-        /home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i
-      );
-      return {
-        rows: [
-          {
-            id: '1',
-            when: 1,
-            home: '2491998',
-            away: '999',
-            hs: 1,
-            away_score: 2
-          }
-        ]
-      };
+    if (/cup_fixtures/i.test(sql)) {
+      return { rows: [row] };
     }
     return { rows: [] };
   });
@@ -142,15 +139,17 @@ test('serves league matches including non-league opponents', async () => {
     assert.deepStrictEqual(body, {
       matches: [
         {
-          id: '1',
+          id: 1,
+          cup: 'test',
           home: '2491998',
           away: '999',
-          round: null,
+          round: 'R1',
           when: 1,
-          status: 'final',
-          score: { hs: 1, as: 2 }
-        }
-      ]
+          status: 'scheduled',
+          score: { hs: 1, as: 2 },
+          createdAt: 2,
+        },
+      ],
     });
   });
 
