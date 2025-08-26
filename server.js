@@ -700,6 +700,37 @@ app.get('/api/league', async (_req, res) => {
   }
 });
 
+app.get('/api/league/leaders', async (_req, res) => {
+  const clubIds = resolveClubIds();
+  const scorerSql = `
+    SELECT club_id, name, SUM(goals) AS count
+      FROM public.players
+     WHERE club_id = ANY($1)
+     GROUP BY club_id, name
+     ORDER BY count DESC, name
+     LIMIT 10`;
+  const assisterSql = `
+    SELECT club_id, name, SUM(assists) AS count
+      FROM public.players
+     WHERE club_id = ANY($1)
+     GROUP BY club_id, name
+     ORDER BY count DESC, name
+     LIMIT 10`;
+  try {
+    const [scorers, assisters] = await Promise.all([
+      q(scorerSql, [clubIds]),
+      q(assisterSql, [clubIds])
+    ]);
+    res.json({
+      scorers: scorers.rows,
+      assisters: assisters.rows
+    });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch league leaders');
+    res.status(500).json({ error: 'Failed to fetch league leaders' });
+  }
+});
+
 app.get('/api/leagues/:leagueId', async (req, res) => {
   const clubIds = clubsForLeague(req.params.leagueId);
   if (!clubIds.length) {
