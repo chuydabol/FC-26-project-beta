@@ -54,8 +54,8 @@ const SQL_UPSERT_PLAYER = `
     name = EXCLUDED.name,
     position = EXCLUDED.position,
     vproattr = EXCLUDED.vproattr,
-    goals = EXCLUDED.goals,
-    assists = EXCLUDED.assists,
+    goals = public.players.goals + EXCLUDED.goals,
+    assists = public.players.assists + EXCLUDED.assists,
     last_seen = NOW()
 `;
 
@@ -263,10 +263,8 @@ async function refreshAllMatches(clubIds) {
     await refreshClubMatches(clubId);
   }
   await rebuildLeagueStandings();
-  if (process.env.NODE_ENV !== 'test') {
-    await rebuildUpclStandings();
-    await q('REFRESH MATERIALIZED VIEW public.upcl_leaders');
-  }
+  await rebuildUpclStandings();
+  await q('REFRESH MATERIALIZED VIEW public.upcl_leaders');
 }
 
 async function ensureLeagueClubs(clubIds) {
