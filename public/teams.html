@@ -532,7 +532,9 @@ h2{margin:0 0 10px}
   <section id="leagueView" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h2>League Standings</h2>
-      <button id="statsToggleBtn" class="chip">Stats</button>
+      <div id="statsBtnHolderLeague">
+        <button id="statsToggleBtn" class="chip">Stats</button>
+      </div>
     </div>
     <div class="league-grid">
       <div>
@@ -543,8 +545,15 @@ h2{margin:0 0 10px}
           <tbody id="leagueTableBody"></tbody>
         </table>
       </div>
-      <div id="statsCol" style="display:none"></div>
     </div>
+  </section>
+
+  <section id="statsView" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <h2>League Stats</h2>
+      <div id="statsBtnHolderStats"></div>
+    </div>
+    <div class="leaderboards"></div>
   </section>
 
   <!-- FRIENDLIES -->
@@ -1867,11 +1876,23 @@ async function loadLeague(){
   renderStats(players.players || []);
 
   const toggleBtn = document.getElementById('statsToggleBtn');
-  const statsCol = document.getElementById('statsCol');
+  const leagueView = document.getElementById('leagueView');
+  const statsView = document.getElementById('statsView');
+  const holderLeague = document.getElementById('statsBtnHolderLeague');
+  const holderStats = document.getElementById('statsBtnHolderStats');
+
+  // reset view
+  statsView.style.display = 'none';
+  leagueView.style.display = 'block';
+  holderLeague.appendChild(toggleBtn);
+  toggleBtn.textContent = 'Stats';
+
   toggleBtn.onclick = () => {
-    const show = statsCol.style.display === 'none';
-    statsCol.style.display = show ? 'block' : 'none';
-    toggleBtn.textContent = show ? 'Standings' : 'Stats';
+    const showStats = statsView.style.display === 'none';
+    statsView.style.display = showStats ? 'block' : 'none';
+    leagueView.style.display = showStats ? 'none' : 'block';
+    (showStats ? holderStats : holderLeague).appendChild(toggleBtn);
+    toggleBtn.textContent = showStats ? 'Standings' : 'Stats';
   };
 }
 
@@ -1940,7 +1961,9 @@ function per90(val, mins){ const m = Number(mins)||0; return m ? (Number(val||0)
 function pct(num, den){ const d = Number(den)||0; return d ? (Number(num||0)/d)*100 : 0; }
 
 function renderStats(players){
-  const container = document.getElementById('statsCol');
+  const section = document.getElementById('statsView');
+  const container = section.querySelector('.leaderboards');
+  if (!container) return;
   container.innerHTML = '';
   STAT_CATEGORIES.forEach(cat => {
     const rows = players.map(p => ({ p, v:cat.calc(p) }))
