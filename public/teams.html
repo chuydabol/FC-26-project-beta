@@ -1858,7 +1858,7 @@ async function loadLeague(){
       rowDiv.appendChild(card);
       const info = document.createElement('div');
       info.className = 'podium-info';
-      const clubName = (typeof CLUB_NAMES !== 'undefined' && CLUB_NAMES[row.club_id]) || row.club_id;
+      const clubName = byId(row.club_id)?.name || row.club_id;
       info.innerHTML = `<div>${escapeHtml(row.name)}</div><div class="muted">${escapeHtml(clubName)} — ${row.count} ${label}</div>`;
       rowDiv.appendChild(info);
       el.appendChild(rowDiv);
@@ -1875,7 +1875,7 @@ async function loadLeague(){
   (standings.standings || []).forEach(row => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${escapeHtml((typeof CLUB_NAMES !== 'undefined' && CLUB_NAMES[row.club_id]) || row.club_id)}</td>
+      <td>${escapeHtml(byId(row.club_id)?.name || row.club_id)}</td>
       <td>${row.wins}</td>
       <td>${row.draws}</td>
       <td>${row.losses}</td>
