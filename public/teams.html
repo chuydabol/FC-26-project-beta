@@ -79,7 +79,7 @@ h2{margin:0 0 10px}
   margin-top: 12px; /* pick 12px instead of 10px for consistency */
   width: 100%;
 }
-.player-card{position:relative;width:200px;height:280px;flex:0 1 auto;overflow:hidden}
+.player-card{position:relative;width:200px;height:280px;flex:0 0 200px;overflow:hidden}
 .card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
 .card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black;z-index:3;text-align:center}
 .player-silhouette{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;opacity:.85;z-index:1}
@@ -154,7 +154,7 @@ h2{margin:0 0 10px}
 .league-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
 .podium-list{display:flex;flex-direction:column;gap:12px}
 .podium-row{display:flex;align-items:center;gap:8px}
-.podium-row .player-card{width:100px;height:140px}
+.podium-row .player-card{width:100px;height:140px;flex:0 0 100px}
 .podium-info{font-size:14px}
 .form{display:flex;gap:2px;justify-content:center}
 .form-dot{width:10px;height:10px;border-radius:2px;display:inline-block}
@@ -164,7 +164,7 @@ h2{margin:0 0 10px}
 .league-table tr.top4{border-left:4px solid #0a0}
 .stat-card{margin-top:12px}
 .leaderboard-row{display:flex;align-items:center;gap:8px;margin-top:6px}
-.mini-card{width:40px;height:56px}
+.mini-card{width:40px;height:56px;flex:0 0 40px}
 .mini-card .player-overall{font-size:14px}
 .mini-card .player-name{font-size:8px}
 .mini-card .player-position{font-size:7px;margin-bottom:4px}
@@ -241,7 +241,7 @@ h2{margin:0 0 10px}
 
 <main>
   <!-- TEAMS -->
-  <section id="teams-view" aria-live="polite">
+  <section id="teams-view" aria-live="polite" class="tab-content">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <h2 style="margin:0">Teams</h2>
       <div class="muted">Total teams: <span id="teams-count">0</span></div>
@@ -362,7 +362,7 @@ h2{margin:0 0 10px}
   <div id="teamView" style="display:none"></div>
 
   <!-- NEWS -->
-  <section id="news-view" style="display:none">
+  <section id="news-view" class="tab-content" style="display:none">
     <h2>League News</h2>
     <div id="newsFeed" class="news-wrap" style="margin-top:8px">
       <div class="muted">Loading news…</div>
@@ -415,7 +415,7 @@ h2{margin:0 0 10px}
   </section>
 
   <!-- MARKET -->
-  <section id="market-view" style="display:none">
+  <section id="market-view" class="tab-content" style="display:none">
     <h2>Transfer Market</h2>
     <div class="m-card">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
@@ -427,14 +427,14 @@ h2{margin:0 0 10px}
   </section>
 
   <!-- FIXTURES (PUBLIC) -->
-  <section id="fixtures-public" style="display:none">
+  <section id="fixtures-public" class="tab-content" style="display:none">
     <h2>Fixtures</h2>
     <div id="fixtures" class="fx-list" style="margin-top:10px"></div>
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
   <!-- FIXTURES SCHEDULING (MANAGERS/Admins) -->
-  <section id="fixtures-sched" style="display:none">
+  <section id="fixtures-sched" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
       <h2>Fixtures Scheduling</h2>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -449,7 +449,7 @@ h2{margin:0 0 10px}
   </section>
 
   <!-- CHAMPIONS CUP -->
-  <section id="champions-view" style="display:none">
+  <section id="champions-view" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h2>UPCL Champions Cup</h2>
       <div class="chip">Cup ID: <span id="ccCupId"></span></div>
@@ -529,7 +529,7 @@ h2{margin:0 0 10px}
   </section>
 
   <!-- LEAGUE STANDINGS -->
-  <section id="leagueView" style="display:none">
+  <section id="leagueView" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h2>League Standings</h2>
       <div id="statsBtnHolderLeague">
@@ -548,7 +548,7 @@ h2{margin:0 0 10px}
     </div>
   </section>
 
-  <section id="statsView" style="display:none">
+  <section id="statsView" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h2>League Stats</h2>
       <div id="statsBtnHolderStats"></div>
@@ -557,7 +557,7 @@ h2{margin:0 0 10px}
   </section>
 
   <!-- FRIENDLIES -->
-  <section id="friendlies-view" style="display:none">
+  <section id="friendlies-view" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <h2>Friendlies</h2>
       <div class="chip">Cup ID: <span id="frCupId"></span></div>
@@ -781,6 +781,7 @@ const friendliesView = document.getElementById('friendlies-view');
 
 function setNav(active){
   if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
+  document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
   const s = {
     teams:[teamsViewEl, navTeams],
     news:[newsView, navNews],
@@ -794,7 +795,7 @@ function setNav(active){
   for (const key of Object.keys(s)){
     const [view,btn] = s[key];
     const is = key===active;
-    view.style.display = is ? 'block' : 'none';
+    if(is) view.style.display = 'block';
     btn.setAttribute('aria-pressed', String(is));
   }
 }
@@ -919,15 +920,30 @@ function applyGradient(img, customKit){
   img.replaceWith(box);
 }
 
+const clubInfoCache = new Map();
+const kitUrlCache = new Map();
+
 async function renderClubKits(clubId, container){
-  let info=null;
-  try{ info = await getClubInfo(clubId); }catch(e){ info=null; }
+  if(!clubId) return;
+  let info = clubInfoCache.get(clubId);
+  if(!info){
+    try{ info = await getClubInfo(clubId); clubInfoCache.set(clubId, info); }
+    catch(e){ info=null; }
+  }
   const teamId = info?.teamId;
   const customKit = info?.customKit || {};
-  const kitUrl = teamId ? getKitUrl(teamId) : null;
-  const imgs = container
-    ? container.querySelectorAll('.player-kit')
-    : document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`);
+  let kitUrl = teamId ? kitUrlCache.get(teamId) : null;
+  if(teamId && !kitUrl){
+    kitUrl = getKitUrl(teamId);
+    kitUrlCache.set(teamId, kitUrl);
+  }
+  let imgs;
+  if(container){
+    imgs = container.querySelectorAll(`[data-club-id="${clubId}"] .player-kit`);
+    if(!imgs.length) imgs = container.querySelectorAll('.player-kit');
+  }else{
+    imgs = document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`);
+  }
   imgs.forEach(img=>{
     if(kitUrl){
       img.src = kitUrl;
@@ -1975,9 +1991,11 @@ function renderStats(players){
     card.className = 'm-card stat-card';
     card.innerHTML = `<strong>${cat.label}</strong>`;
     const list = document.createElement('div');
+    const clubIds = new Set();
     rows.forEach(r => {
       const rowDiv = document.createElement('div');
       rowDiv.className = 'leaderboard-row';
+      rowDiv.dataset.clubId = String(r.p.club_id);
       const cardEl = buildPlayerCard({ name:r.p.name, position:r.p.position, player_id:r.p.player_id }, null);
       cardEl.classList.add('mini-card');
       rowDiv.appendChild(cardEl);
@@ -1990,9 +2008,12 @@ function renderStats(players){
       val.className = 'leaderboard-value';
       val.textContent = typeof cat.decimals === 'number' ? r.v.toFixed(cat.decimals) : String(Math.round(r.v));
       rowDiv.appendChild(val);
-      renderClubKits(r.p.club_id, rowDiv);
-      upgradeClubPlayers(r.p.club_id, rowDiv);
       list.appendChild(rowDiv);
+      clubIds.add(r.p.club_id);
+    });
+    clubIds.forEach(cid=>{
+      renderClubKits(cid, list);
+      upgradeClubPlayers(cid, list);
     });
     card.appendChild(list);
     container.appendChild(card);
