@@ -156,6 +156,22 @@ h2{margin:0 0 10px}
 .podium-row{display:flex;align-items:center;gap:8px}
 .podium-row .player-card{width:100px;height:140px}
 .podium-info{font-size:14px}
+.form{display:flex;gap:2px;justify-content:center}
+.form-dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+.form-dot.W{background:#0a0}
+.form-dot.D{background:#777}
+.form-dot.L{background:#a00}
+.league-table tr.top4{border-left:4px solid #0a0}
+.stat-card{margin-top:12px}
+.leaderboard-row{display:flex;align-items:center;gap:8px;margin-top:6px}
+.mini-card{width:40px;height:56px}
+.mini-card .player-overall{font-size:14px}
+.mini-card .player-name{font-size:8px}
+.mini-card .player-position{font-size:7px;margin-bottom:4px}
+.mini-card .player-stats{font-size:6px}
+.leaderboard-info{flex:1;min-width:0}
+.leaderboard-info div:first-child{font-weight:600}
+.leaderboard-value{font-weight:700;text-align:right}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
@@ -514,22 +530,20 @@ h2{margin:0 0 10px}
 
   <!-- LEAGUE STANDINGS -->
   <section id="leagueView" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <h2>League Standings</h2>
+      <button id="statsToggleBtn" class="chip">Stats</button>
+    </div>
     <div class="league-grid">
       <div>
-        <h2>League Standings</h2>
         <table class="league-table">
           <thead>
-            <tr><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th></tr>
+            <tr><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th><th>Form</th></tr>
           </thead>
           <tbody id="leagueTableBody"></tbody>
         </table>
       </div>
-      <div>
-        <h2>Top Scorers</h2>
-        <div id="scorersPodium" class="podium-list"></div>
-        <h2 style="margin-top:16px">Top Assisters</h2>
-        <div id="assistersPodium" class="podium-list"></div>
-      </div>
+      <div id="statsCol" style="display:none"></div>
     </div>
   </section>
 
@@ -1844,36 +1858,32 @@ function setupCcFixtureForm(){
 }
 
 async function loadLeague(){
-  const [leaders, standings] = await Promise.all([
-    apiGet('/api/league/leaders'),
-    apiGet('/api/league')
+  const [standings, players, matches] = await Promise.all([
+    apiGet('/api/league'),
+    apiGet('/api/players'),
+    apiGet('/api/matches')
   ]);
+  renderStandings(standings.standings || [], matches.matches || []);
+  renderStats(players.players || []);
 
-  function renderPodium(el, rows, label){
-    el.innerHTML = '';
-    (rows || []).slice(0,3).forEach(row => {
-      const rowDiv = document.createElement('div');
-      rowDiv.className = 'podium-row';
-      const card = buildPlayerCard({ name: row.name }, null);
-      rowDiv.appendChild(card);
-      const info = document.createElement('div');
-      info.className = 'podium-info';
-      const clubName = byId(row.club_id)?.name || row.club_id;
-      info.innerHTML = `<div>${escapeHtml(row.name)}</div><div class="muted">${escapeHtml(clubName)} — ${row.count} ${label}</div>`;
-      rowDiv.appendChild(info);
-      el.appendChild(rowDiv);
-      renderClubKits(row.club_id, rowDiv);
-      upgradeClubPlayers(row.club_id, rowDiv);
-    });
-  }
+  const toggleBtn = document.getElementById('statsToggleBtn');
+  const statsCol = document.getElementById('statsCol');
+  toggleBtn.onclick = () => {
+    const show = statsCol.style.display === 'none';
+    statsCol.style.display = show ? 'block' : 'none';
+    toggleBtn.textContent = show ? 'Standings' : 'Stats';
+  };
+}
 
-  renderPodium(document.getElementById('scorersPodium'), leaders.scorers, 'goals');
-  renderPodium(document.getElementById('assistersPodium'), leaders.assisters, 'assists');
-
+function renderStandings(rows, matches){
+  const clubIds = rows.map(r => r.club_id);
+  const forms = computeForms(matches, clubIds);
   const body = document.getElementById('leagueTableBody');
   body.innerHTML = '';
-  (standings.standings || []).forEach(row => {
+  rows.forEach((row, idx) => {
     const tr = document.createElement('tr');
+    if (idx < 4) tr.classList.add('top4');
+    const formHtml = (forms[row.club_id] || []).map(r => `<span class="form-dot ${r}"></span>`).join('');
     tr.innerHTML = `
       <td>${escapeHtml(byId(row.club_id)?.name || row.club_id)}</td>
       <td>${row.wins}</td>
@@ -1882,8 +1892,87 @@ async function loadLeague(){
       <td>${row.goals_for}</td>
       <td>${row.goals_against}</td>
       <td>${row.points}</td>
+      <td class="form">${formHtml}</td>
     `;
     body.appendChild(tr);
+  });
+}
+
+function computeForms(matches, clubIds){
+  const forms = {};
+  (matches || []).forEach(m => {
+    const ids = Object.keys(m.clubs || {});
+    if (ids.length < 2) return;
+    const [a,b] = ids;
+    const ga = m.clubs[a].goals, gb = m.clubs[b].goals;
+    if (clubIds.includes(a)){
+      const res = ga>gb?'W':ga===gb?'D':'L';
+      forms[a] = forms[a]||[];
+      if (forms[a].length < 5) forms[a].push(res);
+    }
+    if (clubIds.includes(b)){
+      const res = gb>ga?'W':gb===ga?'D':'L';
+      forms[b] = forms[b]||[];
+      if (forms[b].length < 5) forms[b].push(res);
+    }
+  });
+  return forms;
+}
+
+const STAT_CATEGORIES = [
+  { id:'goals', label:'Goals', calc:p=>p.goals||0 },
+  { id:'assists', label:'Assists', calc:p=>p.assists||0 },
+  { id:'ga', label:'G+A', calc:p=>(p.goals||0)+(p.assists||0) },
+  { id:'goals90', label:'Goals per 90', calc:p=>per90(p.goals, p.realtimegame), decimals:2 },
+  { id:'assists90', label:'Assists per 90', calc:p=>per90(p.assists, p.realtimegame), decimals:2 },
+  { id:'ga90', label:'G+A per 90', calc:p=>per90((p.goals||0)+(p.assists||0), p.realtimegame), decimals:2 },
+  { id:'shots90', label:'Shots per 90', calc:p=>per90(p.shots, p.realtimegame), decimals:2 },
+  { id:'passAcc', label:'Pass Accuracy %', calc:p=>pct(p.passesmade, p.passattempts), decimals:1 },
+  { id:'tackles90', label:'Tackles per 90', calc:p=>per90(p.tacklesmade, p.realtimegame), decimals:2 },
+  { id:'tacklePct', label:'Tackle Success %', calc:p=>pct(p.tacklesmade, p.tackleattempts), decimals:1 },
+  { id:'cleanSheets', label:'Clean Sheets', calc:p=>p.cleansheetsany||0 },
+  { id:'savePct', label:'Save %', calc:p=>pct(p.saves, (p.saves||0)+(p.goalsconceded||0)), decimals:1 },
+  { id:'avgRating', label:'Average Rating', calc:p=>p.rating||0, decimals:2 },
+  { id:'motm', label:'MOTM', calc:p=>p.mom||0 }
+];
+
+function per90(val, mins){ const m = Number(mins)||0; return m ? (Number(val||0)/m)*90 : 0; }
+function pct(num, den){ const d = Number(den)||0; return d ? (Number(num||0)/d)*100 : 0; }
+
+function renderStats(players){
+  const container = document.getElementById('statsCol');
+  container.innerHTML = '';
+  STAT_CATEGORIES.forEach(cat => {
+    const rows = players.map(p => ({ p, v:cat.calc(p) }))
+      .filter(r => r.v && isFinite(r.v))
+      .sort((a,b)=>b.v - a.v)
+      .slice(0,5);
+    if (!rows.length) return;
+    const card = document.createElement('div');
+    card.className = 'm-card stat-card';
+    card.innerHTML = `<strong>${cat.label}</strong>`;
+    const list = document.createElement('div');
+    rows.forEach(r => {
+      const rowDiv = document.createElement('div');
+      rowDiv.className = 'leaderboard-row';
+      const cardEl = buildPlayerCard({ name:r.p.name, position:r.p.position, player_id:r.p.player_id }, null);
+      cardEl.classList.add('mini-card');
+      rowDiv.appendChild(cardEl);
+      const info = document.createElement('div');
+      info.className = 'leaderboard-info';
+      const clubName = byId(r.p.club_id)?.name || r.p.club_id;
+      info.innerHTML = `<div>${escapeHtml(r.p.name)}</div><div class="muted">${escapeHtml(clubName)}</div>`;
+      rowDiv.appendChild(info);
+      const val = document.createElement('div');
+      val.className = 'leaderboard-value';
+      val.textContent = typeof cat.decimals === 'number' ? r.v.toFixed(cat.decimals) : String(Math.round(r.v));
+      rowDiv.appendChild(val);
+      renderClubKits(r.p.club_id, rowDiv);
+      upgradeClubPlayers(r.p.club_id, rowDiv);
+      list.appendChild(rowDiv);
+    });
+    card.appendChild(list);
+    container.appendChild(card);
   });
 }
 
