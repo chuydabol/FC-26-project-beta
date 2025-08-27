@@ -71,7 +71,8 @@ h2{margin:0 0 10px}
 }
 .team-meta{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;gap:8px}
 .team-meta .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.team-meta .record{font-weight:700;font-size:14px}.players-grid {
+.team-meta .record{font-weight:700;font-size:14px}
+.players-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -79,6 +80,7 @@ h2{margin:0 0 10px}
   margin-top: 12px; /* pick 12px instead of 10px for consistency */
   width: 100%;
 }
+.team-card > .players-grid{display:none}
 .player-card{position:relative;width:200px;height:280px;flex:0 0 200px;overflow:hidden}
 .card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
 .card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black;z-index:3;text-align:center}
@@ -162,15 +164,11 @@ h2{margin:0 0 10px}
 .form-dot.D{background:#777}
 .form-dot.L{background:#a00}
 .league-table tr.top4{border-left:4px solid #0a0}
-.stat-card{
-  transform:scale(.7);
-  transform-origin:top left;
-  margin:8px 0
-}
-.leaderboard-row{display:flex;align-items:center;gap:8px;margin-top:6px}
-.leaderboard-info{flex:1;min-width:0}
-.leaderboard-info div:first-child{font-weight:600}
-.leaderboard-value{font-weight:700;text-align:right}
+.stats-row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.stats-row .player-card{width:130px;height:160px;flex-shrink:0;object-fit:contain}
+.stats-row .info{flex:1;margin-left:12px;min-width:0}
+.stats-row .info div:first-child{font-weight:600}
+.stats-row .value{font-size:18px;font-weight:700;color:#fff;text-align:right}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
@@ -1054,20 +1052,8 @@ async function loadPlayers(){
       const cid = String(p.club_id);
       (playersByClub[cid] ||= []).push(p);
     });
-    document.querySelectorAll('.team-card').forEach(card=>{
-      const clubId = card.getAttribute('data-club-id');
-      const members = (d.players||[]).filter(p=>String(p.club_id)===clubId);
-      const grid = card.querySelector('.players-grid');
-      if(!grid) return;
-      grid.innerHTML='';
-      members.forEach(p=>{
-        const stats = parseVpro(p.vproattr);
-        const tier = tierFromOvr(stats?stats.ovr:null);
-        const el = buildPlayerCard(p, stats, tier);
-        grid.appendChild(el);
-      });
-      renderClubKits(clubId);
-      upgradeClubPlayers(clubId, grid);
+    document.querySelectorAll('.team-card .players-grid').forEach(grid=>{
+      grid.innerHTML = '';
     });
   }catch(e){
     console.error('Failed to load players', e);
@@ -1993,18 +1979,17 @@ function renderStats(players){
     const clubIds = new Set();
     rows.forEach(r => {
       const rowDiv = document.createElement('div');
-      rowDiv.className = 'leaderboard-row';
+      rowDiv.className = 'stats-row';
       rowDiv.dataset.clubId = String(r.p.club_id);
       const cardEl = buildPlayerCard({ name:r.p.name, position:r.p.position, player_id:r.p.player_id }, null);
-      cardEl.classList.add('stat-card');
       rowDiv.appendChild(cardEl);
       const info = document.createElement('div');
-      info.className = 'leaderboard-info';
+      info.className = 'info';
       const clubName = byId(r.p.club_id)?.name || r.p.club_id;
       info.innerHTML = `<div>${escapeHtml(r.p.name)}</div><div class="muted">${escapeHtml(clubName)}</div>`;
       rowDiv.appendChild(info);
       const val = document.createElement('div');
-      val.className = 'leaderboard-value';
+      val.className = 'value';
       val.textContent = typeof cat.decimals === 'number' ? r.v.toFixed(cat.decimals) : String(Math.round(r.v));
       rowDiv.appendChild(val);
       list.appendChild(rowDiv);
