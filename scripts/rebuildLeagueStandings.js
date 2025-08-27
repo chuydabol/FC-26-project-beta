@@ -1,4 +1,5 @@
 const { q } = require('../services/pgwrap');
+const { checkStatsIntegrity } = require('../services/statsIntegrity');
 
 const SQL_COMPUTE = `
   WITH club_match AS (
@@ -61,6 +62,14 @@ module.exports = { rebuildLeagueStandings };
 
 if (require.main === module) {
   rebuildLeagueStandings()
+    .then(async () => {
+      const mismatches = await checkStatsIntegrity();
+      for (const m of mismatches) {
+        console.warn(
+          `Stats mismatch match ${m.match_id} club ${m.club_id}: players=${m.player_goals} team=${m.team_goals}`
+        );
+      }
+    })
     .then(() => process.exit(0))
     .catch(err => {
       console.error(err);
