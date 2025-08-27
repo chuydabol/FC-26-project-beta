@@ -45,7 +45,7 @@ test('duplicate saveEaMatch calls do not double-count player stats', async () =>
     if (/INSERT INTO public\.match_participants/i.test(sql)) {
       return { rowCount: 1 };
     }
-    if (/INSERT INTO public\.players \(player_id, club_id, name, position, vproattr, goals, assists, last_seen\)/i.test(sql)) {
+    if (/INSERT INTO public\.players/i.test(sql)) {
       const [pid, cid] = params;
       const key = `${pid}_${cid}`;
       if (!players.has(key)) players.set(key, { goals: 0, assists: 0 });
@@ -112,7 +112,7 @@ test('rebuildPlayerStats recomputes totals matching team goals', async () => {
       teamGoals.set(cid, goals);
       return { rowCount: 1 };
     }
-    if (/INSERT INTO public\.players \(player_id, club_id, name, position, vproattr, goals, assists, last_seen\)/i.test(sql)) {
+    if (/INSERT INTO public\.players/i.test(sql)) {
       if (/SELECT pm\.player_id/i.test(sql)) {
         const totals = {};
         for (const [k, v] of pms) {

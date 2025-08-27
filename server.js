@@ -58,8 +58,18 @@ const SQL_UPSERT_PLAYER_INFO = `
 `;
 
 const SQL_INSERT_PLAYER_MATCH_STATS = `
-  INSERT INTO public.player_match_stats (match_id, player_id, club_id, goals, assists)
-  VALUES ($1, $2, $3, $4, $5)
+  INSERT INTO public.player_match_stats (
+    match_id, player_id, club_id,
+    goals, assists, realtimegame, shots, passesmade, passattempts,
+    tacklesmade, tackleattempts, cleansheetsany, saves, goalsconceded,
+    rating, mom
+  )
+  VALUES (
+    $1, $2, $3,
+    $4, $5, $6, $7, $8, $9,
+    $10, $11, $12, $13, $14,
+    $15, $16
+  )
   ON CONFLICT (match_id, player_id, club_id) DO NOTHING
 `;
 
@@ -67,11 +77,33 @@ const SQL_REFRESH_PLAYER_TOTALS = `
   UPDATE public.players p SET
     goals = COALESCE(s.goals, 0),
     assists = COALESCE(s.assists, 0),
+    realtimegame = COALESCE(s.realtimegame, 0),
+    shots = COALESCE(s.shots, 0),
+    passesmade = COALESCE(s.passesmade, 0),
+    passattempts = COALESCE(s.passattempts, 0),
+    tacklesmade = COALESCE(s.tacklesmade, 0),
+    tackleattempts = COALESCE(s.tackleattempts, 0),
+    cleansheetsany = COALESCE(s.cleansheetsany, 0),
+    saves = COALESCE(s.saves, 0),
+    goalsconceded = COALESCE(s.goalsconceded, 0),
+    rating = COALESCE(s.rating, 0),
+    mom = COALESCE(s.mom, 0),
     last_seen = NOW()
   FROM (
     SELECT player_id, club_id,
            SUM(goals) AS goals,
-           SUM(assists) AS assists
+           SUM(assists) AS assists,
+           SUM(realtimegame) AS realtimegame,
+           SUM(shots) AS shots,
+           SUM(passesmade) AS passesmade,
+           SUM(passattempts) AS passattempts,
+           SUM(tacklesmade) AS tacklesmade,
+           SUM(tackleattempts) AS tackleattempts,
+           SUM(cleansheetsany) AS cleansheetsany,
+           SUM(saves) AS saves,
+           SUM(goalsconceded) AS goalsconceded,
+           AVG(rating) AS rating,
+           SUM(mom) AS mom
       FROM public.player_match_stats
      WHERE player_id = $1 AND club_id = $2
      GROUP BY player_id, club_id
@@ -257,6 +289,17 @@ async function saveEaMatch(match) {
         const vproattr = pdata.vproattr || null;
         const goals = Number(pdata.goals || 0);
         const assists = Number(pdata.assists || 0);
+        const realtimegame = Number(pdata.realtimegame || 0);
+        const shots = Number(pdata.shots || 0);
+        const passesmade = Number(pdata.passesmade || 0);
+        const passattempts = Number(pdata.passattempts || 0);
+        const tacklesmade = Number(pdata.tacklesmade || 0);
+        const tackleattempts = Number(pdata.tackleattempts || 0);
+        const cleansheetsany = Number(pdata.cleansheetsany || 0);
+        const saves = Number(pdata.saves || 0);
+        const goalsconceded = Number(pdata.goalsconceded || 0);
+        const rating = Number(pdata.rating || 0);
+        const mom = Number(pdata.mom || 0);
         await q(SQL_UPSERT_PLAYER_INFO, [pid, cid, name, pos, vproattr]);
         const { rowCount: statInserted } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
           matchId,
@@ -264,6 +307,17 @@ async function saveEaMatch(match) {
           cid,
           goals,
           assists,
+          realtimegame,
+          shots,
+          passesmade,
+          passattempts,
+          tacklesmade,
+          tackleattempts,
+          cleansheetsany,
+          saves,
+          goalsconceded,
+          rating,
+          mom,
         ]);
         if (statInserted) {
           await q(SQL_REFRESH_PLAYER_TOTALS, [pid, cid]);
