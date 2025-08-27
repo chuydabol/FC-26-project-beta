@@ -47,16 +47,36 @@ const SQL_UPSERT_PARTICIPANT = `
   SET is_home = EXCLUDED.is_home, goals = EXCLUDED.goals
 `;
 
-const SQL_UPSERT_PLAYER = `
+const SQL_UPSERT_PLAYER_INFO = `
   INSERT INTO public.players (player_id, club_id, name, position, vproattr, goals, assists, last_seen)
-  VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+  VALUES ($1, $2, $3, $4, $5, 0, 0, NOW())
   ON CONFLICT (player_id, club_id) DO UPDATE SET
     name = EXCLUDED.name,
     position = EXCLUDED.position,
     vproattr = EXCLUDED.vproattr,
-    goals = public.players.goals + EXCLUDED.goals,
-    assists = public.players.assists + EXCLUDED.assists,
     last_seen = NOW()
+`;
+
+const SQL_INSERT_PLAYER_MATCH_STATS = `
+  INSERT INTO public.player_match_stats (match_id, player_id, club_id, goals, assists)
+  VALUES ($1, $2, $3, $4, $5)
+  ON CONFLICT (match_id, player_id, club_id) DO NOTHING
+`;
+
+const SQL_REFRESH_PLAYER_TOTALS = `
+  UPDATE public.players p SET
+    goals = COALESCE(s.goals, 0),
+    assists = COALESCE(s.assists, 0),
+    last_seen = NOW()
+  FROM (
+    SELECT player_id, club_id,
+           SUM(goals) AS goals,
+           SUM(assists) AS assists
+      FROM public.player_match_stats
+     WHERE player_id = $1 AND club_id = $2
+     GROUP BY player_id, club_id
+  ) s
+ WHERE p.player_id = $1 AND p.club_id = $2
 `;
 
 const SQL_UPSERT_PLAYERCARD = `
@@ -237,7 +257,17 @@ async function saveEaMatch(match) {
         const vproattr = pdata.vproattr || null;
         const goals = Number(pdata.goals || 0);
         const assists = Number(pdata.assists || 0);
-        await q(SQL_UPSERT_PLAYER, [pid, cid, name, pos, vproattr, goals, assists]);
+        await q(SQL_UPSERT_PLAYER_INFO, [pid, cid, name, pos, vproattr]);
+        const { rowCount: statInserted } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
+          matchId,
+          pid,
+          cid,
+          goals,
+          assists,
+        ]);
+        if (statInserted) {
+          await q(SQL_REFRESH_PLAYER_TOTALS, [pid, cid]);
+        }
         if (vproattr) {
           const stats = parseVpro(vproattr);
           await q(SQL_UPSERT_PLAYERCARD, [pid, cid, name, pos, vproattr, stats.ovr]);
