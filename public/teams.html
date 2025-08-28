@@ -167,23 +167,33 @@ h2{margin:0 0 10px}
 .form-cell span.D{background:#777}
 .form-cell span.L{background:#a00}
 .league-table tr.top4{border-left:4px solid #0a0}
-.stats-row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.1)}
-.stats-row .player-card{flex-shrink:0}
-.stats-row .info{flex:1;margin-left:12px;min-width:0}
-.stats-row .info div:first-child{font-weight:600}
-.stats-row .value{font-size:18px;font-weight:700;color:#fff;text-align:right}
+.stats-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.stats-row .player-kit,.stats-row .player-silhouette{position:static;transform:none;width:60px;height:auto;flex-shrink:0}
+.stats-row .player-kit-box{position:static;transform:none;width:60px;height:60px;border-radius:6px;flex-shrink:0}
+.stats-row .info{flex:1;min-width:0;line-height:1.2}
+.stats-row .info div:first-child{font-weight:600;font-size:14px}
+.stats-row .value{margin-left:auto;font-size:16px;font-weight:700;color:#fff;text-align:right}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
 /* Leaderboards layout */
-.leaderboards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:12px}
+.leaderboards{display:grid;gap:16px;margin-top:12px}
 .leaderboards .m-card strong{display:block;font-size:18px;font-weight:700;margin-bottom:8px;text-align:center}
+@media (max-width:600px){
+  .leaderboards{grid-template-columns:1fr}
+}
+@media (min-width:601px) and (max-width:900px){
+  .leaderboards{grid-template-columns:repeat(2,1fr)}
+}
+@media (min-width:901px){
+  .leaderboards{grid-template-columns:repeat(3,1fr)}
+}
 
 @media (max-width:768px){
   .standings-table{font-size:14px;overflow-x:auto}
   .standings-table table{min-width:480px}
   .league-grid{display:block}
-  .stats-section{display:flex;flex-direction:column;align-items:center}
+  .stats-section{display:block}
   .player-card{transform:scale(0.85);margin:8px auto}
   .player-name{font-size:14px}
 }
@@ -1938,23 +1948,28 @@ function renderStats(players){
       const rowDiv = document.createElement('div');
       rowDiv.className = 'stats-row';
       rowDiv.dataset.clubId = String(r.p.club_id);
-      const cardEl = buildPlayerCard({ name:r.p.name, position:r.p.position, player_id:r.p.player_id }, null);
-      rowDiv.appendChild(cardEl);
+
+      const kitImg = document.createElement('img');
+      kitImg.className = 'player-kit';
+      kitImg.src = '/assets/silhouette.png';
+      rowDiv.appendChild(kitImg);
+
       const info = document.createElement('div');
       info.className = 'info';
       const clubName = byId(r.p.club_id)?.name || r.p.club_id;
       info.innerHTML = `<div>${escapeHtml(r.p.name)}</div><div class="muted">${escapeHtml(clubName)}</div>`;
       rowDiv.appendChild(info);
+
       const val = document.createElement('div');
       val.className = 'value';
       val.textContent = typeof cat.decimals === 'number' ? r.v.toFixed(cat.decimals) : String(Math.round(r.v));
       rowDiv.appendChild(val);
+
       list.appendChild(rowDiv);
       clubIds.add(r.p.club_id);
     });
     clubIds.forEach(cid=>{
       renderClubKits(cid, list);
-      upgradeClubPlayers(cid, list);
     });
     card.appendChild(list);
     container.appendChild(card);
