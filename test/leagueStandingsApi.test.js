@@ -32,7 +32,9 @@ test('serves league standings table', async () => {
   const stub = mock.method(pool, 'query', async (sql, params) => {
     if (/jsonb_object_keys/i.test(sql)) {
       assert.match(sql, /WHERE cid = ANY\(\$1\)/i);
-      assert.deepStrictEqual(params, [['1']]);
+      const start = Date.parse('2025-08-27T23:59:00-07:00');
+      const end = Date.parse('2025-09-03T23:59:00-07:00');
+      assert.deepStrictEqual(params, [['1'], start, end]);
 
       const stats = new Map();
       for (const m of matchRows) {

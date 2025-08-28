@@ -1,6 +1,9 @@
 const { q } = require('../services/pgwrap');
 const { checkStatsIntegrity } = require('../services/statsIntegrity');
 
+const LEAGUE_START_MS = Date.parse('2025-08-27T23:59:00-07:00');
+const LEAGUE_END_MS = Date.parse('2025-09-03T23:59:00-07:00');
+
 const SQL_COMPUTE = `
   WITH club_match AS (
     SELECT
@@ -17,6 +20,7 @@ const SQL_COMPUTE = `
       WHERE key <> c.cid
       LIMIT 1
     ) AS o
+    WHERE m.ts_ms >= $1 AND m.ts_ms < $2
   )
   SELECT club_id,
          SUM(wins * 3 + draws) AS points,
@@ -44,7 +48,7 @@ const SQL_UPSERT = `
 `;
 
 async function rebuildLeagueStandings() {
-  const { rows } = await q(SQL_COMPUTE);
+  const { rows } = await q(SQL_COMPUTE, [LEAGUE_START_MS, LEAGUE_END_MS]);
   for (const r of rows) {
     await q(SQL_UPSERT, [
       r.club_id,
