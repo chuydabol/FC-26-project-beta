@@ -21,7 +21,21 @@ async function withServer(fn) {
 test('serves league standings', async () => {
   const stub = mock.method(pool, 'query', async sql => {
     if (/match_participants/i.test(sql)) {
-      return { rows: [ { clubId: '1', P: 1, W: 1, D: 0, L: 0, GF: 2, GA: 1, GD: 1, Pts: 3 } ] };
+      return {
+        rows: [
+          {
+            club_id: '1',
+            played: 1,
+            wins: 1,
+            draws: 0,
+            losses: 0,
+            goals_for: 2,
+            goals_against: 1,
+            goal_diff: 1,
+            points: 3,
+          },
+        ],
+      };
     }
     if (/from\s+public\.clubs/i.test(sql)) {
       return { rows: [ { id: '1', name: 'Team 1' } ] };
@@ -33,7 +47,17 @@ test('serves league standings', async () => {
     const res = await fetch(`http://localhost:${port}/api/leagues/test`);
     const body = await res.json();
     assert.deepStrictEqual(body.teams, [ { id: '1', name: 'Team 1' } ]);
-    assert.deepStrictEqual(body.standings, [ { clubId: '1', P: 1, W: 1, D: 0, L: 0, GF: 2, GA: 1, GD: 1, Pts: 3 } ]);
+    assert.deepStrictEqual(body.standings, [ {
+      club_id: '1',
+      played: 1,
+      wins: 1,
+      draws: 0,
+      losses: 0,
+      goals_for: 2,
+      goals_against: 1,
+      goal_diff: 1,
+      points: 3,
+    } ]);
   });
 
   stub.mock.restore();
@@ -42,7 +66,21 @@ test('serves league standings', async () => {
 test('standings include teams with zero matches', async () => {
   const stub = mock.method(pool, 'query', async sql => {
     if (/match_participants/i.test(sql)) {
-      return { rows: [ { clubId: '1', P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0 } ] };
+      return {
+        rows: [
+          {
+            club_id: '1',
+            played: 0,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goals_for: 0,
+            goals_against: 0,
+            goal_diff: 0,
+            points: 0,
+          },
+        ],
+      };
     }
     if (/from\s+public\.clubs/i.test(sql)) {
       return { rows: [ { id: '1', name: 'Team 1' } ] };
@@ -53,7 +91,17 @@ test('standings include teams with zero matches', async () => {
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/leagues/test`);
     const body = await res.json();
-    assert.deepStrictEqual(body.standings, [ { clubId: '1', P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0 } ]);
+    assert.deepStrictEqual(body.standings, [ {
+      club_id: '1',
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goals_for: 0,
+      goals_against: 0,
+      goal_diff: 0,
+      points: 0,
+    } ]);
     assert.deepStrictEqual(body.teams, [ { id: '1', name: 'Team 1' } ]);
   });
 
@@ -69,7 +117,17 @@ test('standings include matches against non-league opponents', async () => {
       );
       return {
         rows: [
-          { clubId: '1', P: 1, W: 0, D: 0, L: 1, GF: 0, GA: 1, GD: -1, Pts: 0 }
+          {
+            club_id: '1',
+            played: 1,
+            wins: 0,
+            draws: 0,
+            losses: 1,
+            goals_for: 0,
+            goals_against: 1,
+            goal_diff: -1,
+            points: 0,
+          }
         ]
       };
     }
@@ -83,7 +141,17 @@ test('standings include matches against non-league opponents', async () => {
     const res = await fetch(`http://localhost:${port}/api/leagues/test`);
     const body = await res.json();
     assert.deepStrictEqual(body.standings, [
-      { clubId: '1', P: 1, W: 0, D: 0, L: 1, GF: 0, GA: 1, GD: -1, Pts: 0 }
+      {
+        club_id: '1',
+        played: 1,
+        wins: 0,
+        draws: 0,
+        losses: 1,
+        goals_for: 0,
+        goals_against: 1,
+        goal_diff: -1,
+        points: 0,
+      }
     ]);
   });
 
@@ -165,7 +233,17 @@ test('different leagueIds return appropriate clubs', async () => {
       const cid = params[0][0];
       return {
         rows: [
-          { clubId: cid, P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 },
+          {
+            club_id: cid,
+            played: 1,
+            wins: 1,
+            draws: 0,
+            losses: 0,
+            goals_for: 1,
+            goals_against: 0,
+            goal_diff: 1,
+            points: 3,
+          },
         ],
       };
     }
@@ -181,12 +259,32 @@ test('different leagueIds return appropriate clubs', async () => {
     let res = await fetch(`http://localhost:${port}/api/leagues/alpha`);
     let body = await res.json();
     assert.deepStrictEqual(body.teams, [ { id: '1', name: 'Team 1' } ]);
-    assert.deepStrictEqual(body.standings, [ { clubId: '1', P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 } ]);
+    assert.deepStrictEqual(body.standings, [ {
+      club_id: '1',
+      played: 1,
+      wins: 1,
+      draws: 0,
+      losses: 0,
+      goals_for: 1,
+      goals_against: 0,
+      goal_diff: 1,
+      points: 3,
+    } ]);
 
     res = await fetch(`http://localhost:${port}/api/leagues/beta`);
     body = await res.json();
     assert.deepStrictEqual(body.teams, [ { id: '2', name: 'Team 2' } ]);
-    assert.deepStrictEqual(body.standings, [ { clubId: '2', P: 1, W: 1, D: 0, L: 0, GF: 1, GA: 0, GD: 1, Pts: 3 } ]);
+    assert.deepStrictEqual(body.standings, [ {
+      club_id: '2',
+      played: 1,
+      wins: 1,
+      draws: 0,
+      losses: 0,
+      goals_for: 1,
+      goals_against: 0,
+      goal_diff: 1,
+      points: 3,
+    } ]);
   });
 
   stub.mock.restore();

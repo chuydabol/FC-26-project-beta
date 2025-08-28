@@ -712,20 +712,20 @@ const SQL_LEAGUE_STANDINGS = `
     ) s
     WHERE rn <= 15
   )
-  SELECT c.club_id AS "clubId",
-         COALESCE(COUNT(s.club_id), 0)::int AS "P",
-         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 1 ELSE 0 END), 0)::int AS "W",
-         COALESCE(SUM(CASE WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS "D",
-         COALESCE(SUM(CASE WHEN s.gf < s.ga THEN 1 ELSE 0 END), 0)::int AS "L",
-         COALESCE(SUM(s.gf), 0)::int AS "GF",
-         COALESCE(SUM(s.ga), 0)::int AS "GA",
-         COALESCE(SUM(s.gf - s.ga), 0)::int AS "GD",
-         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 3 WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS "Pts"
+  SELECT c.club_id AS club_id,
+         COALESCE(COUNT(s.club_id), 0)::int AS played,
+         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 1 ELSE 0 END), 0)::int AS wins,
+         COALESCE(SUM(CASE WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS draws,
+         COALESCE(SUM(CASE WHEN s.gf < s.ga THEN 1 ELSE 0 END), 0)::int AS losses,
+         COALESCE(SUM(s.gf), 0)::int AS goals_for,
+         COALESCE(SUM(s.ga), 0)::int AS goals_against,
+         COALESCE(SUM(s.gf - s.ga), 0)::int AS goal_diff,
+         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 3 WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS points
     FROM public.clubs c
     LEFT JOIN sides s ON c.club_id = s.club_id
    WHERE c.club_id = ANY($1)
    GROUP BY c.club_id
-   ORDER BY "Pts" DESC, "GD" DESC, "GF" DESC`;
+   ORDER BY points DESC, goal_diff DESC, goals_for DESC`;
 
 const SQL_LEAGUE_TEAMS = `
   SELECT club_id AS "id", club_name AS "name"

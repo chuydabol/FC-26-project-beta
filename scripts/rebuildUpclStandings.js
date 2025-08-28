@@ -18,19 +18,19 @@ const SQL_LEAGUE_STANDINGS = `
     SELECT away AS club_id, home AS opp_id, away_goals AS gf, home_goals AS ga
       FROM matches
   )
-  SELECT c.club_id AS "clubId",
-         COALESCE(COUNT(s.club_id), 0)::int AS "P",
-         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 1 ELSE 0 END), 0)::int AS "W",
-         COALESCE(SUM(CASE WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS "D",
-         COALESCE(SUM(CASE WHEN s.gf < s.ga THEN 1 ELSE 0 END), 0)::int AS "L",
-         COALESCE(SUM(s.gf), 0)::int AS "GF",
-         COALESCE(SUM(s.ga), 0)::int AS "GA",
-         COALESCE(SUM(s.gf - s.ga), 0)::int AS "GD",
-         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 3 WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS "Pts"
+  SELECT c.club_id AS club_id,
+         COALESCE(COUNT(s.club_id), 0)::int AS played,
+         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 1 ELSE 0 END), 0)::int AS wins,
+         COALESCE(SUM(CASE WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS draws,
+         COALESCE(SUM(CASE WHEN s.gf < s.ga THEN 1 ELSE 0 END), 0)::int AS losses,
+         COALESCE(SUM(s.gf), 0)::int AS goals_for,
+         COALESCE(SUM(s.ga), 0)::int AS goals_against,
+         COALESCE(SUM(s.gf - s.ga), 0)::int AS goal_diff,
+         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 3 WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS points
     FROM public.clubs c
     LEFT JOIN sides s ON c.club_id = s.club_id
    GROUP BY c.club_id
-   ORDER BY "Pts" DESC, "GD" DESC, "GF" DESC`;
+   ORDER BY points DESC, goal_diff DESC, goals_for DESC`;
 
 const SQL_UPSERT_STANDING = `
   INSERT INTO public.upcl_standings (club_id, p, w, d, l, gf, ga, gd, pts, updated_at)
@@ -50,7 +50,17 @@ const SQL_UPSERT_STANDING = `
 async function rebuildUpclStandings() {
   const { rows } = await q(SQL_LEAGUE_STANDINGS);
   for (const r of rows) {
-    await q(SQL_UPSERT_STANDING, [r.clubId, r.P, r.W, r.D, r.L, r.GF, r.GA, r.GD, r.Pts]);
+    await q(SQL_UPSERT_STANDING, [
+      r.club_id,
+      r.played,
+      r.wins,
+      r.draws,
+      r.losses,
+      r.goals_for,
+      r.goals_against,
+      r.goal_diff,
+      r.points,
+    ]);
   }
 }
 
