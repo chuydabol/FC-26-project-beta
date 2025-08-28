@@ -1,6 +1,11 @@
 const eaApi = require('../services/eaApi');
 const { pool } = require('../db');
 
+// Only ingest matches on or after the league start date
+const START_MS = process.env.START_DATE
+  ? Date.parse(process.env.START_DATE)
+  : Date.parse('2025-08-27T23:59:00-07:00');
+
 async function main() {
   const ids = (process.env.EA_CLUB_IDS || '')
     .split(',')
@@ -18,6 +23,7 @@ async function main() {
     for (const m of matches) {
       const matchId = String(m.matchId);
       const tsMs = Number(m.timestamp) * 1000;
+      if (START_MS && tsMs < START_MS) continue;
       try {
         const { rowCount } = await pool.query(
           `INSERT INTO public.matches (match_id, ts_ms, raw)

@@ -690,7 +690,8 @@ const SQL_LEAGUE_STANDINGS = `
     SELECT home.club_id AS home,
            away.club_id AS away,
            home.goals AS home_goals,
-           away.goals AS away_goals
+           away.goals AS away_goals,
+           m.ts_ms
       FROM public.matches m
       JOIN public.match_participants home
         ON home.match_id = m.match_id AND home.is_home = true
@@ -700,11 +701,16 @@ const SQL_LEAGUE_STANDINGS = `
        AND m.ts_ms >= $2
        AND m.ts_ms < $3
   ), sides AS (
-    SELECT home AS club_id, away AS opp_id, home_goals AS gf, away_goals AS ga
-      FROM matches
-    UNION ALL
-    SELECT away AS club_id, home AS opp_id, away_goals AS gf, home_goals AS ga
-      FROM matches
+    SELECT club_id, opp_id, gf, ga FROM (
+      SELECT home AS club_id, away AS opp_id, home_goals AS gf, away_goals AS ga, ts_ms,
+             ROW_NUMBER() OVER (PARTITION BY home ORDER BY ts_ms) AS rn
+        FROM matches
+      UNION ALL
+      SELECT away AS club_id, home AS opp_id, away_goals AS gf, home_goals AS ga, ts_ms,
+             ROW_NUMBER() OVER (PARTITION BY away ORDER BY ts_ms) AS rn
+        FROM matches
+    ) s
+    WHERE rn <= 15
   )
   SELECT c.club_id AS "clubId",
          COALESCE(COUNT(s.club_id), 0)::int AS "P",
@@ -744,38 +750,12 @@ async function getUpclLeaders(clubIds) {
 
 app.get('/api/league', async (_req, res) => {
   const clubIds = resolveClubIds();
-  const sql = `
-    SELECT
-      cid AS club_id,
-      SUM((m.raw->'clubs'->cid->>'wins')::int) AS wins,
-      SUM((m.raw->'clubs'->cid->>'losses')::int) AS losses,
-      SUM((m.raw->'clubs'->cid->>'ties')::int) AS draws,
-      SUM((m.raw->'clubs'->cid->>'goals')::int) AS goals_for,
-      SUM(g.opp_goals) AS goals_against,
-      SUM((m.raw->'clubs'->cid->>'wins')::int * 3 +
-          (m.raw->'clubs'->cid->>'ties')::int) AS points
-    FROM matches m
-    CROSS JOIN LATERAL jsonb_object_keys(m.raw->'clubs') cid
-    CROSS JOIN LATERAL (
-      SELECT COALESCE(
-               (m.raw->'clubs'->opp->>'goals')::int,
-               (m.raw->'clubs'->opp->>'score')::int,
-               0
-             ) AS opp_goals
-      FROM jsonb_object_keys(m.raw->'clubs') opp
-      WHERE opp <> cid
-    ) g
-    WHERE cid = ANY($1)
-      AND m.ts_ms >= $2
-      AND m.ts_ms < $3
-    GROUP BY cid
-    ORDER BY points DESC,
-             (SUM((m.raw->'clubs'->cid->>'goals')::int) -
-              SUM(g.opp_goals)) DESC,
-             wins DESC;
-  `;
   try {
-    const { rows } = await q(sql, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS]);
+    const { rows } = await q(SQL_LEAGUE_STANDINGS, [
+      clubIds,
+      LEAGUE_START_MS,
+      LEAGUE_END_MS,
+    ]);
     res.json({ standings: rows });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league standings');
