@@ -27,7 +27,17 @@ test('serves league standings table', async () => {
       assert.deepStrictEqual(params, [['1'], start, end]);
       return {
         rows: [
-          { clubId: '1', P: 1, W: 0, D: 0, L: 1, GF: 2, GA: 3, GD: -1, Pts: 0 },
+          {
+            club_id: '1',
+            played: 1,
+            wins: 0,
+            draws: 0,
+            losses: 1,
+            goals_for: 2,
+            goals_against: 3,
+            goal_diff: -1,
+            points: 0,
+          },
         ],
       };
     }
@@ -39,7 +49,17 @@ test('serves league standings table', async () => {
     const body = await res.json();
     assert.deepStrictEqual(body, {
       standings: [
-        { clubId: '1', P: 1, W: 0, D: 0, L: 1, GF: 2, GA: 3, GD: -1, Pts: 0 },
+        {
+          club_id: '1',
+          played: 1,
+          wins: 0,
+          draws: 0,
+          losses: 1,
+          goals_for: 2,
+          goals_against: 3,
+          goal_diff: -1,
+          points: 0,
+        },
       ],
     });
   });
