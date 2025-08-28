@@ -1,8 +1,19 @@
 const { q } = require('../services/pgwrap');
 const { checkStatsIntegrity } = require('../services/statsIntegrity');
 
-const LEAGUE_START_MS = Date.parse('2025-08-27T23:59:00-07:00');
-const LEAGUE_END_MS = Date.parse('2025-09-03T23:59:00-07:00');
+function parseDateMs(value, fallback) {
+  const ms = value ? Number(value) || Date.parse(value) : NaN;
+  return Number.isFinite(ms) ? ms : fallback;
+}
+
+const LEAGUE_START_MS = parseDateMs(
+  process.env.LEAGUE_START_MS,
+  Date.parse('2025-08-27T23:59:00-07:00')
+);
+const LEAGUE_END_MS = parseDateMs(
+  process.env.LEAGUE_END_MS,
+  Date.parse('2025-09-03T23:59:00-07:00')
+);
 
 const SQL_COMPUTE = `
   WITH club_match AS (
