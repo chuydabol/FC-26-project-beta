@@ -22,14 +22,16 @@ async function withServer(fn) {
 test('serves league leaders', async () => {
   const scorerRows = [{ club_id: '1', name: 'Alice', count: 3 }];
   const assisterRows = [{ club_id: '1', name: 'Bob', count: 5 }];
+  const LEAGUE_START_MS = Date.parse('2025-08-27T23:59:00-07:00');
+  const LEAGUE_END_MS = Date.parse('2025-09-03T23:59:00-07:00');
 
   const stub = mock.method(pool, 'query', async (sql, params) => {
-    if (/SUM\(goals\)/i.test(sql)) {
-      assert.deepStrictEqual(params, [['1']]);
+    if (/SUM\(pms\.goals\)/i.test(sql)) {
+      assert.deepStrictEqual(params, [['1'], LEAGUE_START_MS, LEAGUE_END_MS]);
       return { rows: scorerRows };
     }
-    if (/SUM\(assists\)/i.test(sql)) {
-      assert.deepStrictEqual(params, [['1']]);
+    if (/SUM\(pms\.assists\)/i.test(sql)) {
+      assert.deepStrictEqual(params, [['1'], LEAGUE_START_MS, LEAGUE_END_MS]);
       return { rows: assisterRows };
     }
     return { rows: [] };

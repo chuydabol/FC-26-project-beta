@@ -786,23 +786,29 @@ app.get('/api/league', async (_req, res) => {
 app.get('/api/league/leaders', async (_req, res) => {
   const clubIds = resolveClubIds();
   const scorerSql = `
-    SELECT club_id, name, SUM(goals) AS count
-      FROM public.players
-     WHERE club_id = ANY($1)
-     GROUP BY club_id, name
-     ORDER BY count DESC, name
+    SELECT pms.club_id, p.name, SUM(pms.goals) AS count
+      FROM public.player_match_stats pms
+      JOIN public.matches m ON m.match_id = pms.match_id
+      JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
+     WHERE pms.club_id = ANY($1)
+       AND m.ts_ms BETWEEN $2 AND $3
+     GROUP BY pms.club_id, p.name
+     ORDER BY count DESC, p.name
      LIMIT 10`;
   const assisterSql = `
-    SELECT club_id, name, SUM(assists) AS count
-      FROM public.players
-     WHERE club_id = ANY($1)
-     GROUP BY club_id, name
-     ORDER BY count DESC, name
+    SELECT pms.club_id, p.name, SUM(pms.assists) AS count
+      FROM public.player_match_stats pms
+      JOIN public.matches m ON m.match_id = pms.match_id
+      JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
+     WHERE pms.club_id = ANY($1)
+       AND m.ts_ms BETWEEN $2 AND $3
+     GROUP BY pms.club_id, p.name
+     ORDER BY count DESC, p.name
      LIMIT 10`;
   try {
     const [scorers, assisters] = await Promise.all([
-      q(scorerSql, [clubIds]),
-      q(assisterSql, [clubIds])
+      q(scorerSql, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS]),
+      q(assisterSql, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS])
     ]);
     res.json({
       scorers: scorers.rows,
