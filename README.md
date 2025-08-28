@@ -44,9 +44,9 @@ LEAGUE_END_MS="2026-09-01T23:59:00-07:00" \
 node server.js
 ```
 
-Update these variables at the start of each season to adjust the range. The
-`scripts/rebuildLeagueStandings.js` utility honors the same environment
-variables when recomputing standings.
+Update these variables at the start of each season to adjust the range. Use
+`scripts/rebuildLeagueStandings.js` to refresh the `mv_league_standings`
+materialized view.
 
 ## Card Assets
 
