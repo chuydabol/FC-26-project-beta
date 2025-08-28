@@ -254,6 +254,30 @@ const CLUB_INFO_TTL_MS = 60_000;
 // Track last league refresh times
 const _leagueRefreshCache = new Map();
 
+// Debounced standings refresh
+const AUTO_REFRESH_STANDINGS = process.env.AUTO_REFRESH_STANDINGS !== '0';
+let _standingsRefreshTimer = null;
+async function _refreshStandings() {
+  await q('REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_league_standings');
+  await rebuildUpclStandings();
+  await rebuildUpclLeaders();
+}
+function scheduleStandingsRefresh() {
+  if (!AUTO_REFRESH_STANDINGS || process.env.NODE_ENV === 'test') return;
+  if (_standingsRefreshTimer) return;
+  _standingsRefreshTimer = setTimeout(async () => {
+    _standingsRefreshTimer = null;
+    try {
+      await _refreshStandings();
+    } catch (err) {
+      logger.error({ err }, 'Failed refreshing standings');
+    }
+  }, 1000);
+  if (typeof _standingsRefreshTimer.unref === 'function') {
+    _standingsRefreshTimer.unref();
+  }
+}
+
 
 
 // --- Match utilities backed by Postgres ---
@@ -340,6 +364,8 @@ async function saveEaMatch(match) {
       }
     }
   }
+
+  scheduleStandingsRefresh();
 }
 
 async function refreshClubMatches(clubId) {
@@ -360,9 +386,6 @@ async function refreshAllMatches(clubIds) {
   for (const clubId of ids) {
     await refreshClubMatches(clubId);
   }
-  await q('REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_league_standings');
-  await rebuildUpclStandings();
-  await rebuildUpclLeaders();
 }
 
 async function ensureLeagueClubs(clubIds) {
