@@ -171,6 +171,10 @@ function clubsForLeague(id) {
 }
 const DEFAULT_LEAGUE_ID = process.env.DEFAULT_LEAGUE_ID || 'UPCL_LEAGUE_2025';
 
+// League standings include only matches within this date range (Unix ms)
+const LEAGUE_START_MS = Date.parse('2025-08-27T23:59:00-07:00');
+const LEAGUE_END_MS = Date.parse('2025-09-03T23:59:00-07:00');
+
 function resolveClubIds() {
   let ids = clubsForLeague(DEFAULT_LEAGUE_ID);
   if (!ids.length) {
@@ -692,7 +696,9 @@ const SQL_LEAGUE_STANDINGS = `
         ON home.match_id = m.match_id AND home.is_home = true
       JOIN public.match_participants away
         ON away.match_id = m.match_id AND away.is_home = false
-     WHERE home.club_id = ANY($1) OR away.club_id = ANY($1)
+     WHERE (home.club_id = ANY($1) OR away.club_id = ANY($1))
+       AND m.ts_ms >= $2
+       AND m.ts_ms < $3
   ), sides AS (
     SELECT home AS club_id, away AS opp_id, home_goals AS gf, away_goals AS ga
       FROM matches
@@ -760,6 +766,8 @@ app.get('/api/league', async (_req, res) => {
       WHERE opp <> cid
     ) g
     WHERE cid = ANY($1)
+      AND m.ts_ms >= $2
+      AND m.ts_ms < $3
     GROUP BY cid
     ORDER BY points DESC,
              (SUM((m.raw->'clubs'->cid->>'goals')::int) -
@@ -767,7 +775,7 @@ app.get('/api/league', async (_req, res) => {
              wins DESC;
   `;
   try {
-    const { rows } = await q(sql, [clubIds]);
+    const { rows } = await q(sql, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS]);
     res.json({ standings: rows });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league standings');
@@ -816,7 +824,7 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
     await refreshAllMatches(clubIds);
     _leagueRefreshCache.set(req.params.leagueId, Date.now());
     const [standings, teams] = await Promise.all([
-      q(SQL_LEAGUE_STANDINGS, [clubIds]),
+      q(SQL_LEAGUE_STANDINGS, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS]),
       q(SQL_LEAGUE_TEAMS, [clubIds])
     ]);
     res.json({ teams: teams.rows, standings: standings.rows });
