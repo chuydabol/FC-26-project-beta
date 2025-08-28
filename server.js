@@ -255,6 +255,7 @@ async function fetchClubMatches(clubId) {
 async function saveEaMatch(match) {
   const matchId = String(match.matchId);
   const tsMs = Number(match.timestamp) * 1000;
+  if (tsMs < LEAGUE_START_MS) return;
   const { rowCount } = await q(SQL_INSERT_MATCH, [matchId, tsMs, match]);
   if (rowCount === 0) return;
 
@@ -330,6 +331,8 @@ async function saveEaMatch(match) {
 async function refreshClubMatches(clubId) {
   const matches = await fetchClubMatches(clubId);
   for (const m of matches) {
+    const tsMs = Number(m.timestamp) * 1000;
+    if (tsMs < LEAGUE_START_MS) continue;
     try {
       await saveEaMatch(m);
     } catch (err) {

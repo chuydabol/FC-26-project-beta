@@ -7,6 +7,8 @@ const { pool } = require('../db');
 const { saveEaMatch } = require('../server');
 const { rebuildPlayerStats } = require('../scripts/rebuildPlayerStats');
 
+const LEAGUE_START_SEC = Date.parse('2025-08-27T23:59:00-07:00') / 1000;
+
 test('saveEaMatch stores home/away flags for clubs', async () => {
   const calls = [];
   const queryStub = mock.method(pool, 'query', async (sql, params) => {
@@ -18,7 +20,7 @@ test('saveEaMatch stores home/away flags for clubs', async () => {
 
   const match = {
     matchId: 'm1',
-    timestamp: 1000,
+    timestamp: LEAGUE_START_SEC + 60,
     clubs: {
       '10': { details: { name: 'Alpha', isHome: 1 }, goals: 3 },
       '20': { details: { name: 'Beta', isHome: 0 }, goals: 1 },
@@ -32,6 +34,18 @@ test('saveEaMatch stores home/away flags for clubs', async () => {
     ['m1', '10', true, 3],
     ['m1', '20', false, 1],
   ]);
+});
+
+test('saveEaMatch skips matches before league start', async () => {
+  const queryStub = mock.method(pool, 'query', async () => {
+    throw new Error('should not query');
+  });
+
+  const match = { matchId: 'm0', timestamp: LEAGUE_START_SEC - 60 };
+  await saveEaMatch(match);
+
+  assert.strictEqual(queryStub.mock.calls.length, 0);
+  queryStub.mock.restore();
 });
 
 test('duplicate saveEaMatch calls do not double-count player stats', async () => {
@@ -79,7 +93,7 @@ test('duplicate saveEaMatch calls do not double-count player stats', async () =>
 
   const match = {
     matchId: 'm2',
-    timestamp: 1000,
+    timestamp: LEAGUE_START_SEC + 60,
     clubs: {
       '10': { details: { name: 'Alpha', isHome: 1 }, goals: 1 },
     },
@@ -163,7 +177,7 @@ test('rebuildPlayerStats recomputes totals matching team goals', async () => {
 
   const match = {
     matchId: 'm3',
-    timestamp: 1000,
+    timestamp: LEAGUE_START_SEC + 60,
     clubs: {
       '10': { details: { name: 'Alpha', isHome: 1 }, goals: 2 },
     },
