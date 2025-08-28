@@ -20,7 +20,7 @@ async function withServer(fn) {
 
 test('serves league standings', async () => {
   const stub = mock.method(pool, 'query', async sql => {
-    if (/match_participants/i.test(sql)) {
+    if (/mv_league_standings/i.test(sql)) {
       return {
         rows: [
           {
@@ -65,7 +65,7 @@ test('serves league standings', async () => {
 
 test('standings include teams with zero matches', async () => {
   const stub = mock.method(pool, 'query', async sql => {
-    if (/match_participants/i.test(sql)) {
+    if (/mv_league_standings/i.test(sql)) {
       return {
         rows: [
           {
@@ -110,11 +110,7 @@ test('standings include teams with zero matches', async () => {
 
 test('standings include matches against non-league opponents', async () => {
   const stub = mock.method(pool, 'query', async sql => {
-    if (/home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i.test(sql)) {
-      assert.match(
-        sql,
-        /home\.club_id\s*=\s*ANY\(\$1\)\s+OR\s+away\.club_id\s*=\s*ANY\(\$1\)/i
-      );
+    if (/mv_league_standings/i.test(sql)) {
       return {
         rows: [
           {
@@ -228,7 +224,7 @@ test('serves league matches including non-league opponents', async () => {
 
 test('different leagueIds return appropriate clubs', async () => {
   const stub = mock.method(pool, 'query', async (sql, params) => {
-    if (/match_participants/i.test(sql)) {
+    if (/mv_league_standings/i.test(sql)) {
       if (!params) return { rows: [] };
       const cid = params[0][0];
       return {

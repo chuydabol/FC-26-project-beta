@@ -21,10 +21,8 @@ async function withServer(fn) {
 
 test('serves league standings table', async () => {
   const stub = mock.method(pool, 'query', async (sql, params) => {
-    if (/match_participants/i.test(sql)) {
-      const start = Date.parse('2025-08-27T23:59:00-07:00');
-      const end = Date.parse('2025-09-03T23:59:00-07:00');
-      assert.deepStrictEqual(params, [['1'], start, end]);
+    if (/mv_league_standings/i.test(sql)) {
+      assert.deepStrictEqual(params, [['1']]);
       return {
         rows: [
           {

@@ -25,7 +25,6 @@ const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
 const { rebuildUpclStandings } = require('./scripts/rebuildUpclStandings');
-const { rebuildLeagueStandings } = require('./scripts/rebuildLeagueStandings');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -360,7 +359,7 @@ async function refreshAllMatches(clubIds) {
   for (const clubId of ids) {
     await refreshClubMatches(clubId);
   }
-  await rebuildLeagueStandings();
+  await q('REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_league_standings');
   await rebuildUpclStandings();
   await q('REFRESH MATERIALIZED VIEW public.upcl_leaders');
 }
@@ -703,45 +702,17 @@ app.get('/api/cup/fixtures', async (req, res) => {
 
 // League standings and leaders
 const SQL_LEAGUE_STANDINGS = `
-  WITH matches AS (
-    SELECT home.club_id AS home,
-           away.club_id AS away,
-           home.goals AS home_goals,
-           away.goals AS away_goals,
-           m.ts_ms
-      FROM public.matches m
-      JOIN public.match_participants home
-        ON home.match_id = m.match_id AND home.is_home = true
-      JOIN public.match_participants away
-        ON away.match_id = m.match_id AND away.is_home = false
-     WHERE (home.club_id = ANY($1) OR away.club_id = ANY($1))
-       AND m.ts_ms >= $2
-       AND m.ts_ms < $3
-  ), sides AS (
-    SELECT club_id, opp_id, gf, ga FROM (
-      SELECT home AS club_id, away AS opp_id, home_goals AS gf, away_goals AS ga, ts_ms,
-             ROW_NUMBER() OVER (PARTITION BY home ORDER BY ts_ms) AS rn
-        FROM matches
-      UNION ALL
-      SELECT away AS club_id, home AS opp_id, away_goals AS gf, home_goals AS ga, ts_ms,
-             ROW_NUMBER() OVER (PARTITION BY away ORDER BY ts_ms) AS rn
-        FROM matches
-    ) s
-    WHERE rn <= 15
-  )
-  SELECT c.club_id AS club_id,
-         COALESCE(COUNT(s.club_id), 0)::int AS played,
-         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 1 ELSE 0 END), 0)::int AS wins,
-         COALESCE(SUM(CASE WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS draws,
-         COALESCE(SUM(CASE WHEN s.gf < s.ga THEN 1 ELSE 0 END), 0)::int AS losses,
-         COALESCE(SUM(s.gf), 0)::int AS goals_for,
-         COALESCE(SUM(s.ga), 0)::int AS goals_against,
-         COALESCE(SUM(s.gf - s.ga), 0)::int AS goal_diff,
-         COALESCE(SUM(CASE WHEN s.gf > s.ga THEN 3 WHEN s.gf = s.ga THEN 1 ELSE 0 END), 0)::int AS points
-    FROM public.clubs c
-    LEFT JOIN sides s ON c.club_id = s.club_id
-   WHERE c.club_id = ANY($1)
-   GROUP BY c.club_id
+  SELECT club_id,
+         played,
+         wins,
+         draws,
+         losses,
+         goals_for,
+         goals_against,
+         goal_diff,
+         points
+    FROM public.mv_league_standings
+   WHERE club_id = ANY($1)
    ORDER BY points DESC, goal_diff DESC, goals_for DESC`;
 
 const SQL_LEAGUE_TEAMS = `
@@ -768,11 +739,7 @@ async function getUpclLeaders(clubIds) {
 app.get('/api/league', async (_req, res) => {
   const clubIds = resolveClubIds();
   try {
-    const { rows } = await q(SQL_LEAGUE_STANDINGS, [
-      clubIds,
-      LEAGUE_START_MS,
-      LEAGUE_END_MS,
-    ]);
+    const { rows } = await q(SQL_LEAGUE_STANDINGS, [clubIds]);
     res.json({ standings: rows });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch league standings');
@@ -827,7 +794,7 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
     await refreshAllMatches(clubIds);
     _leagueRefreshCache.set(req.params.leagueId, Date.now());
     const [standings, teams] = await Promise.all([
-      q(SQL_LEAGUE_STANDINGS, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS]),
+      q(SQL_LEAGUE_STANDINGS, [clubIds]),
       q(SQL_LEAGUE_TEAMS, [clubIds])
     ]);
     res.json({ teams: teams.rows, standings: standings.rows });
