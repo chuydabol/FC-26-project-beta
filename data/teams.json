@@ -1,25 +1,11 @@
 [
+  { "id": "576007",  "name": "Ethabella",        "logo": "/assets/logos/ethabella-fc.png" },
+  { "id": "567756",  "name": "Potland Pounders", "logo": "/assets/logos/potland-pounders.png" },
+  { "id": "3638105", "name": "Real MVC",         "logo": "/assets/logos/real-mvc.png" },
+  { "id": "55408",   "name": "Elite VT",         "logo": "/assets/logos/elite-vt.png" },
+  { "id": "3465152", "name": "Razorblacks FC",   "logo": "/assets/logos/razorblack-fc.png" },
+  { "id": "1969494", "name": "Club Frijol",      "logo": "/assets/logos/club-frijol.png" },
   { "id": "2491998", "name": "Royal Republic",   "logo": "/assets/logos/royal-republic-logo.png" },
-  { "id": "1527486", "name": "Gungan FC",         "logo": "/assets/logos/gungan-fc.png" },
-  { "id": "1969494", "name": "Club Frijol",       "logo": "/assets/logos/club-frijol.png" },
-  { "id": "2086022", "name": "Brehemen",          "logo": "/assets/logos/brehemen.png" },
-  { "id": "2462194", "name": "Costa Chica FC",    "logo": "/assets/logos/costa-chica-fc.png" },
-  { "id": "5098824", "name": "Sporting de la ma", "logo": "/assets/logos/sporting-de-la-ma.png" },
-  { "id": "4869810", "name": "Afc Tekki",         "logo": "/assets/logos/afc-tekki.png" },
-  { "id": "576007",  "name": "Ethabella FC",      "logo": "/assets/logos/ethabella-fc.png" },
-  { "id": "4933507", "name": "Loss Toyz",         "logo": "/assets/logos/loss-toyz.png" },
-  { "id": "4824736", "name": "GoldenGoals FC",    "logo": "/assets/logos/goldengoals-fc.png" },
-  { "id": "481847",  "name": "Rooney tunes",      "logo": "/assets/logos/rooney-tunes.png" },
-  { "id": "3050467", "name": "invincible afc",    "logo": "/assets/logos/invincible-afc.png" },
-  { "id": "4154835", "name": "khalch Fc",         "logo": "/assets/logos/khalch-fc.png" },
-  { "id": "3638105", "name": "Real mvc",          "logo": "/assets/logos/real-mvc.png" },
-  { "id": "55408",   "name": "Elite VT",          "logo": "/assets/logos/elite-vt.png" },
-  { "id": "4819681", "name": "EVERYTHING DEAD",   "logo": "/assets/logos/everything-dead.png" },
-  { "id": "35642",   "name": "EBK FC",            "logo": "/assets/logos/ebk-fc.png" },
-  { "id": "afc-warriors",  "name": "AFC Warriors",  "logo": "/assets/logos/afc-warriors.png" },
-  { "id": "jids-trivela",  "name": "Jids Trivela",  "logo": "/assets/logos/jids-trivela.png" },
-  { "id": "razorblack-fc", "name": "Razorblack FC", "logo": "/assets/logos/razorblack-fc.png" },
-  { "id": "fc-dhizz",      "name": "FC Dhizz",      "logo": "/assets/logos/fc-dhizz.png" },
-
-  { "id": "elite-xi",      "name": "Elite xi",      "logo": "/assets/logos/elite-xi.png" }
+  { "id": "4819681", "name": "Everything Dead",  "logo": "/assets/logos/everything-dead.png" },
+  { "id": "52008",   "name": "afc warriors",     "logo": "/assets/logos/afc-warriors.png" }
 ]
