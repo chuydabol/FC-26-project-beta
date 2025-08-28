@@ -25,6 +25,7 @@ const { q } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
 const { rebuildUpclStandings } = require('./scripts/rebuildUpclStandings');
+const { rebuildUpclLeaders } = require('./scripts/rebuildUpclLeaders');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -361,7 +362,7 @@ async function refreshAllMatches(clubIds) {
   }
   await q('REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_league_standings');
   await rebuildUpclStandings();
-  await q('REFRESH MATERIALIZED VIEW public.upcl_leaders');
+  await rebuildUpclLeaders();
 }
 
 async function ensureLeagueClubs(clubIds) {
