@@ -81,7 +81,8 @@ h2{margin:0 0 10px}
   width: 100%;
 }
 .team-card > .players-grid{display:none}
-.player-card{position:relative;width:200px;height:280px;flex:0 0 200px;overflow:hidden}
+.player-card{position:relative;width:180px;min-height:260px;margin:0 auto;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+.player-card img{max-width:100%;object-fit:contain}
 .card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
 .card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black;z-index:3;text-align:center}
 .player-silhouette{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;opacity:.85;z-index:1}
@@ -151,26 +152,41 @@ h2{margin:0 0 10px}
 .group-table tbody tr:hover{background:#160000}
 .league-table{width:100%;border-collapse:collapse}
 .league-table th,.league-table td{padding:6px 8px;border-bottom:1px solid #2a0000;text-align:right;font-variant-numeric:tabular-nums}
-.league-table th:first-child,.league-table td:first-child{text-align:left}
+.league-table th:first-child,.league-table td:first-child{text-align:center}
+.league-table th:nth-child(2),.league-table td:nth-child(2){text-align:left}
 .league-table tbody tr:hover{background:#160000}
+.league-table .club-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
 .league-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
 .podium-list{display:flex;flex-direction:column;gap:12px}
 .podium-row{display:flex;align-items:center;gap:8px}
 .podium-row .player-card{width:100px;height:140px;flex:0 0 100px}
 .podium-info{font-size:14px}
-.form{display:flex;gap:2px;justify-content:center}
-.form-dot{width:10px;height:10px;border-radius:2px;display:inline-block}
-.form-dot.W{background:#0a0}
-.form-dot.D{background:#777}
-.form-dot.L{background:#a00}
+.form-cell{display:flex;gap:4px;justify-content:flex-start}
+.form-cell span{width:12px;height:12px;border-radius:50%}
+.form-cell span.W{background:#0a0}
+.form-cell span.D{background:#777}
+.form-cell span.L{background:#a00}
 .league-table tr.top4{border-left:4px solid #0a0}
 .stats-row{display:flex;align-items:center;justify-content:space-between;margin:8px 0;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.1)}
-.stats-row .player-card{width:130px;height:160px;flex-shrink:0;object-fit:contain}
+.stats-row .player-card{flex-shrink:0}
 .stats-row .info{flex:1;margin-left:12px;min-width:0}
 .stats-row .info div:first-child{font-weight:600}
 .stats-row .value{font-size:18px;font-weight:700;color:#fff;text-align:right}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
+
+/* Leaderboards layout */
+.leaderboards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:12px}
+.leaderboards .m-card strong{display:block;font-size:18px;font-weight:700;margin-bottom:8px;text-align:center}
+
+@media (max-width:768px){
+  .standings-table{font-size:14px;overflow-x:auto}
+  .standings-table table{min-width:480px}
+  .league-grid{display:block}
+  .stats-section{display:flex;flex-direction:column;align-items:center}
+  .player-card{transform:scale(0.85);margin:8px auto}
+  .player-name{font-size:14px}
+}
 
 /* Champions Cup bracket */
 .bracket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
@@ -469,10 +485,10 @@ h2{margin:0 0 10px}
       </div>
     </div>
     <div class="league-grid">
-      <div>
+      <div class="standings-table">
         <table class="league-table">
           <thead>
-            <tr><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th><th>Form</th></tr>
+            <tr><th>#</th><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th><th>Form</th></tr>
           </thead>
           <tbody id="leagueTableBody"></tbody>
         </table>
@@ -485,7 +501,7 @@ h2{margin:0 0 10px}
       <h2>League Stats</h2>
       <div id="statsBtnHolderStats"></div>
     </div>
-    <div class="leaderboards"></div>
+    <div class="leaderboards stats-section"></div>
   </section>
 
   <!-- FRIENDLIES -->
@@ -1833,23 +1849,29 @@ async function loadLeague(){
 }
 
 function renderStandings(rows, matches){
-  const clubIds = rows.map(r => r.club_id);
+  const sorted = [...rows].sort((a,b)=>{
+    if (b.points !== a.points) return b.points - a.points;
+    if (b.goals_for !== a.goals_for) return b.goals_for - a.goals_for;
+    return a.goals_against - b.goals_against;
+  });
+  const clubIds = sorted.map(r => r.club_id);
   const forms = computeForms(matches, clubIds);
   const body = document.getElementById('leagueTableBody');
   body.innerHTML = '';
-  rows.forEach((row, idx) => {
+  sorted.forEach((row, idx) => {
     const tr = document.createElement('tr');
     if (idx < 4) tr.classList.add('top4');
-    const formHtml = (forms[row.club_id] || []).map(r => `<span class="form-dot ${r}"></span>`).join('');
+    const formHtml = (forms[row.club_id] || []).map(r => `<span class="${r}"></span>`).join('');
     tr.innerHTML = `
-      <td>${escapeHtml(byId(row.club_id)?.name || row.club_id)}</td>
+      <td>${idx + 1}</td>
+      <td class="club-name">${escapeHtml(byId(row.club_id)?.name || row.club_id)}</td>
       <td>${row.wins}</td>
       <td>${row.draws}</td>
       <td>${row.losses}</td>
       <td>${row.goals_for}</td>
       <td>${row.goals_against}</td>
       <td>${row.points}</td>
-      <td class="form">${formHtml}</td>
+      <td class="form-cell">${formHtml}</td>
     `;
     body.appendChild(tr);
   });
