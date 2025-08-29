@@ -218,7 +218,9 @@ const CLUB_NAMES = {
   '1969494': 'Club Frijol',
   '2491998': 'Royal Republic',
   '4819681': 'Everything Dead',
-  '52008': 'afc warriors'
+  '52008': 'afc warriors',
+  '2040883': 'Iron United',
+  '3160508': 'Mad Ladz 117'
 };
 
 
