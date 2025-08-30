@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UPCL — Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red-dark:#200;
+  --red-main:#700;
+  --red-accent:#a00;
+  --gold:#ffd700;
+  --black-box:#151515;
+}
+
+body {
+  margin:0;
+  font-family:'Montserrat',sans-serif;
+  background:#000;
+  color:#fff;
+}
+
+/* Header/Nav */
+header {
+  background:linear-gradient(90deg,var(--red-dark),var(--red-main));
+  padding:14px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+header h1 { margin:0; font-size:22px; font-weight:900; color:#fff; }
+.navbar { display:flex; gap:12px; }
+.navbar a {
+  text-decoration:none;
+  color:#fff;
+  background:var(--red-accent);
+  padding:6px 12px;
+  border-radius:8px;
+  font-weight:700;
+  font-size:14px;
+}
+.navbar a:hover { background:var(--gold); color:#111; }
+
+/* Ticker */
+.ticker {
+  background:#300;
+  padding:6px 12px;
+  font-size:14px;
+  overflow:hidden;
+  white-space:nowrap;
+}
+.ticker span {
+  display:inline-block;
+  padding-right:40px;
+  animation:scroll 20s linear infinite;
+}
+@keyframes scroll {
+  from { transform:translateX(100%); }
+  to { transform:translateX(-100%); }
+}
+
+/* Hero */
+.hero {
+  background:linear-gradient(180deg,#400,#000);
+  text-align:center;
+  padding:50px 20px;
+}
+.hero h2 {
+  font-size:32px;
+  font-weight:900;
+  margin:0 0 10px;
+}
+.hero p { font-size:16px; color:#ccc; }
+.hero button {
+  margin-top:20px;
+  background:var(--gold);
+  border:none;
+  color:#111;
+  padding:10px 20px;
+  border-radius:8px;
+  font-weight:700;
+  cursor:pointer;
+}
+.hero button:hover { background:#fff; }
+
+/* Main Layout */
+main {
+  display:grid;
+  grid-template-columns:2fr 1fr;
+  gap:20px;
+  padding:20px;
+}
+
+/* Unified dark boxes */
+.featured, .widget, .news, .clubs {
+  background:var(--black-box);
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:20px;
+  box-shadow:0 0 12px rgba(255,0,0,0.25);
+}
+
+/* Featured section */
+.featured img {
+  width:100%;
+  height:200px;
+  object-fit:cover;
+  border-radius:8px;
+}
+.featured .content { padding:10px 0 0; }
+.featured h3 { margin:0 0 8px; font-size:18px; }
+
+/* Section headers */
+.widget h4, .news h4, .clubs h4 {
+  margin:0 0 10px;
+  font-size:16px;
+  color:var(--gold);
+}
+
+/* Tables */
+.table { width:100%; border-collapse:collapse; font-size:14px; }
+.table th, .table td { padding:6px; text-align:left; }
+.table th { color:var(--gold); }
+.table tr:nth-child(even){ background:#1f1f1f; }
+
+/* News list */
+.news-item {
+  display:flex;
+  gap:10px;
+  margin-bottom:12px;
+}
+.news-item img {
+  width:60px;
+  height:40px;
+  object-fit:cover;
+  border-radius:6px;
+}
+.news-item div { flex:1; }
+.news-item h5 { margin:0; font-size:14px; }
+.news-item p { margin:2px 0 0; font-size:12px; color:#aaa; }
+
+/* Clubs mini grid */
+.club-grid {
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+.club {
+  background:#300;
+  border-radius:8px;
+  padding:10px;
+  text-align:center;
+  box-shadow:0 0 6px rgba(255,0,0,0.2);
+}
+.club img {
+  width:60px; height:60px; object-fit:contain;
+  margin-bottom:6px;
+}
+.club p { margin:0; font-size:13px; font-weight:700; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>UPCL</h1>
+  <nav class="navbar">
+    <a href="/">Home</a>
+    <a href="teams.html#league">League</a>
+    <a href="teams.html#fixtures">Fixtures</a>
+    <a href="teams.html#cup">Champions Cup</a>
+    <a href="teams.html#news">News</a>
+    <a href="teams.html#teams">Clubs</a>
+  </nav>
+</header>
+
+<div class="ticker">
+  <span id="tickerText">Real MVC defeat Royal Republic 5-0 | Luis scores 5 in 2 games | Champions Cup begins Sept 3rd</span>
+</div>
+
+<section class="hero">
+  <h2>United Pro Clubs League</h2>
+  <p>Where the World Unites to Play EA FC Pro Clubs</p>
+  <button onclick="location.href='teams.html#league'">View League</button>
+</section>
+
+<main>
+  <!-- Left column -->
+  <div>
+    <div class="featured" id="featuredMatch">
+      <img src="https://placehold.co/800x400" alt="Match">
+      <div class="content">
+        <h3>Match of the Day</h3>
+        <p id="featuredDesc">A dominant performance secures Real MVC as early league favorites.</p>
+      </div>
+    </div>
+
+    <div class="widget">
+      <h4>League</h4>
+      <table class="table" id="standingsTable">
+        <tr><th>#</th><th>Club</th><th>Pts</th></tr>
+      </table>
+    </div>
+
+    <div class="widget">
+      <h4>Top Scorers</h4>
+      <table class="table" id="scorersTable">
+        <tr><th>Player</th><th>Goals</th></tr>
+      </table>
+    </div>
+
+    <div class="widget">
+      <h4>Goals per 90</h4>
+      <table class="table" id="goals90Table">
+        <tr><th>Player</th><th>G/90</th></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div>
+    <div class="news">
+      <h4>Latest News</h4>
+      <div id="newsFeed">
+        <div class="news-item">
+          <div><h5>Loading news…</h5></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="clubs">
+      <h4>Featured Clubs</h4>
+      <div class="club-grid" id="clubGrid">
+        <div class="club"><img src="assets/logos/real-mvc.png" alt="Club"><p>Real MVC</p></div>
+        <div class="club"><img src="assets/logos/royal-republic.png" alt="Club"><p>Royal Republic</p></div>
+        <div class="club"><img src="assets/logos/elite-vt.png" alt="Club"><p>Elite VT</p></div>
+        <div class="club"><img src="assets/logos/club-frijol.png" alt="Club"><p>Club Frijol</p></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+function per90(val, mins){ const m = Number(mins)||0; return m ? (Number(val||0)/m)*90 : 0; }
+
+async function loadStandings(){
+  try{
+    const res = await fetch('/api/leagues/upcl');
+    const data = await res.json();
+    const rows = (data.standings||[]).slice(0,4);
+    const tbody = document.getElementById('standingsTable');
+    tbody.innerHTML = '<tr><th>#</th><th>Club</th><th>Pts</th></tr>' +
+      rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.club_name||r.club}</td><td>${r.points||r.pts||0}</td></tr>`).join('');
+  }catch(err){ console.error('standings', err); }
+}
+
+async function loadLeaders(){
+  try{
+    const res = await fetch('/api/leagues/upcl/leaders');
+    const data = await res.json();
+    const rows = (data.scorers||[]).slice(0,3);
+    const tbody = document.getElementById('scorersTable');
+    tbody.innerHTML = '<tr><th>Player</th><th>Goals</th></tr>' +
+      rows.map(p=>`<tr><td>${p.name}</td><td>${p.count}</td></tr>`).join('');
+  }catch(err){ console.error('leaders', err); }
+}
+
+async function loadGoals90(){
+  try{
+    const res = await fetch('/api/players');
+    const data = await res.json();
+    const players = (data.players||[]).map(p=>({name:p.name, g90:per90(p.goals,p.realtimegame)}));
+    players.sort((a,b)=>b.g90-a.g90);
+    const tbody = document.getElementById('goals90Table');
+    tbody.innerHTML = '<tr><th>Player</th><th>G/90</th></tr>' +
+      players.slice(0,5).map(p=>`<tr><td>${p.name}</td><td>${p.g90.toFixed(2)}</td></tr>`).join('');
+  }catch(err){ console.error('goals90', err); }
+}
+
+async function loadNews(){
+  try{
+    const res = await fetch('/api/cup/fixtures?cup=UPCL');
+    const data = await res.json();
+    const news = computeNews(data.fixtures||[]).slice(0,5);
+    const wrap = document.getElementById('newsFeed');
+    wrap.innerHTML = news.map(renderNewsItem).join('') || '<div class="news-item"><div><h5>No news yet.</h5></div></div>';
+  }catch(err){ console.error('news', err); }
+}
+
+function computeNews(fixtures){
+  const out=[]; const streaks=new Map();
+  const sorted=[...(fixtures||[])].sort((a,b)=>(a.when||0)-(b.when||0));
+  for(const f of sorted){
+    ['home','away'].forEach(side=>{
+      (f.details?.[side]||[]).forEach(r=>{
+        const name=r.player||r.playerId||'Unknown';
+        const g=Number(r.goals||0);
+        const meta=streaks.get(name)||{streak:0};
+        if(g>0){
+          meta.streak+=1;
+          if(g>=3){ out.push({title:`${name} nets ${g}`, body:`${name} scored ${g} in ${f.round||'League'}`, ts:f.when}); }
+          if(meta.streak>=4){ out.push({title:`${name} scoring streak`, body:`${name} has scored in ${meta.streak} straight matches`, ts:f.when}); }
+        }else{ meta.streak=0; }
+        streaks.set(name,meta);
+      });
+    });
+  }
+  out.sort((a,b)=>(b.ts||0)-(a.ts||0));
+  return out;
+}
+
+function renderNewsItem(n){
+  return `<div class="news-item"><div><h5>${n.title}</h5><p>${n.body}</p></div></div>`;
+}
+
+async function init(){
+  await Promise.all([loadStandings(), loadLeaders(), loadGoals90(), loadNews()]);
+}
+
+init();
+</script>
+
+</body>
+</html>
