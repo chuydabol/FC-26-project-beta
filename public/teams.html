@@ -248,7 +248,8 @@ h2{margin:0 0 10px}
 <header>
   <h1>UPCL</h1>
   <div class="navbar" aria-label="Primary">
-    <button id="navTeams"    aria-pressed="true">Teams</button>
+    <button id="navHome"     aria-pressed="true">Home</button>
+    <button id="navTeams"    aria-pressed="false">Teams</button>
     <button id="navNews"     aria-pressed="false">News</button>
     <button id="navMarket"   aria-pressed="false">Market</button>
     <button id="navFixturesPublic" aria-pressed="false">Fixtures</button>
@@ -263,8 +264,40 @@ h2{margin:0 0 10px}
 </header>
 
 <main>
+  <!-- HOME -->
+  <section id="home-view" class="tab-content">
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+      <div>
+        <div class="m-card">
+          <strong>League Standings</strong>
+          <table class="league-table" style="margin-top:6px">
+            <tbody id="homeStandingsBody"><tr><td colspan="3" class="muted">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="m-card">
+          <strong>Top Scorers</strong>
+          <table class="league-table" style="margin-top:6px">
+            <tbody id="homeScorersBody"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="m-card">
+          <strong>Goals per 90</strong>
+          <table class="league-table" style="margin-top:6px">
+            <tbody id="homeGoals90Body"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="m-card">
+          <strong>Latest News</strong>
+          <div id="homeNewsFeed" class="news-wrap" style="margin-top:6px"><div class="muted">Loading…</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- TEAMS -->
-  <section id="teams-view" aria-live="polite" class="tab-content">
+  <section id="teams-view" aria-live="polite" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <h2 style="margin:0">Teams</h2>
       <div class="muted">Total teams: <span id="teams-count">0</span></div>
@@ -729,6 +762,7 @@ async function resolvePlayerName(id){
 }
 
 // nav elements
+const navHome     = document.getElementById('navHome');
 const navTeams    = document.getElementById('navTeams');
 const navNews     = document.getElementById('navNews');
 const navMarket   = document.getElementById('navMarket');
@@ -738,6 +772,7 @@ const navChampions= document.getElementById('navChampions');
 const navLeague   = document.getElementById('navLeague');
 const navFriendlies = document.getElementById('navFriendlies');
 
+const homeView    = document.getElementById('home-view');
 const teamsViewEl = document.getElementById('teams-view');
 const newsView    = document.getElementById('news-view');
 const marketView  = document.getElementById('market-view');
@@ -751,6 +786,7 @@ function setNav(active){
   if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
   document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
   const s = {
+    home:[homeView, navHome],
     teams:[teamsViewEl, navTeams],
     news:[newsView, navNews],
     market:[marketView, navMarket],
@@ -767,6 +803,7 @@ function setNav(active){
     btn.setAttribute('aria-pressed', String(is));
   }
 }
+navHome.onclick        = async ()=>{ setNav('home'); await loadHome(); };
 navTeams.onclick       = ()=> setNav('teams');
 navNews.onclick        = async ()=>{ setNav('news'); await loadNews(); };
 navMarket.onclick      = ()=> setNav('market');
@@ -2117,6 +2154,55 @@ function renderNewsItem(n){
     </div>
   </article>`;
 }
+async function loadHome(){
+  await Promise.all([
+    loadHomeStandings(),
+    loadHomeScorers(),
+    loadHomeGoals90(),
+    loadHomeNews()
+  ]);
+}
+async function loadHomeStandings(){
+  try{
+    const d = await apiGet('/api/leagues/upcl');
+    const rows = (d.standings||[]).slice(0,4);
+    const tbody = document.getElementById('homeStandingsBody');
+    tbody.innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td class="club-name">${escapeHtml(r.club_name||r.club)}</td><td>${r.points||r.pts||0}</td></tr>`).join('');
+  }catch(err){ console.error('standings', err); }
+}
+async function loadHomeScorers(){
+  try{
+    const d = await apiGet('/api/leagues/upcl/leaders');
+    const rows = (d.scorers||[]).slice(0,3);
+    const tbody = document.getElementById('homeScorersBody');
+    tbody.innerHTML = rows.map(p=>`<tr><td class="club-name">${escapeHtml(p.name)}</td><td>${p.count}</td></tr>`).join('');
+  }catch(err){ console.error('leaders', err); }
+}
+async function loadHomeGoals90(){
+  try{
+    const d = await apiGet('/api/players');
+    const players = (d.players||[]).map(p=>({name:p.name, g90:per90(p.goals,p.realtimegame)}));
+    players.sort((a,b)=>b.g90-a.g90);
+    const tbody = document.getElementById('homeGoals90Body');
+    tbody.innerHTML = players.slice(0,5).map(p=>`<tr><td class="club-name">${escapeHtml(p.name)}</td><td>${p.g90.toFixed(2)}</td></tr>`).join('');
+  }catch(err){ console.error('goals90', err); }
+}
+async function loadHomeNews(){
+  const wrap = document.getElementById('homeNewsFeed');
+  try{
+    await refreshFixturesPublic();
+    const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
+    const fr = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`).catch(()=>({fixtures:[]}));
+    const computed = await computeNewsFromFixtures([
+      ...fixturesPublicCache,
+      ...normalizeFixtures(cc.fixtures||[]),
+      ...normalizeFixtures(fr.fixtures||[])
+    ]);
+    wrap.innerHTML = computed.slice(0,5).map(renderNewsItem).join('') || '<div class="muted">No news yet.</div>';
+  }catch{
+    wrap.innerHTML = '<div class="muted">Failed to load news.</div>';
+  }
+}
 async function computeNewsFromFixtures(list){
   const out = [];
   const byPlayer = new Map(); // name => { goalStreak, assistStreak, contribStreak, lastAt }
@@ -2209,7 +2295,8 @@ async function init(){
   await checkMe();
 
   // default
-  setNav('teams');
+  setNav('home');
+  await loadHome();
 
   await refreshMatches();
   setInterval(async () => { await refreshMatches(); }, 10*60*1000);
