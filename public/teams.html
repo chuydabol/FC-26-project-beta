@@ -238,6 +238,67 @@ h2{margin:0 0 10px}
 }
 #intro.hidden{opacity:0;pointer-events:none;}
 #intro img{max-width:80vw;max-height:80vh;}
+
+/* Home dashboard styling */
+.ticker{
+  background:#300;
+  padding:6px 12px;
+  font-size:14px;
+  overflow:hidden;
+  white-space:nowrap;
+}
+.ticker span{
+  display:inline-block;
+  padding-right:40px;
+  animation:scroll 20s linear infinite;
+}
+@keyframes scroll{
+  from{transform:translateX(100%);}
+  to{transform:translateX(-100%);}
+}
+.hero{
+  background:linear-gradient(180deg,#400,#000);
+  text-align:center;
+  padding:50px 20px;
+}
+.hero h2{font-size:32px;font-weight:900;margin:0 0 10px}
+.hero p{font-size:16px;color:#ccc}
+.hero button{
+  margin-top:20px;
+  background:#ffd700;
+  border:none;
+  color:#111;
+  padding:10px 20px;
+  border-radius:8px;
+  font-weight:700;
+  cursor:pointer;
+}
+.hero button:hover{background:#fff}
+.home-layout{display:grid;grid-template-columns:2fr 1fr;gap:20px;padding:20px}
+.featured,.widget,.news,.clubs{
+  background:#151515;
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:20px;
+  box-shadow:0 0 12px rgba(255,0,0,0.25);
+}
+.featured img{width:100%;height:200px;object-fit:cover;border-radius:8px}
+.featured .content{padding:10px 0 0}
+.featured h3{margin:0 0 8px;font-size:18px}
+.widget h4,.news h4,.clubs h4{margin:0 0 10px;font-size:16px;color:#ffd700}
+.table{width:100%;border-collapse:collapse;font-size:14px}
+.table th,.table td{padding:6px;text-align:left}
+.table th{color:#ffd700}
+.table tr:nth-child(even){background:#1f1f1f}
+.news-item{display:flex;gap:10px;margin-bottom:12px}
+.news-item img{width:60px;height:40px;object-fit:cover;border-radius:6px}
+.news-item div{flex:1}
+.news-item h5{margin:0;font-size:14px}
+.news-item p{margin:2px 0 0;font-size:12px;color:#aaa}
+.club-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.club{background:#300;border-radius:8px;padding:10px;text-align:center;box-shadow:0 0 6px rgba(255,0,0,0.2)}
+.club img{width:60px;height:60px;object-fit:contain;margin-bottom:6px}
+.club p{margin:0;font-size:13px;font-weight:700}
 </style>
 </head>
 <body>
@@ -248,7 +309,8 @@ h2{margin:0 0 10px}
 <header>
   <h1>UPCL</h1>
   <div class="navbar" aria-label="Primary">
-    <button id="navTeams"    aria-pressed="true">Teams</button>
+    <button id="navHome"     aria-pressed="true">Home</button>
+    <button id="navTeams"    aria-pressed="false">Teams</button>
     <button id="navNews"     aria-pressed="false">News</button>
     <button id="navMarket"   aria-pressed="false">Market</button>
     <button id="navFixturesPublic" aria-pressed="false">Fixtures</button>
@@ -263,8 +325,65 @@ h2{margin:0 0 10px}
 </header>
 
 <main>
+  <!-- HOME -->
+  <section id="home-view" class="tab-content">
+    <div class="ticker"><span id="homeTickerText">Real MVC defeat Royal Republic 5-0 | Luis scores 5 in 2 games | Champions Cup begins Sept 3rd</span></div>
+    <section class="hero">
+      <h2>United Pro Clubs League</h2>
+      <p>Where the World Unites to Play EA FC Pro Clubs</p>
+      <button onclick="setNav('league')">View League</button>
+    </section>
+    <div class="home-layout">
+      <div>
+        <div class="featured">
+          <img src="https://placehold.co/800x400" alt="Match">
+          <div class="content">
+            <h3>Match of the Day</h3>
+            <p id="homeFeaturedDesc">A dominant performance secures Real MVC as early league favorites.</p>
+          </div>
+        </div>
+        <div class="widget">
+          <h4>League</h4>
+          <table class="table">
+            <thead><tr><th>#</th><th>Club</th><th>Pts</th></tr></thead>
+            <tbody id="homeStandingsBody"><tr><td colspan="3" class="muted">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="widget">
+          <h4>Top Scorers</h4>
+          <table class="table">
+            <thead><tr><th>Player</th><th>Goals</th></tr></thead>
+            <tbody id="homeScorersBody"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="widget">
+          <h4>Goals per 90</h4>
+          <table class="table">
+            <thead><tr><th>Player</th><th>G/90</th></tr></thead>
+            <tbody id="homeGoals90Body"><tr><td colspan="2" class="muted">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <div class="news">
+          <h4>Latest News</h4>
+          <div id="homeNewsFeed"><div class="news-item"><div><h5>Loading…</h5></div></div></div>
+        </div>
+        <div class="clubs">
+          <h4>Featured Clubs</h4>
+          <div class="club-grid">
+            <div class="club"><img src="assets/logos/real-mvc.png" alt="Club"><p>Real MVC</p></div>
+            <div class="club"><img src="assets/logos/royal-republic.png" alt="Club"><p>Royal Republic</p></div>
+            <div class="club"><img src="assets/logos/elite-vt.png" alt="Club"><p>Elite VT</p></div>
+            <div class="club"><img src="assets/logos/club-frijol.png" alt="Club"><p>Club Frijol</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- TEAMS -->
-  <section id="teams-view" aria-live="polite" class="tab-content">
+  <section id="teams-view" aria-live="polite" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <h2 style="margin:0">Teams</h2>
       <div class="muted">Total teams: <span id="teams-count">0</span></div>
@@ -499,7 +618,7 @@ h2{margin:0 0 10px}
   <!-- LEAGUE STANDINGS -->
   <section id="leagueView" class="tab-content" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-      <h2>League Standings</h2>
+      <h2>League</h2>
       <div id="statsBtnHolderLeague">
         <button id="statsToggleBtn" class="chip">Stats</button>
       </div>
@@ -729,6 +848,7 @@ async function resolvePlayerName(id){
 }
 
 // nav elements
+const navHome     = document.getElementById('navHome');
 const navTeams    = document.getElementById('navTeams');
 const navNews     = document.getElementById('navNews');
 const navMarket   = document.getElementById('navMarket');
@@ -738,6 +858,7 @@ const navChampions= document.getElementById('navChampions');
 const navLeague   = document.getElementById('navLeague');
 const navFriendlies = document.getElementById('navFriendlies');
 
+const homeView    = document.getElementById('home-view');
 const teamsViewEl = document.getElementById('teams-view');
 const newsView    = document.getElementById('news-view');
 const marketView  = document.getElementById('market-view');
@@ -751,6 +872,7 @@ function setNav(active){
   if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
   document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
   const s = {
+    home:[homeView, navHome],
     teams:[teamsViewEl, navTeams],
     news:[newsView, navNews],
     market:[marketView, navMarket],
@@ -767,6 +889,7 @@ function setNav(active){
     btn.setAttribute('aria-pressed', String(is));
   }
 }
+navHome.onclick        = async ()=>{ setNav('home'); await loadHome(); };
 navTeams.onclick       = ()=> setNav('teams');
 navNews.onclick        = async ()=>{ setNav('news'); await loadNews(); };
 navMarket.onclick      = ()=> setNav('market');
@@ -2117,6 +2240,58 @@ function renderNewsItem(n){
     </div>
   </article>`;
 }
+async function loadHome(){
+  await Promise.all([
+    loadHomeStandings(),
+    loadHomeScorers(),
+    loadHomeGoals90(),
+    loadHomeNews()
+  ]);
+}
+async function loadHomeStandings(){
+  try{
+    const d = await apiGet('/api/leagues/upcl');
+    const rows = (d.standings||[]).slice(0,4);
+    const tbody = document.getElementById('homeStandingsBody');
+    tbody.innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td class="club-name">${escapeHtml(r.club_name||r.club)}</td><td>${r.points||r.pts||0}</td></tr>`).join('');
+  }catch(err){ console.error('standings', err); }
+}
+async function loadHomeScorers(){
+  try{
+    const d = await apiGet('/api/leagues/upcl/leaders');
+    const rows = (d.scorers||[]).slice(0,3);
+    const tbody = document.getElementById('homeScorersBody');
+    tbody.innerHTML = rows.map(p=>`<tr><td class="club-name">${escapeHtml(p.name)}</td><td>${p.count}</td></tr>`).join('');
+  }catch(err){ console.error('leaders', err); }
+}
+async function loadHomeGoals90(){
+  try{
+    const d = await apiGet('/api/players');
+    const players = (d.players||[]).map(p=>({name:p.name, g90:per90(p.goals,p.realtimegame)}));
+    players.sort((a,b)=>b.g90-a.g90);
+    const tbody = document.getElementById('homeGoals90Body');
+    tbody.innerHTML = players.slice(0,5).map(p=>`<tr><td class="club-name">${escapeHtml(p.name)}</td><td>${p.g90.toFixed(2)}</td></tr>`).join('');
+  }catch(err){ console.error('goals90', err); }
+}
+async function loadHomeNews(){
+  const wrap = document.getElementById('homeNewsFeed');
+  try{
+    await refreshFixturesPublic();
+    const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
+    const fr = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(FRIENDLIES_ID)}`).catch(()=>({fixtures:[]}));
+    const computed = await computeNewsFromFixtures([
+      ...fixturesPublicCache,
+      ...normalizeFixtures(cc.fixtures||[]),
+      ...normalizeFixtures(fr.fixtures||[])
+    ]);
+    const items = computed.slice(0,5).map(n=>`<div class="news-item"><div><h5>${escapeHtml(n.title)}</h5><p>${escapeHtml(n.body)}</p></div></div>`).join('');
+    wrap.innerHTML = items || '<div class="news-item"><div><h5>No news yet.</h5></div></div>';
+    const ticker = document.getElementById('homeTickerText');
+    if (ticker){ ticker.textContent = computed.slice(0,3).map(n=>n.title).join(' | ') || ticker.textContent; }
+  }catch{
+    wrap.innerHTML = '<div class="muted">Failed to load news.</div>';
+  }
+}
 async function computeNewsFromFixtures(list){
   const out = [];
   const byPlayer = new Map(); // name => { goalStreak, assistStreak, contribStreak, lastAt }
@@ -2209,7 +2384,8 @@ async function init(){
   await checkMe();
 
   // default
-  setNav('teams');
+  setNav('home');
+  await loadHome();
 
   await refreshMatches();
   setInterval(async () => { await refreshMatches(); }, 10*60*1000);
