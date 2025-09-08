@@ -51,6 +51,9 @@ h2{margin:0 0 10px}
 .center{text-align:center}
 .chip{background:#220000;border:1px solid #440000;border-radius:999px;padding:4px 8px;font-size:12px}
 
+/* Home section */
+.home-grid{display:grid;gap:16px;margin-top:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+
 /* Teams grid/cards */
 .teams-grid{
   display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
@@ -248,6 +251,7 @@ h2{margin:0 0 10px}
 <header>
   <h1>UPCL</h1>
   <div class="navbar" aria-label="Primary">
+    <button id="navHome" data-view="home" aria-pressed="false">Home</button>
     <button id="navTeams"    aria-pressed="true">Teams</button>
     <button id="navNews"     aria-pressed="false">News</button>
     <button id="navMarket"   aria-pressed="false">Market</button>
@@ -263,6 +267,30 @@ h2{margin:0 0 10px}
 </header>
 
 <main>
+  <section id="home" class="tab-content" style="display:none">
+    <div class="home-grid">
+      <div class="m-card">
+        <strong>Match of the Day</strong>
+        <div id="homeMotd" class="muted" style="margin-top:6px">Loading…</div>
+      </div>
+      <div class="m-card">
+        <strong>Latest News</strong>
+        <div id="homeNews" class="news-wrap" style="margin-top:6px"><div class="muted">Loading…</div></div>
+      </div>
+      <div class="m-card">
+        <strong>Featured Clubs</strong>
+        <div id="homeClubs" class="teams-grid" style="margin-top:6px"></div>
+      </div>
+      <div class="m-card">
+        <strong>League Standings</strong>
+        <div id="homeStandings" class="muted" style="margin-top:6px">Loading…</div>
+      </div>
+      <div class="m-card">
+        <strong>Top Scorers</strong>
+        <div id="homeScorers" class="muted" style="margin-top:6px">Loading…</div>
+      </div>
+    </div>
+  </section>
   <!-- TEAMS -->
   <section id="teams-view" aria-live="polite" class="tab-content">
     <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -636,6 +664,7 @@ h2{margin:0 0 10px}
   </div>
 </div>
 
+<script src="js/home.js"></script>
 <script>
 // =======================
 //   CONFIG / CONSTANTS
@@ -729,6 +758,7 @@ async function resolvePlayerName(id){
 }
 
 // nav elements
+const navHome     = document.getElementById('navHome');
 const navTeams    = document.getElementById('navTeams');
 const navNews     = document.getElementById('navNews');
 const navMarket   = document.getElementById('navMarket');
@@ -738,6 +768,7 @@ const navChampions= document.getElementById('navChampions');
 const navLeague   = document.getElementById('navLeague');
 const navFriendlies = document.getElementById('navFriendlies');
 
+const homeView    = document.getElementById('home');
 const teamsViewEl = document.getElementById('teams-view');
 const newsView    = document.getElementById('news-view');
 const marketView  = document.getElementById('market-view');
@@ -751,6 +782,7 @@ function setNav(active){
   if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
   document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
   const s = {
+    home:[homeView, navHome],
     teams:[teamsViewEl, navTeams],
     news:[newsView, navNews],
     market:[marketView, navMarket],
@@ -767,6 +799,7 @@ function setNav(active){
     btn.setAttribute('aria-pressed', String(is));
   }
 }
+navHome.onclick        = async ()=>{ setNav('home'); await loadHome(); };
 navTeams.onclick       = ()=> setNav('teams');
 navNews.onclick        = async ()=>{ setNav('news'); await loadNews(); };
 navMarket.onclick      = ()=> setNav('market');
@@ -2207,6 +2240,7 @@ async function init(){
   await loadPlayers();
   await checkAdmin();
   await checkMe();
+  await loadHome();
 
   // default
   setNav('teams');
