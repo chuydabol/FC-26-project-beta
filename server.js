@@ -26,7 +26,6 @@ const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
 const { rebuildUpclStandings } = require('./scripts/rebuildUpclStandings');
 const { rebuildUpclLeaders } = require('./scripts/rebuildUpclLeaders');
-const { resetSeason } = require('./scripts/resetSeason');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
@@ -438,22 +437,6 @@ app.post('/api/admin/logout', (req, res) => {
 
 app.get('/api/admin/me', (req, res) => {
   res.json({ admin: !!req.session?.isAdmin });
-});
-
-app.post('/api/admin/reset-season', async (req, res) => {
-  const isSessionAdmin = !!req.session?.isAdmin;
-  const hasToken = ADMIN_TOKEN && req.get('x-admin-token') === ADMIN_TOKEN;
-  if (!isSessionAdmin && !hasToken) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  try {
-    await resetSeason();
-    res.json({ ok: true });
-  } catch (err) {
-    logger.error({ err }, 'Failed resetting season');
-    res.status(500).json({ error: 'Failed to reset season' });
-  }
 });
 
 app.post('/admin/migrate', async (req, res) => {
