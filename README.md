@@ -48,6 +48,26 @@ Update these variables at the start of each season to adjust the range. Use
 `scripts/rebuildLeagueStandings.js` to refresh the `mv_league_standings`
 materialized view.
 
+## Resetting a Season
+
+The `scripts/resetSeason.js` helper clears stored match data and zeros player
+totals. Run it manually with:
+
+```bash
+node scripts/resetSeason.js
+```
+
+The server also exposes an admin-only endpoint to perform the same workflow:
+
+```
+POST /api/admin/reset-season
+```
+
+This route accepts either an authenticated admin session created via
+`POST /api/admin/login` or an `x-admin-token` header that matches the
+`ADMIN_TOKEN` environment variable. Ensure `ADMIN_PASSWORD`, `SESSION_SECRET`,
+and (optionally) `ADMIN_TOKEN` are configured before invoking the reset.
+
 ## Card Assets
 
 Place card frame PNGs in `public/assets/cards/` with the following names:
