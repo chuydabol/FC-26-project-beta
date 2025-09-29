@@ -1013,7 +1013,7 @@ async function upgradeClubPlayers(clubId, container){
   }
 }
 async function openTeamView(clubId){
-  document.querySelector('.teams-grid').style.display = 'none';
+  teamsGrid.style.display = 'none';
   const teamView = document.getElementById('teamView');
   teamView.style.display = 'block';
   const team = byId(clubId);
@@ -1044,7 +1044,7 @@ async function openTeamView(clubId){
 
 function closeTeamView(){
   document.getElementById('teamView').style.display = 'none';
-  document.querySelector('.teams-grid').style.display = 'grid';
+  teamsGrid.style.display = 'grid';
 }
 
 
