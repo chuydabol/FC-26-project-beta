@@ -770,7 +770,7 @@ app.get('/api/league/leaders', async (_req, res) => {
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1)
+     WHERE pms.club_id = ANY($1::text[])
        AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name
@@ -780,7 +780,7 @@ app.get('/api/league/leaders', async (_req, res) => {
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1)
+     WHERE pms.club_id = ANY($1::text[])
        AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name
