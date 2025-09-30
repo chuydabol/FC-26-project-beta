@@ -29,8 +29,8 @@ const { rebuildUpclLeaders } = require('./scripts/rebuildUpclLeaders');
 
 // SQL statements for saving EA matches
 const SQL_INSERT_MATCH = `
-  INSERT INTO public.matches (match_id, ts_ms, raw)
-  VALUES ($1, $2, $3::jsonb)
+  INSERT INTO public.matches (match_id, ts_ms, raw, home_division, away_division)
+  VALUES ($1, $2, $3::jsonb, $4, $5)
   ON CONFLICT (match_id) DO NOTHING
 `;
 
@@ -320,10 +320,64 @@ async function saveEaMatch(match) {
   const matchId = String(match.matchId);
   const tsMs = Number(match.timestamp) * 1000;
   if (tsMs < LEAGUE_START_MS) return;
-  const { rowCount } = await q(SQL_INSERT_MATCH, [matchId, tsMs, match]);
+  const clubs = match.clubs || {};
+  const clubEntries = Object.entries(clubs).map(([cid, c]) => {
+    const details = c?.details || {};
+    const name = typeof details.name === 'string' ? details.name.trim() : '';
+    return {
+      clubId: cid,
+      name,
+      isHome: parseHomeIndicator(details.isHome),
+    };
+  });
+
+  let homeDivision = null;
+  let awayDivision = null;
+
+  if (clubEntries.length) {
+    const divisionLookups = await Promise.all(
+      clubEntries.map(async info => {
+        if (!info.name) {
+          return { ...info, division: null };
+        }
+        try {
+          const division = await limit(() =>
+            eaApi.fetchClubDivisionByName(info.name)
+          );
+          return { ...info, division };
+        } catch (err) {
+          logger.warn(
+            { err, clubId: info.clubId, clubName: info.name },
+            'Failed fetching leaderboard division'
+          );
+          return { ...info, division: null };
+        }
+      })
+    );
+
+    let homeEntry = divisionLookups.find(entry => entry.isHome === true) || null;
+    let awayEntry = divisionLookups.find(entry => entry.isHome === false) || null;
+
+    if (!homeEntry && divisionLookups.length) {
+      homeEntry = divisionLookups[0];
+    }
+    if (!awayEntry) {
+      awayEntry = divisionLookups.find(entry => entry !== homeEntry) || null;
+    }
+
+    homeDivision = homeEntry?.division ?? null;
+    awayDivision = awayEntry?.division ?? null;
+  }
+
+  const { rowCount } = await q(SQL_INSERT_MATCH, [
+    matchId,
+    tsMs,
+    match,
+    homeDivision,
+    awayDivision,
+  ]);
   if (rowCount === 0) return;
 
-  const clubs = match.clubs || {};
   for (const cid of Object.keys(clubs)) {
     const c = clubs[cid];
     const name = c?.details?.name || `Club ${cid}`;

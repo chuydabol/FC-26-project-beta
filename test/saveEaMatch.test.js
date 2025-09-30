@@ -5,11 +5,17 @@ process.env.DATABASE_URL = 'postgres://user:pass@localhost:5432/db';
 
 const { pool } = require('../db');
 const { saveEaMatch } = require('../server');
+const eaApi = require('../services/eaApi');
 const { rebuildPlayerStats } = require('../scripts/rebuildPlayerStats');
 
 const LEAGUE_START_SEC = Date.parse('2025-08-27T23:59:00-07:00') / 1000;
 
 test('saveEaMatch stores home/away flags for clubs', async () => {
+  const divisionStub = mock.method(eaApi, 'fetchClubDivisionByName', async name => {
+    if (name === 'Alpha') return 2;
+    if (name === 'Beta') return 4;
+    return null;
+  });
   const calls = [];
   const queryStub = mock.method(pool, 'query', async (sql, params) => {
     if (/INSERT INTO public\.match_participants/i.test(sql)) {
@@ -18,25 +24,73 @@ test('saveEaMatch stores home/away flags for clubs', async () => {
     return { rows: [], rowCount: 1 };
   });
 
-  const match = {
-    matchId: 'm1',
-    timestamp: LEAGUE_START_SEC + 60,
-    clubs: {
-      '10': { details: { name: 'Alpha', isHome: 1 }, goals: 3 },
-      '20': { details: { name: 'Beta', isHome: 0 }, goals: 1 },
-    },
-  };
+  try {
+    const match = {
+      matchId: 'm1',
+      timestamp: LEAGUE_START_SEC + 60,
+      clubs: {
+        '10': { details: { name: 'Alpha', isHome: 1 }, goals: 3 },
+        '20': { details: { name: 'Beta', isHome: 0 }, goals: 1 },
+      },
+    };
 
-  await saveEaMatch(match);
+    await saveEaMatch(match);
 
-  queryStub.mock.restore();
-  assert.deepStrictEqual(calls, [
-    ['m1', '10', true, 3],
-    ['m1', '20', false, 1],
-  ]);
+    assert.deepStrictEqual(calls, [
+      ['m1', '10', true, 3],
+      ['m1', '20', false, 1],
+    ]);
+  } finally {
+    queryStub.mock.restore();
+    divisionStub.mock.restore();
+  }
+});
+
+test('saveEaMatch persists club divisions from leaderboard search', async () => {
+  const divisionStub = mock.method(eaApi, 'fetchClubDivisionByName', async name => {
+    if (name === 'Alpha') return 5;
+    if (name === 'Beta') return 7;
+    return null;
+  });
+  const matchesParams = [];
+  const queryStub = mock.method(pool, 'query', async (sql, params) => {
+    if (/INSERT INTO public\.matches/i.test(sql)) {
+      matchesParams.push(params);
+      return { rowCount: 1 };
+    }
+    if (/INSERT INTO public\.match_participants/i.test(sql)) {
+      return { rowCount: 1 };
+    }
+    if (/INSERT INTO public\.clubs/i.test(sql)) {
+      return { rowCount: 1 };
+    }
+    return { rowCount: 1 };
+  });
+
+  try {
+    const match = {
+      matchId: 'div1',
+      timestamp: LEAGUE_START_SEC + 240,
+      clubs: {
+        '1': { details: { name: 'Alpha', isHome: 1 }, goals: 4 },
+        '2': { details: { name: 'Beta', isHome: 0 }, goals: 3 },
+      },
+    };
+
+    await saveEaMatch(match);
+  } finally {
+    queryStub.mock.restore();
+    divisionStub.mock.restore();
+  }
+
+  assert.strictEqual(matchesParams.length, 1);
+  const params = matchesParams[0];
+  assert.strictEqual(params[3], 5);
+  assert.strictEqual(params[4], 7);
 });
 
 test('saveEaMatch normalizes string and boolean home flags', async () => {
+  const divisionStub = mock.method(eaApi, 'fetchClubDivisionByName', async () => 1);
   const calls = [];
   const queryStub = mock.method(pool, 'query', async (sql, params) => {
     if (/INSERT INTO public\.match_participants/i.test(sql)) {
@@ -45,36 +99,40 @@ test('saveEaMatch normalizes string and boolean home flags', async () => {
     return { rows: [], rowCount: 1 };
   });
 
-  const matches = [
-    {
-      matchId: 'm1b',
-      timestamp: LEAGUE_START_SEC + 120,
-      clubs: {
-        '30': { details: { name: 'Gamma', isHome: 'true' }, goals: 2 },
-        '40': { details: { name: 'Delta', isHome: 'false' }, goals: 2 },
+  try {
+    const matches = [
+      {
+        matchId: 'm1b',
+        timestamp: LEAGUE_START_SEC + 120,
+        clubs: {
+          '30': { details: { name: 'Gamma', isHome: 'true' }, goals: 2 },
+          '40': { details: { name: 'Delta', isHome: 'false' }, goals: 2 },
+        },
       },
-    },
-    {
-      matchId: 'm1c',
-      timestamp: LEAGUE_START_SEC + 180,
-      clubs: {
-        '50': { details: { name: 'Epsilon', isHome: 'home' }, goals: 1 },
-        '60': { details: { name: 'Zeta', isHome: false }, goals: 3 },
+      {
+        matchId: 'm1c',
+        timestamp: LEAGUE_START_SEC + 180,
+        clubs: {
+          '50': { details: { name: 'Epsilon', isHome: 'home' }, goals: 1 },
+          '60': { details: { name: 'Zeta', isHome: false }, goals: 3 },
+        },
       },
-    },
-  ];
+    ];
 
-  for (const match of matches) {
-    await saveEaMatch(match);
+    for (const match of matches) {
+      await saveEaMatch(match);
+    }
+
+    assert.deepStrictEqual(calls, [
+      ['m1b', '30', true, 2],
+      ['m1b', '40', false, 2],
+      ['m1c', '50', true, 1],
+      ['m1c', '60', false, 3],
+    ]);
+  } finally {
+    queryStub.mock.restore();
+    divisionStub.mock.restore();
   }
-
-  queryStub.mock.restore();
-  assert.deepStrictEqual(calls, [
-    ['m1b', '30', true, 2],
-    ['m1b', '40', false, 2],
-    ['m1c', '50', true, 1],
-    ['m1c', '60', false, 3],
-  ]);
 });
 
 test('saveEaMatch skips matches before league start', async () => {
@@ -90,6 +148,9 @@ test('saveEaMatch skips matches before league start', async () => {
 });
 
 test('duplicate saveEaMatch calls do not double-count player stats', async () => {
+  const divisionStub = mock.method(eaApi, 'fetchClubDivisionByName', async name =>
+    name === 'Alpha' ? 2 : null
+  );
   const players = new Map();
   const pms = new Map();
 
@@ -145,15 +206,22 @@ test('duplicate saveEaMatch calls do not double-count player stats', async () =>
     },
   };
 
-  await saveEaMatch(match);
-  await saveEaMatch(match);
+  try {
+    await saveEaMatch(match);
+    await saveEaMatch(match);
+  } finally {
+    queryStub.mock.restore();
+    divisionStub.mock.restore();
+  }
 
-  queryStub.mock.restore();
   const stats = players.get('p1_10');
   assert.deepStrictEqual(stats, { goals: 2, assists: 1 });
 });
 
 test('rebuildPlayerStats recomputes totals matching team goals', async () => {
+  const divisionStub = mock.method(eaApi, 'fetchClubDivisionByName', async name =>
+    name === 'Alpha' ? 3 : null
+  );
   const players = new Map();
   const pms = new Map();
   const teamGoals = new Map();
@@ -229,12 +297,16 @@ test('rebuildPlayerStats recomputes totals matching team goals', async () => {
     },
   };
 
-  await saveEaMatch(match);
-  // Corrupt player totals
-  players.set('p1_10', { goals: 0, assists: 0 });
-  await rebuildPlayerStats();
+  try {
+    await saveEaMatch(match);
+    // Corrupt player totals
+    players.set('p1_10', { goals: 0, assists: 0 });
+    await rebuildPlayerStats();
+  } finally {
+    queryStub.mock.restore();
+    divisionStub.mock.restore();
+  }
 
-  queryStub.mock.restore();
   const stats = players.get('p1_10');
   assert.strictEqual(stats.goals, teamGoals.get('10'));
 });
