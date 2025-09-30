@@ -36,6 +36,47 @@ test('saveEaMatch stores home/away flags for clubs', async () => {
   ]);
 });
 
+test('saveEaMatch normalizes string and boolean home flags', async () => {
+  const calls = [];
+  const queryStub = mock.method(pool, 'query', async (sql, params) => {
+    if (/INSERT INTO public\.match_participants/i.test(sql)) {
+      calls.push(params);
+    }
+    return { rows: [], rowCount: 1 };
+  });
+
+  const matches = [
+    {
+      matchId: 'm1b',
+      timestamp: LEAGUE_START_SEC + 120,
+      clubs: {
+        '30': { details: { name: 'Gamma', isHome: 'true' }, goals: 2 },
+        '40': { details: { name: 'Delta', isHome: 'false' }, goals: 2 },
+      },
+    },
+    {
+      matchId: 'm1c',
+      timestamp: LEAGUE_START_SEC + 180,
+      clubs: {
+        '50': { details: { name: 'Epsilon', isHome: 'home' }, goals: 1 },
+        '60': { details: { name: 'Zeta', isHome: false }, goals: 3 },
+      },
+    },
+  ];
+
+  for (const match of matches) {
+    await saveEaMatch(match);
+  }
+
+  queryStub.mock.restore();
+  assert.deepStrictEqual(calls, [
+    ['m1b', '30', true, 2],
+    ['m1b', '40', false, 2],
+    ['m1c', '50', true, 1],
+    ['m1c', '60', false, 3],
+  ]);
+});
+
 test('saveEaMatch skips matches before league start', async () => {
   const queryStub = mock.method(pool, 'query', async () => {
     throw new Error('should not query');

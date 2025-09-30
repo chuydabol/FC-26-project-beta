@@ -181,6 +181,25 @@ function clubsForLeague(id) {
 }
 const DEFAULT_LEAGUE_ID = process.env.DEFAULT_LEAGUE_ID || 'UPCL_LEAGUE_2025';
 
+function parseHomeIndicator(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'number') {
+    return value !== 0;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return false;
+    if (normalized === 'home' || normalized === 'true') return true;
+    if (normalized === 'away' || normalized === 'false') return false;
+    if (/^[-+]?\d+(\.0+)?$/.test(normalized)) {
+      return Number(normalized) !== 0;
+    }
+  }
+  return Boolean(value);
+}
+
 // League standings include only matches within this date range (Unix ms)
 // Defaults reflect the current season but can be overridden via environment
 // variables. Values may be provided as Unix millisecond timestamps or ISO
@@ -306,7 +325,7 @@ async function saveEaMatch(match) {
     const c = clubs[cid];
     const name = c?.details?.name || `Club ${cid}`;
     const goals = Number(c?.goals || 0);
-    const isHome = Number(c?.details?.isHome) === 1;
+    const isHome = parseHomeIndicator(c?.details?.isHome);
     await q(SQL_UPSERT_CLUB, [cid, name]);
     await q(SQL_UPSERT_PARTICIPANT, [matchId, cid, isHome, goals]);
   }
