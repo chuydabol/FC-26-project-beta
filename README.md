@@ -32,20 +32,18 @@ LOG_LEVEL=debug node server.js
 
 ## Season Date Range
 
-Endpoints that return league standings or leaderboards only consider matches
-within a specific season window. By default the server uses the current season's
-range, but you can override it with the `LEAGUE_START_MS` and
-`LEAGUE_END_MS` environment variables. Each variable accepts either a Unix
-millisecond timestamp or an ISO date string. For example:
+When importing fixtures from EA the server ignores matches that occurred before
+`LEAGUE_START_MS`. The default value reflects the current season's opening day,
+but you can override it with an environment variable. The variable accepts
+either a Unix millisecond timestamp or an ISO date string. For example:
 
 ```bash
 LEAGUE_START_MS="2026-08-25T23:59:00-07:00" \
-LEAGUE_END_MS="2026-09-01T23:59:00-07:00" \
 node server.js
 ```
 
-Update these variables at the start of each season to adjust the range. Use
-`scripts/rebuildLeagueStandings.js` to refresh the `mv_league_standings`
+Update this variable at the start of each season to adjust the import window.
+Use `scripts/rebuildLeagueStandings.js` to refresh the `mv_league_standings`
 materialized view.
 
 ## Card Assets

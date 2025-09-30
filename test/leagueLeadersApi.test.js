@@ -7,9 +7,7 @@ process.env.LEAGUE_CLUBS_PATH = path.join(__dirname, 'fixtures', 'leagueClubs.js
 process.env.DEFAULT_LEAGUE_ID = 'test';
 // Override league range to ensure server reads from environment variables
 const LEAGUE_START_MS = 123456;
-const LEAGUE_END_MS = 789012;
 process.env.LEAGUE_START_MS = String(LEAGUE_START_MS);
-process.env.LEAGUE_END_MS = String(LEAGUE_END_MS);
 
 const { pool } = require('../db');
 
@@ -31,12 +29,12 @@ test('serves league leaders', async () => {
   const stub = mock.method(pool, 'query', async (sql, params) => {
     if (/SUM\(pms\.goals\)/i.test(sql)) {
       assert.match(sql, /ANY\(\$1::bigint\[\]\)/i);
-      assert.deepStrictEqual(params, [[1], LEAGUE_START_MS, LEAGUE_END_MS]);
+      assert.deepStrictEqual(params, [[1]]);
       return { rows: scorerRows };
     }
     if (/SUM\(pms\.assists\)/i.test(sql)) {
       assert.match(sql, /ANY\(\$1::bigint\[\]\)/i);
-      assert.deepStrictEqual(params, [[1], LEAGUE_START_MS, LEAGUE_END_MS]);
+      assert.deepStrictEqual(params, [[1]]);
       return { rows: assisterRows };
     }
     return { rows: [] };
