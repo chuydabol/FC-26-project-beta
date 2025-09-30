@@ -2,9 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Chat</title>
   <style>
-    body{font:14px Arial;margin:0;background:#000;color:#fff}
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      background:radial-gradient(circle at center, #0a0f1c, #000000);
+      background-size:cover;
+      background-attachment:fixed;
+      background-color:#000;
+      overflow-x:hidden;
+    }
+    body{
+      font:14px Arial;
+      color:#fff;
+      min-height:100vh;
+      padding-top:env(safe-area-inset-top);
+      padding-bottom:env(safe-area-inset-bottom);
+    }
     header{padding:12px;background:#111}
     main{padding:12px;max-width:800px;margin:auto}
     #log{height:60vh;overflow:auto;border:1px solid #333;padding:8px;background:#0b0b0b}
