@@ -1206,7 +1206,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
         <div class="overflow-x-auto">
         <table class="league-table min-w-[560px] text-left text-xs sm:text-sm md:text-base">
           <thead>
-            <tr><th>#</th><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th><th>Form</th></tr>
+            <tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
           </thead>
           <tbody id="leagueTableBody"></tbody>
         </table>
@@ -2881,13 +2881,114 @@ async function loadLeague(){
 }
 
 function renderStandings(rows, matches){
-  const sorted = [...rows].sort((a,b)=>{
-    if (b.points !== a.points) return b.points - a.points;
-    if (b.goals_for !== a.goals_for) return b.goals_for - a.goals_for;
-    return a.goals_against - b.goals_against;
+  const nameFallbacks = new Map();
+  (rows || []).forEach(r => {
+    const id = r?.club_id ?? r?.clubId ?? r?.id;
+    if (!id) return;
+    const key = String(id);
+    const label = r?.club_name || r?.name || r?.club || r?.team;
+    if (label) nameFallbacks.set(key, label);
   });
-  const clubIds = sorted.map(r => r.club_id);
-  const forms = computeForms(matches, clubIds);
+
+  const standingsMap = new Map();
+  const ensureEntry = (clubId, clubData = {}) => {
+    const id = String(clubId);
+    if (!standingsMap.has(id)){
+      standingsMap.set(id, {
+        clubId: id,
+        name: '',
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        points: 0
+      });
+    }
+    const entry = standingsMap.get(id);
+    const clubName = clubData?.details?.name;
+    if (clubName) entry.name = clubName;
+    return entry;
+  };
+
+  (matches || []).forEach(match => {
+    if (!match || !match.clubs) return;
+    const clubEntries = Object.entries(match.clubs).filter(([, data]) => data);
+    if (!clubEntries.length) return;
+    if (clubEntries.length === 1){
+      const [singleId, singleData] = clubEntries[0];
+      ensureEntry(singleId, singleData);
+      return;
+    }
+    const [[idA, dataA], [idB, dataB]] = clubEntries;
+    const entryA = ensureEntry(idA, dataA);
+    const entryB = ensureEntry(idB, dataB);
+
+    const goalsA = Number(dataA?.goals ?? 0);
+    const goalsB = Number(dataB?.goals ?? 0);
+
+    entryA.played += 1;
+    entryB.played += 1;
+    entryA.goalsFor += goalsA;
+    entryA.goalsAgainst += goalsB;
+    entryB.goalsFor += goalsB;
+    entryB.goalsAgainst += goalsA;
+
+    if (goalsA > goalsB){
+      entryA.wins += 1;
+      entryA.points += 3;
+      entryB.losses += 1;
+    } else if (goalsB > goalsA){
+      entryB.wins += 1;
+      entryB.points += 3;
+      entryA.losses += 1;
+    } else {
+      entryA.draws += 1;
+      entryB.draws += 1;
+      entryA.points += 1;
+      entryB.points += 1;
+    }
+  });
+
+  let computed = Array.from(standingsMap.values());
+  if (!computed.length){
+    computed = (rows || []).map(r => {
+      const id = r?.club_id ?? r?.clubId ?? r?.id;
+      if (!id) return null;
+      const wins = Number(r?.wins ?? 0);
+      const draws = Number(r?.draws ?? 0);
+      const losses = Number(r?.losses ?? 0);
+      const played = Number(r?.played ?? r?.games_played ?? wins + draws + losses);
+      return {
+        clubId: String(id),
+        name: r?.club_name || r?.name || r?.club || r?.team || byId(id)?.name || String(id),
+        played,
+        wins,
+        draws,
+        losses,
+        goalsFor: Number(r?.goals_for ?? r?.goalsFor ?? 0),
+        goalsAgainst: Number(r?.goals_against ?? r?.goalsAgainst ?? 0),
+        points: Number(r?.points ?? 0)
+      };
+    }).filter(Boolean);
+  }
+
+  computed.forEach(entry => {
+    if (!entry.name){
+      entry.name = nameFallbacks.get(entry.clubId) || byId(entry.clubId)?.name || entry.clubId;
+    }
+  });
+
+  const sorted = computed.sort((a,b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    const gdA = a.goalsFor - a.goalsAgainst;
+    const gdB = b.goalsFor - b.goalsAgainst;
+    if (gdB !== gdA) return gdB - gdA;
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    return (a.name || '').localeCompare(b.name || '');
+  });
+
   const body = document.getElementById('leagueTableBody');
   body.innerHTML = '';
   sorted.forEach((row, idx) => {
@@ -2896,41 +2997,30 @@ function renderStandings(rows, matches){
     if (idx === 0) tr.classList.add('rank-1');
     else if (idx === 1) tr.classList.add('rank-2');
     else if (idx === 2) tr.classList.add('rank-3');
-    const formHtml = (forms[row.club_id] || []).map(r => `<span class="${r}"></span>`).join('');
+
+    const played = Number(row.played ?? 0);
+    const wins = Number(row.wins ?? 0);
+    const draws = Number(row.draws ?? 0);
+    const losses = Number(row.losses ?? 0);
+    const gf = Number(row.goalsFor ?? 0);
+    const ga = Number(row.goalsAgainst ?? 0);
+    const gd = gf - ga;
+    const pts = Number(row.points ?? 0);
+
     tr.innerHTML = `
       <td>${idx + 1}</td>
-      <td class="club-name">${escapeHtml(byId(row.club_id)?.name || row.club_id)}</td>
-      <td>${row.wins}</td>
-      <td>${row.draws}</td>
-      <td>${row.losses}</td>
-      <td>${row.goals_for}</td>
-      <td>${row.goals_against}</td>
-      <td>${row.points}</td>
-      <td class="form-cell">${formHtml}</td>
+      <td class="club-name">${escapeHtml(row.name || byId(row.clubId)?.name || row.clubId)}</td>
+      <td>${played}</td>
+      <td>${wins}</td>
+      <td>${draws}</td>
+      <td>${losses}</td>
+      <td>${gf}</td>
+      <td>${ga}</td>
+      <td>${gd}</td>
+      <td>${pts}</td>
     `;
     body.appendChild(tr);
   });
-}
-
-function computeForms(matches, clubIds){
-  const forms = {};
-  (matches || []).forEach(m => {
-    const ids = Object.keys(m.clubs || {});
-    if (ids.length < 2) return;
-    const [a,b] = ids;
-    const ga = m.clubs[a].goals, gb = m.clubs[b].goals;
-    if (clubIds.includes(a)){
-      const res = ga>gb?'W':ga===gb?'D':'L';
-      forms[a] = forms[a]||[];
-      if (forms[a].length < 5) forms[a].push(res);
-    }
-    if (clubIds.includes(b)){
-      const res = gb>ga?'W':gb===ga?'D':'L';
-      forms[b] = forms[b]||[];
-      if (forms[b].length < 5) forms[b].push(res);
-    }
-  });
-  return forms;
 }
 
 const STAT_CATEGORIES = [
