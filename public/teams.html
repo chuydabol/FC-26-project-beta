@@ -986,7 +986,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       </div>
     </section>
 
-  <section id="rankings-section" class="mt-24">
+  <section id="rankings-section" class="tab-content mt-24" style="display:none">
     <div class="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-slate-900/80 shadow-[0_30px_60px_rgba(12,10,5,0.75)]">
       <div class="flex flex-wrap items-center justify-between gap-4 border-b border-yellow-300/20 bg-gradient-to-r from-yellow-500/10 via-amber-400/5 to-transparent px-6 py-5">
         <div class="flex flex-col gap-2">
@@ -1764,14 +1764,17 @@ function setNav(active){
     league:[leagueView, navLeague],
     friendlies:[friendliesView, navFriendlies]
   };
+  if(rankingsSection){
+    s.rankings = [rankingsSection, navRankings];
+  }
   for (const key of Object.keys(s)){
     const [view,btn] = s[key];
     const is = key===active;
-    if(is) view.style.display = 'block';
-    btn.setAttribute('aria-pressed', String(is));
+    if(view && is) view.style.display = 'block';
+    if(btn) btn.setAttribute('aria-pressed', String(is));
   }
-  if(navRankings){
-    navRankings.setAttribute('aria-pressed','false');
+  if(active==='rankings'){
+    ensureRankingsLoaded(false);
   }
 }
 navHome.onclick        = async ()=>{ setNav('home'); await loadHome(); };
@@ -1784,17 +1787,7 @@ navLeague.onclick      = ()=> { setNav('league'); loadLeague(); };
 navFriendlies.onclick  = async ()=> { setNav('friendlies'); await loadFriendlies(); };
 if(navRankings){
   navRankings.onclick = ()=>{
-    setNav('teams');
-    ensureRankingsLoaded(false);
-    navRankings.setAttribute('aria-pressed','true');
-    if(rankingsSection){
-      requestAnimationFrame(()=>{
-        rankingsSection.scrollIntoView({ behavior:'smooth', block:'start' });
-      });
-    }
-    setTimeout(()=>{
-      navRankings.setAttribute('aria-pressed','false');
-    }, 800);
+    setNav('rankings');
   };
 }
 
