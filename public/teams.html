@@ -1320,12 +1320,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
           </table>
         </div>
       </div>
-      <div class="m-card glow-card glow-green">
-        <strong>Top Scorers</strong>
-        <div id="league-topscorers" class="mt-2 space-y-2">
-          <div class="muted">Loading…</div>
-        </div>
-      </div>
     </div>
   </section>
 
@@ -1333,6 +1327,12 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
       <h2>League Stats</h2>
       <div id="statsBtnHolderStats"></div>
+    </div>
+    <div class="m-card glow-card glow-green" id="league-topscorers-card">
+      <strong>Top Scorers</strong>
+      <div id="league-topscorers" class="mt-2 space-y-2">
+        <div class="muted">Loading…</div>
+      </div>
     </div>
     <div class="leaderboards stats-section grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
   </section>
@@ -3119,6 +3119,9 @@ async function loadLeague(force = false){
     leagueView.style.display = showStats ? 'none' : 'block';
     (showStats ? holderStats : holderLeague).appendChild(toggleBtn);
     toggleBtn.textContent = showStats ? 'Standings' : 'Stats';
+    if (showStats) {
+      populateLeagueTopScorers();
+    }
   };
 }
 
@@ -3341,9 +3344,25 @@ function renderHomepageStandings(sorted){
   container.innerHTML = `<table class="league-table"><thead><tr><th>#</th><th>Club</th><th>W</th><th>D</th><th>L</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+let latestTopScorers = [];
+
+function populateLeagueTopScorers(list = latestTopScorers){
+  const league = document.getElementById('league-topscorers');
+  if (!league) return;
+  if (!list || !list.length){
+    league.innerHTML = '<div class="muted">No data.</div>';
+    return;
+  }
+  league.innerHTML = list.map((r, idx) => {
+    const clubName = byId(r.clubId)?.name || r.clubId || '';
+    return `<div class="stats-row" data-rank="${idx + 1}" data-club-id="${r.clubId}"><span class="rank-badge">${idx + 1}</span><img class="player-kit" src="/assets/silhouette.png" alt=""><div class="info"><div>${escapeHtml(r.name)}</div><div class="muted">${escapeHtml(clubName)}</div></div><div class="value">${r.goals}</div></div>`;
+  }).join('');
+  const unique = new Set(list.map(r => r.clubId).filter(Boolean));
+  unique.forEach(cid => renderClubKits(cid, league));
+}
+
 function renderTopScorers(rows){
   const homepage = document.getElementById('homepage-topscorers');
-  const league = document.getElementById('league-topscorers');
   const normalized = (rows || []).map(r => {
     if (!r) return null;
     const clubId = r?.club_id ?? r?.clubId ?? r?.team_id ?? r?.teamId ?? r?.club;
@@ -3361,6 +3380,7 @@ function renderTopScorers(rows){
     return a.name.localeCompare(b.name);
   });
   const top = normalized.slice(0,5);
+  latestTopScorers = top;
 
   if (homepage){
     if (!top.length){
@@ -3375,17 +3395,9 @@ function renderTopScorers(rows){
     }
   }
 
-  if (league){
-    if (!top.length){
-      league.innerHTML = '<div class="muted">No data.</div>';
-    } else {
-      league.innerHTML = top.map((r, idx) => {
-        const clubName = byId(r.clubId)?.name || r.clubId || '';
-        return `<div class="stats-row" data-rank="${idx + 1}" data-club-id="${r.clubId}"><span class="rank-badge">${idx + 1}</span><img class="player-kit" src="/assets/silhouette.png" alt=""><div class="info"><div>${escapeHtml(r.name)}</div><div class="muted">${escapeHtml(clubName)}</div></div><div class="value">${r.goals}</div></div>`;
-      }).join('');
-      const unique = new Set(top.map(r => r.clubId).filter(Boolean));
-      unique.forEach(cid => renderClubKits(cid, league));
-    }
+  const statsView = document.getElementById('statsView');
+  if (statsView && statsView.style.display !== 'none'){
+    populateLeagueTopScorers(top);
   }
 
   return top;
