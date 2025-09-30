@@ -22,8 +22,8 @@ async function withServer(fn) {
 test('serves league standings table', async () => {
   const stub = mock.method(pool, 'query', async (sql, params) => {
     if (/mv_league_standings/i.test(sql)) {
-      assert.match(sql, /ANY\(\$1::text\[\]\)/i);
-      assert.deepStrictEqual(params, [['1']]);
+      assert.match(sql, /ANY\(\$1::bigint\[\]\)/i);
+      assert.deepStrictEqual(params, [[1]]);
       return {
         rows: [
           {
