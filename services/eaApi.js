@@ -95,6 +95,8 @@ async function eaFetch(url, options = {}) {
 }
 
 const clubCache = new Map();
+const leaderboardCache = new Map();
+const LEADERBOARD_CACHE_TTL_MS = 5 * 60_000;
 
 async function fetchClubLeagueMatches(clubIds) {
   const ids = Array.isArray(clubIds) ? clubIds : [clubIds];
@@ -180,6 +182,128 @@ async function fetchClubMembersWithRetry(clubId, retries = 2) {
 
 const fetchPlayersForClubWithRetry = fetchClubMembersWithRetry;
 
+function normalizeString(value) {
+  if (typeof value !== 'string') {
+    if (value === null || value === undefined) return '';
+    return String(value);
+  }
+  return value;
+}
+
+function parseDivisionValue(value) {
+  if (value === null || value === undefined) return null;
+  const num = Number(value);
+  if (Number.isFinite(num) && num >= 0) {
+    return Math.trunc(num);
+  }
+  return null;
+}
+
+function extractEntries(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+
+  const candidates = [
+    payload.entries,
+    payload.results,
+    payload.clubs,
+    payload.teams,
+    payload.data,
+    payload.leaderboard,
+    payload.leaderboardEntries,
+    payload.leaderboard?.entries,
+    payload.payload?.entries,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+}
+
+function extractDivisionFromEntry(entry) {
+  if (!entry || typeof entry !== 'object') return { name: '', division: null };
+  const name = normalizeString(
+    entry.clubName ||
+      entry.clubname ||
+      entry.name ||
+      entry.teamName ||
+      entry.teamname ||
+      entry?.club?.name ||
+      entry?.club?.clubName ||
+      entry?.clubInfo?.clubName ||
+      entry?.clubInfo?.name ||
+      entry?.clubinfo?.clubname
+  ).trim();
+
+  const division =
+    entry.division ??
+    entry.divisionId ??
+    entry.division_id ??
+    entry.divisionNumber ??
+    entry.clubDivision ??
+    entry?.club?.division ??
+    entry?.clubInfo?.division ??
+    entry?.clubinfo?.division;
+
+  return { name, division: parseDivisionValue(division) };
+}
+
+async function fetchClubDivisionByName(clubName) {
+  const normalized = normalizeString(clubName).trim();
+  if (!normalized) return null;
+
+  const cacheKey = normalized.toLowerCase();
+  const cached = leaderboardCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.division;
+  }
+
+  const url =
+    'https://proclubs.ea.com/api/fc/allTimeLeaderboard/search' +
+    `?platform=common-gen5&clubName=${encodeURIComponent(normalized)}`;
+
+  try {
+    const res = await eaFetch(url);
+    const data = await res.json();
+    const entries = extractEntries(data);
+    let fallback = null;
+    const target = normalized.toLowerCase();
+    for (const entry of entries) {
+      const info = extractDivisionFromEntry(entry);
+      if (info.division !== null && fallback === null) {
+        fallback = info.division;
+      }
+      if (info.name && info.name.toLowerCase() === target) {
+        if (info.division !== null) {
+          leaderboardCache.set(cacheKey, {
+            division: info.division,
+            expiresAt: Date.now() + LEADERBOARD_CACHE_TTL_MS,
+          });
+          return info.division;
+        }
+      }
+    }
+
+    const result = fallback;
+    leaderboardCache.set(cacheKey, {
+      division: result,
+      expiresAt: Date.now() + LEADERBOARD_CACHE_TTL_MS,
+    });
+    return result;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw { error: 'EA API request timed out' };
+    }
+    if (err.status) {
+      throw { error: 'EA API error', status: err.status };
+    }
+    if (err && err.error) throw err;
+    throw { error: 'EA API error' };
+  }
+}
+
 async function fetchClubInfo(clubId) {
   if (!clubId) throw new Error('clubId required');
   const url =
@@ -223,5 +347,6 @@ module.exports = {
   fetchClubMembersWithRetry,
   fetchPlayersForClubWithRetry,
   fetchClubInfo,
-  fetchClubInfoWithRetry
+  fetchClubInfoWithRetry,
+  fetchClubDivisionByName,
 };
