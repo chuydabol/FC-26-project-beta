@@ -5,7 +5,11 @@ async function loadHome(){
       fetchLeagueData(),
       apiGet('/api/news').catch(()=>({ items: [] }))
     ]);
-    const standingsComputed = renderStandings(leagueData.standings || [], leagueData.matches || []);
+    const standingsComputed = renderStandings(
+      leagueData.standings || [],
+      leagueData.matches || [],
+      leagueData.playerStandings || []
+    );
     renderTopScorers(leagueData.scorers || []);
     const match = (leagueData.matches || [])[0];
     renderHomeMatch(match);

@@ -346,6 +346,30 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 
 /* Home section */
 .home-grid{display:grid;gap:16px;margin-top:18px}
+.home-card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.home-card-action{
+  font-size:11px;
+  padding:6px 12px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  border-radius:999px;
+  background:linear-gradient(135deg, rgba(30,201,195,0.18), rgba(8,14,24,0.88));
+  border:1px solid rgba(30,201,195,0.38);
+  color:#f6f9ff;
+  white-space:nowrap;
+}
+.home-card-action:hover,
+.home-card-action:focus-visible{
+  border-color:rgba(30,201,195,0.6);
+  box-shadow:0 12px 24px rgba(30,201,195,0.18);
+}
+.home-card-body{margin-top:10px;}
 
 /* Teams grid/cards */
 .teams-grid{
@@ -1012,13 +1036,19 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
         <strong>Featured Clubs</strong>
         <div id="homeClubs" class="teams-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style="margin-top:6px"></div>
       </div>
-      <div class="m-card glow-card glow-gold">
-        <strong>League Standings</strong>
-        <div id="homepage-standings" class="muted" style="margin-top:6px">Loading…</div>
+      <div class="m-card glow-card glow-gold home-card">
+        <div class="home-card-header">
+          <strong>League Standings</strong>
+          <button type="button" id="btnViewFullStandings" class="home-card-action">View Full Standings</button>
+        </div>
+        <div id="homepage-standings" class="muted home-card-body">Loading…</div>
       </div>
-      <div class="m-card glow-card glow-gold">
-        <strong>Top Scorers</strong>
-        <div id="homepage-topscorers" class="muted" style="margin-top:6px">Loading…</div>
+      <div class="m-card glow-card glow-gold home-card">
+        <div class="home-card-header">
+          <strong>Top Scorers</strong>
+          <button type="button" id="btnViewFullTopScorers" class="home-card-action">View Full Top Scorers</button>
+        </div>
+        <div id="homepage-topscorers" class="muted home-card-body">Loading…</div>
       </div>
     </div>
   </section>
@@ -1414,22 +1444,111 @@ async function fetchLeagueData(force = false){
   if (!force && leagueDataCache) return leagueDataCache;
   if (!leagueDataPromise || force){
     leagueDataPromise = (async () => {
-      const [standingsRes, matchesRes, playersRes, leadersRes] = await Promise.all([
+      const [standingsRes, matchesRes, playersRes] = await Promise.all([
         apiGet('/api/league').catch(()=>({ standings: [] })),
         apiGet('/api/matches').catch(()=>({ matches: [] })),
-        apiGet('/api/players').catch(()=>({ players: [] })),
-        apiGet('/api/league/leaders').catch(()=>({ scorers: [] }))
+        apiGet('/api/players').catch(()=>({ players: [] }))
       ]);
+      const players = Array.isArray(playersRes.players) ? playersRes.players : [];
+      const playerStandings = deriveStandingsFromPlayers(players);
+      const topScorers = deriveTopScorersFromPlayers(players);
       leagueDataCache = {
         standings: standingsRes.standings || [],
         matches: matchesRes.matches || [],
-        players: playersRes.players || [],
-        scorers: leadersRes.scorers || []
+        players,
+        scorers: topScorers,
+        playerStandings
       };
       return leagueDataCache;
     })();
   }
   return leagueDataPromise;
+}
+
+function deriveStandingsFromPlayers(players){
+  const byClub = new Map();
+  const toNumber = value => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
+  (Array.isArray(players) ? players : []).forEach(player => {
+    const rawId = player?.club_id ?? player?.clubId ?? player?.team_id ?? player?.teamId ?? player?.club;
+    if (!rawId) return;
+    const clubId = String(rawId);
+    const entry = byClub.get(clubId) || {
+      clubId,
+      name: '',
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      goalsFor: 0,
+      goalsAgainst: 0,
+      points: 0
+    };
+    if (!entry.name){
+      entry.name = player?.club_name || player?.club || player?.team || player?.team_name || '';
+    }
+    const wins = toNumber(player?.club_wins ?? player?.wins ?? player?.team_wins ?? player?.record_wins);
+    const draws = toNumber(player?.club_draws ?? player?.draws ?? player?.team_draws ?? player?.record_draws);
+    const losses = toNumber(player?.club_losses ?? player?.losses ?? player?.team_losses ?? player?.record_losses);
+    const playedCandidates = [
+      player?.club_played,
+      player?.club_games_played,
+      player?.games_played,
+      player?.gamesPlayed,
+      player?.matches,
+      wins + draws + losses
+    ];
+    const goalsFor = toNumber(player?.club_goals_for ?? player?.goals_for ?? player?.team_goals_for);
+    const goalsAgainst = toNumber(player?.club_goals_against ?? player?.goals_against ?? player?.team_goals_against);
+    const points = toNumber(player?.club_points ?? player?.points ?? player?.team_points ?? player?.clubpts);
+
+    if (wins > entry.wins) entry.wins = wins;
+    if (draws > entry.draws) entry.draws = draws;
+    if (losses > entry.losses) entry.losses = losses;
+    const played = playedCandidates
+      .map(toNumber)
+      .reduce((acc, val) => (val > acc ? val : acc), entry.played);
+    if (played > entry.played) entry.played = played;
+    if (goalsFor > entry.goalsFor) entry.goalsFor = goalsFor;
+    if (goalsAgainst > entry.goalsAgainst) entry.goalsAgainst = goalsAgainst;
+    if (points > entry.points) entry.points = points;
+
+    byClub.set(clubId, entry);
+  });
+
+  return Array.from(byClub.values()).map(entry => {
+    if (!entry.played){
+      entry.played = entry.wins + entry.draws + entry.losses;
+    }
+    return entry;
+  });
+}
+
+function deriveTopScorersFromPlayers(players){
+  const toNumber = value => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
+  const normalized = (Array.isArray(players) ? players : []).map(player => {
+    const clubId = player?.club_id ?? player?.clubId ?? player?.team_id ?? player?.teamId ?? player?.club;
+    const goals = toNumber(player?.goals ?? player?.goal ?? player?.total_goals ?? player?.totalGoals ?? player?.count);
+    const name = player?.name || player?.player || player?.player_name || player?.personaName || player?.persona_name || player?.gamertag || player?.displayName || '';
+    if (!name) return null;
+    return {
+      clubId: clubId ? String(clubId) : '',
+      name,
+      goals
+    };
+  }).filter(Boolean);
+
+  normalized.sort((a, b) => {
+    if (b.goals !== a.goals) return b.goals - a.goals;
+    return a.name.localeCompare(b.name);
+  });
+
+  return normalized;
 }
 
 // Teams
@@ -1942,6 +2061,23 @@ if(navRankings){
   navRankings.onclick = ()=>{
     setNav('rankings');
   };
+}
+
+const btnViewFullStandings = document.getElementById('btnViewFullStandings');
+const btnViewFullTopScorers = document.getElementById('btnViewFullTopScorers');
+const goToLeagueView = () => {
+  if (navLeague) {
+    navLeague.click();
+  } else {
+    setNav('league');
+    loadLeague();
+  }
+};
+if (btnViewFullStandings) {
+  btnViewFullStandings.addEventListener('click', goToLeagueView);
+}
+if (btnViewFullTopScorers) {
+  btnViewFullTopScorers.addEventListener('click', goToLeagueView);
 }
 
 // auth / admin / manager
@@ -2961,7 +3097,7 @@ function setupCcFixtureForm(){
 
 async function loadLeague(force = false){
   const data = await fetchLeagueData(force);
-  renderStandings(data.standings || [], data.matches || []);
+  renderStandings(data.standings || [], data.matches || [], data.playerStandings || []);
   renderStats(data.players || []);
   renderTopScorers(data.scorers || []);
 
@@ -2986,14 +3122,14 @@ async function loadLeague(force = false){
   };
 }
 
-function renderStandings(rows, matches){
-  const computed = computeStandings(rows, matches);
+function renderStandings(rows, matches, fallbackRows = []){
+  const computed = computeStandings(rows, matches, fallbackRows);
   renderLeagueStandings(computed);
   renderHomepageStandings(computed);
   return computed;
 }
 
-function computeStandings(rows, matches){
+function computeStandings(rows, matches, fallbackRows = []){
   const allowedClubIds = new Set();
   const nameFallbacks = new Map();
   (rows || []).forEach(r => {
@@ -3003,6 +3139,15 @@ function computeStandings(rows, matches){
     allowedClubIds.add(id);
     const label = r?.club_name || r?.name || r?.club || r?.team;
     if (label) nameFallbacks.set(id, label);
+  });
+
+  (fallbackRows || []).forEach(r => {
+    const rawId = r?.clubId ?? r?.club_id ?? r?.id;
+    if (!rawId) return;
+    const id = String(rawId);
+    allowedClubIds.add(id);
+    const label = r?.name || r?.club_name || r?.club || r?.team;
+    if (label && !nameFallbacks.has(id)) nameFallbacks.set(id, label);
   });
 
   if (!allowedClubIds.size){
@@ -3102,6 +3247,32 @@ function computeStandings(rows, matches){
     });
   }
 
+  if (!computed.length && fallbackRows && fallbackRows.length){
+    computed = fallbackRows.map(r => {
+      const id = r?.clubId ?? r?.club_id ?? r?.id;
+      if (!id) return null;
+      const wins = Number(r?.wins ?? 0);
+      const draws = Number(r?.draws ?? 0);
+      const losses = Number(r?.losses ?? 0);
+      const played = Number(r?.played ?? r?.games_played ?? wins + draws + losses);
+      return {
+        clubId: String(id),
+        name: r?.name || r?.club_name || r?.club || r?.team || String(id),
+        played,
+        wins,
+        draws,
+        losses,
+        goalsFor: Number(r?.goalsFor ?? r?.goals_for ?? 0),
+        goalsAgainst: Number(r?.goalsAgainst ?? r?.goals_against ?? 0),
+        points: Number(r?.points ?? 0)
+      };
+    }).filter(Boolean);
+  }
+
+  computed = computed.filter(entry => {
+    return !allowedClubIds.size || allowedClubIds.has(String(entry?.clubId ?? ''));
+  });
+
   computed.forEach(entry => {
     if (!entry.name){
       entry.name = nameFallbacks.get(entry.clubId) || byId(entry.clubId)?.name || entry.clubId;
@@ -3168,13 +3339,17 @@ function renderTopScorers(rows){
   const homepage = document.getElementById('homepage-topscorers');
   const league = document.getElementById('league-topscorers');
   const normalized = (rows || []).map(r => {
+    if (!r) return null;
     const clubId = r?.club_id ?? r?.clubId ?? r?.team_id ?? r?.teamId ?? r?.club;
+    const name = r?.name || r?.player || r?.player_name || r?.personaName || r?.persona_name || r?.gamertag || r?.displayName || '';
+    const goals = numberFrom(r?.count ?? r?.goals ?? r?.total ?? r?.goal ?? r?.totalGoals);
+    if (!name) return null;
     return {
       clubId: clubId ? String(clubId) : '',
-      name: r?.name || r?.player || 'Unknown',
-      goals: Number(r?.count ?? r?.goals ?? r?.total ?? 0)
+      name,
+      goals
     };
-  }).filter(r => r.name);
+  }).filter(Boolean);
   normalized.sort((a,b) => {
     if (b.goals !== a.goals) return b.goals - a.goals;
     return a.name.localeCompare(b.name);
