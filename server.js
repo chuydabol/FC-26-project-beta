@@ -171,16 +171,15 @@ function normalizeClubIds(ids) {
   if (!Array.isArray(ids) || !ids.length) {
     return [];
   }
-  return ids
-    .map(id => {
-      const asString = String(id ?? '').trim();
-      if (!asString) {
-        return null;
-      }
-      const asNumber = Number(asString);
-      return Number.isFinite(asNumber) ? asNumber : null;
-    })
-    .filter(id => id !== null);
+  const seen = new Set();
+  const normalized = [];
+  for (const id of ids) {
+    const asString = String(id ?? '').trim();
+    if (!asString || seen.has(asString)) continue;
+    seen.add(asString);
+    normalized.push(asString);
+  }
+  return normalized;
 }
 
 function clubsForLeague(id) {
@@ -766,18 +765,18 @@ const SQL_LEAGUE_STANDINGS = `
          goal_diff,
          points
     FROM public.mv_league_standings
-   WHERE club_id = ANY($1::bigint[])
+   WHERE club_id = ANY($1::text[])
    ORDER BY points DESC, goal_diff DESC, goals_for DESC`;
 
 const SQL_LEAGUE_TEAMS = `
   SELECT club_id AS "id", club_name AS "name"
     FROM public.clubs
-   WHERE club_id = ANY($1::bigint[])`;
+   WHERE club_id = ANY($1::text[])`;
 
 async function getUpclLeaders(clubIds) {
   const sql = `SELECT type, club_id AS "clubId", name, count
                  FROM public.upcl_leaders
-                WHERE club_id = ANY($1::bigint[])
+                WHERE club_id = ANY($1::text[])
                 ORDER BY type, count DESC, name`;
   const { rows } = await q(sql, [clubIds]);
   return {
@@ -808,7 +807,7 @@ app.get('/api/league/leaders', async (_req, res) => {
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1::bigint[])
+     WHERE pms.club_id = ANY($1::text[])
        AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name
@@ -818,7 +817,7 @@ app.get('/api/league/leaders', async (_req, res) => {
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1::bigint[])
+     WHERE pms.club_id = ANY($1::text[])
        AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name
