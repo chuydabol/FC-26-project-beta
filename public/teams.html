@@ -297,7 +297,7 @@ h1{
 /* Layout */
 main{
   position:relative;
-  padding:32px clamp(16px,4vw,42px) 80px;
+  padding:0;
   max-width:1280px;
   margin:0 auto;
   z-index:1;
@@ -330,13 +330,12 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 }
 
 /* Home section */
-.home-grid{display:grid;gap:16px;margin-top:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.home-grid{display:grid;gap:16px;margin-top:18px}
 
 /* Teams grid/cards */
 .teams-grid{
   position:relative;
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
   gap:24px;
   margin-top:28px;
   padding:8px 4px 28px;
@@ -524,7 +523,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   .navbar button{padding:8px 14px;font-size:12px;}
   .team-card{padding:18px;}
   .team-meta .name{font-size:17px;}
-  .teams-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;}
+  .teams-grid{gap:18px;}
   .team-manager{font-size:12px;}
   .brand-tagline{letter-spacing:0.24em;font-size:10px;}
 }
@@ -649,7 +648,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .news-meta{font-size:12px;color:var(--muted);margin-top:6px}
 
 /* Champions Cup groups — compact standings only */
-.group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.group-grid{display:grid;gap:16px}
 .group-card{padding:0;overflow:hidden}
 .group-card.glow-card{padding:18px;}
 .group-title{font-weight:800;margin:0 0 10px;letter-spacing:0.08em;text-transform:uppercase}
@@ -703,15 +702,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 /* Leaderboards layout */
 .leaderboards{display:grid;gap:16px;margin-top:12px}
 .leaderboards .m-card strong{display:block;font-size:18px;font-weight:700;margin-bottom:8px;text-align:center}
-@media (max-width:600px){
-  .leaderboards{grid-template-columns:1fr}
-}
-@media (min-width:601px) and (max-width:900px){
-  .leaderboards{grid-template-columns:repeat(2,1fr)}
-}
-@media (min-width:901px){
-  .leaderboards{grid-template-columns:repeat(3,1fr)}
-}
 
 @media (max-width:768px){
   .standings-table{font-size:14px;overflow-x:auto}
@@ -723,7 +713,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 }
 
 /* Champions Cup bracket */
-.bracket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.bracket-grid{display:grid;gap:16px}
 .bracket-card{padding:0;text-align:center}
 .bracket-card.glow-card{padding:18px;}
 .bracket-match{display:flex;flex-direction:column;gap:4px}
@@ -731,7 +721,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 
 /* Mobile & small tablets */
 @media (max-width: 900px){
-  .teams-grid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;}
+  .teams-grid{gap:20px;}
   .fx-team span{max-width:120px}
   .league-grid{grid-template-columns:1fr}
 }
@@ -770,7 +760,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     <img src="/assets/logos/UPCL.png" alt="League logo">
   <audio id="introAudio" src="/intro.mp3"></audio>
 </div>
-<header>
+<header class="flex flex-wrap items-center gap-4 md:gap-6">
   <div class="site-brand">
     <div class="brand-mark">UP</div>
     <div class="brand-copy">
@@ -778,7 +768,21 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       <div class="brand-tagline">United Pro Clubs League</div>
     </div>
   </div>
-  <nav class="navbar" aria-label="Primary navigation">
+  <button
+    type="button"
+    id="navToggle"
+    class="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-yellow-400/40 bg-black/30 p-2 text-yellow-100 shadow-[0_8px_20px_rgba(15,23,42,0.5)] transition hover:border-yellow-300/70 hover:bg-black/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200/60 md:hidden"
+    aria-expanded="false"
+    aria-controls="primaryNav"
+  >
+    <span class="sr-only">Toggle navigation</span>
+    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  </button>
+  <nav id="primaryNav" class="navbar hidden w-full flex-col gap-6 md:ml-auto md:flex md:w-auto md:flex-row md:items-stretch" aria-label="Primary navigation">
     <div class="nav-group" aria-label="Main">
       <span class="nav-group-label">Main</span>
       <div class="nav-group-items">
@@ -911,9 +915,9 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   </nav>
 </header>
 
-<main>
-  <section id="home" class="tab-content" style="display:none">
-    <div class="home-grid">
+<main class="relative mx-auto max-w-6xl px-3 pt-6 pb-16 text-xs sm:px-6 sm:pt-8 sm:pb-20 sm:text-sm md:px-10 md:pt-12 md:pb-24 md:text-base">
+  <section id="home" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
+    <div class="home-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <div class="m-card glow-card glow-green">
         <strong>Match of the Day</strong>
         <div id="homeMotd" class="muted" style="margin-top:6px">Loading…</div>
@@ -924,7 +928,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       </div>
       <div class="m-card glow-card glow-silver">
         <strong>Featured Clubs</strong>
-        <div id="homeClubs" class="teams-grid" style="margin-top:6px"></div>
+        <div id="homeClubs" class="teams-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style="margin-top:6px"></div>
       </div>
       <div class="m-card glow-card glow-gold">
         <strong>League Standings</strong>
@@ -937,12 +941,12 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     </div>
   </section>
   <!-- TEAMS -->
-  <section id="teams-view" aria-live="polite" class="tab-content">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
+  <section id="teams-view" aria-live="polite" class="tab-content space-y-6 p-2 sm:p-4 md:p-8">
+    <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
       <h2 style="margin:0">Teams</h2>
       <div class="muted">Total teams: <span id="teams-count">0</span></div>
     </div>
-    <div class="teams-grid" id="teamsGrid" role="list">
+    <div class="teams-grid grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="teamsGrid" role="list">
         <div class="team-card glow-card glow-silver" data-club-id="585548" role="listitem">
           <div class="team-card-header">
             <div class="team-crest">
@@ -979,16 +983,16 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
           <div class="players-grid"></div>
         </div>
       </div>
-      <div id="teamsEmpty" class="teams-empty" role="status" aria-live="polite" style="display:none">
+      <div id="teamsEmpty" class="teams-empty p-4 sm:p-6 md:p-7" role="status" aria-live="polite" style="display:none">
         <div class="empty-icon">🏟️</div>
         <div>No teams registered yet.</div>
         <small class="muted">Check back after clubs join the competition.</small>
       </div>
     </section>
 
-  <section id="rankings-section" class="tab-content mt-24" style="display:none">
+  <section id="rankings-section" class="tab-content mt-24 space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
     <div class="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-slate-900/80 shadow-[0_30px_60px_rgba(12,10,5,0.75)]">
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-yellow-300/20 bg-gradient-to-r from-yellow-500/10 via-amber-400/5 to-transparent px-6 py-5">
+      <div class="flex flex-wrap items-center justify-between gap-4 sm:gap-6 border-b border-yellow-300/20 bg-gradient-to-r from-yellow-500/10 via-amber-400/5 to-transparent px-6 py-5">
         <div class="flex flex-col gap-2">
           <p class="text-xl font-semibold tracking-wide text-yellow-50">Rankings Leaderboard</p>
           <p id="rankingsMeta" class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">Generating universal rankings…</p>
@@ -1012,7 +1016,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
         Unable to load player data. Try refreshing in a moment.
       </div>
       <div id="rankingsTableWrap" class="hidden overflow-x-auto px-4 pb-8">
-        <table class="min-w-full border-separate border-spacing-y-3 text-sm text-slate-100">
+        <table class="min-w-full border-separate border-spacing-y-3 text-xs text-slate-100 sm:text-sm md:text-base">
           <thead>
             <tr class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">
               <th scope="col" class="px-4 py-3 text-left">Rank</th>
@@ -1031,7 +1035,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   <div id="teamView" style="display:none"></div>
 
   <!-- NEWS -->
-  <section id="news-view" class="tab-content" style="display:none">
+  <section id="news-view" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
     <h2>League News</h2>
     <div id="newsFeed" class="news-wrap" style="margin-top:8px">
       <div class="muted">Loading news…</div>
@@ -1084,17 +1088,17 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   </section>
 
   <!-- FIXTURES (PUBLIC) -->
-  <section id="fixtures-public" class="tab-content" style="display:none">
+  <section id="fixtures-public" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
     <h2>Fixtures</h2>
     <div id="fixtures" class="fx-list" style="margin-top:10px"></div>
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
   <!-- FIXTURES SCHEDULING (MANAGERS/Admins) -->
-  <section id="fixtures-sched" class="tab-content" style="display:none">
-    <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap">
+  <section id="fixtures-sched" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
+    <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
       <h2>Fixtures Scheduling</h2>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
         <button data-fxf="upcoming" aria-pressed="true">Upcoming</button>
         <button data-fxf="final" aria-pressed="false">Final</button>
         <button data-fxf="all" aria-pressed="false">All</button>
@@ -1106,8 +1110,8 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   </section>
 
   <!-- CHAMPIONS CUP -->
-  <section id="champions-view" class="tab-content" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+  <section id="champions-view" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
+    <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
       <h2>UPCL Champions Cup</h2>
       <div class="chip">Cup ID: <span id="ccCupId"></span></div>
     </div>
@@ -1115,19 +1119,19 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     <!-- Groups + tables (names once, standings only) -->
     <div class="m-card glow-card glow-gold" style="margin-top:10px">
       <strong>Groups</strong>
-      <div id="ccGroups" class="group-grid" style="margin-top:8px"></div>
+      <div id="ccGroups" class="group-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" style="margin-top:8px"></div>
     </div>
 
     <!-- Bracket -->
     <div class="m-card glow-card glow-gold" style="margin-top:10px">
       <strong>Bracket</strong>
-      <div id="ccBracket" class="bracket-grid" style="margin-top:8px"></div>
+      <div id="ccBracket" class="bracket-grid grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3" style="margin-top:8px"></div>
     </div>
 
     <!-- Leaders -->
     <div class="m-card glow-card glow-green" style="margin-top:10px">
       <strong>Leaders</strong>
-      <div id="ccLeaders" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"></div>
+      <div id="ccLeaders" class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
     </div>
 
     <!-- Admin tools (group editor + easy create fixture) -->
@@ -1136,7 +1140,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       <div class="muted">Assign teams to groups, save groups, and create fixtures.</div>
 
       <div id="ccManualGroups" style="display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:10px;margin-top:10px"></div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <div class="flex flex-wrap gap-3" style="margin-top:8px">
         <button id="ccBtnSaveGroups">Save groups</button>
       </div>
 
@@ -1186,8 +1190,8 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   </section>
 
   <!-- LEAGUE STANDINGS -->
-  <section id="leagueView" class="tab-content" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+  <section id="leagueView" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
+    <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
       <h2>League Standings</h2>
       <div id="statsBtnHolderLeague">
         <button id="statsToggleBtn" class="chip">Stats</button>
@@ -1195,27 +1199,29 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     </div>
     <div class="league-grid">
       <div class="standings-table glow-card glow-gold">
-        <table class="league-table">
+        <div class="overflow-x-auto">
+        <table class="league-table min-w-[560px] text-left text-xs sm:text-sm md:text-base">
           <thead>
             <tr><th>#</th><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th><th>Form</th></tr>
           </thead>
           <tbody id="leagueTableBody"></tbody>
         </table>
+        </div>
       </div>
     </div>
   </section>
 
-  <section id="statsView" class="tab-content" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+  <section id="statsView" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
+    <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
       <h2>League Stats</h2>
       <div id="statsBtnHolderStats"></div>
     </div>
-    <div class="leaderboards stats-section"></div>
+    <div class="leaderboards stats-section grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3"></div>
   </section>
 
   <!-- FRIENDLIES -->
-  <section id="friendlies-view" class="tab-content" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+  <section id="friendlies-view" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
+    <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
       <h2>Friendlies</h2>
       <div class="chip">Cup ID: <span id="frCupId"></span></div>
     </div>
@@ -1229,7 +1235,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       <strong>Admin tools</strong>
       <div class="muted">Manage friendly teams and generate fixtures.</div>
       <div id="frTeamList" style="margin-top:8px"></div>
-      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <div class="flex flex-wrap gap-3" style="margin-top:8px">
         <select id="frAddSel"></select>
         <button id="frAddBtn">Add team</button>
       </div>
@@ -1254,12 +1260,14 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
           <strong id="homeTitle">Home</strong>
           <div class="row-btns"><button id="addHomeRow">+ Add row</button></div>
         </div>
-        <table id="homeTable" style="margin-top:6px">
-          <thead>
-            <tr><th style="width:40%">Player</th><th>G</th><th>A</th><th>Rating</th><th>Pos</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table id="homeTable" class="min-w-[520px] text-left text-xs sm:text-sm md:text-base" style="margin-top:6px">
+            <thead>
+              <tr><th style="width:40%">Player</th><th>G</th><th>A</th><th>Rating</th><th>Pos</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="sheet">
@@ -1267,12 +1275,14 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
           <strong id="awayTitle">Away</strong>
           <div class="row-btns"><button id="addAwayRow">+ Add row</button></div>
         </div>
-        <table id="awayTable" style="margin-top:6px">
-          <thead>
-            <tr><th style="width:40%">Player</th><th>G</th><th>A</th><th>Rating</th><th>Pos</th><th></th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table id="awayTable" class="min-w-[520px] text-left text-xs sm:text-sm md:text-base" style="margin-top:6px">
+            <thead>
+              <tr><th style="width:40%">Player</th><th>G</th><th>A</th><th>Rating</th><th>Pos</th><th></th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -1740,6 +1750,36 @@ const navFxSched    = document.getElementById('navFixturesSched');
 const navChampions  = document.getElementById('navChampions');
 const navLeague     = document.getElementById('navLeague');
 const navFriendlies = document.getElementById('navFriendlies');
+const navToggle     = document.getElementById('navToggle');
+const primaryNav    = document.getElementById('primaryNav');
+
+if(navToggle && primaryNav){
+  const syncNavForViewport = ()=>{
+    if(window.innerWidth >= 768){
+      primaryNav.classList.remove('hidden');
+      navToggle.setAttribute('aria-expanded','true');
+    }else{
+      primaryNav.classList.add('hidden');
+      navToggle.setAttribute('aria-expanded','false');
+    }
+  };
+  syncNavForViewport();
+  window.addEventListener('resize', syncNavForViewport);
+  navToggle.addEventListener('click', ()=>{
+    if(window.innerWidth >= 768) return;
+    const expanded = navToggle.getAttribute('aria-expanded') === 'true';
+    navToggle.setAttribute('aria-expanded', String(!expanded));
+    primaryNav.classList.toggle('hidden', expanded);
+  });
+  primaryNav.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(window.innerWidth < 768){
+        primaryNav.classList.add('hidden');
+        navToggle.setAttribute('aria-expanded','false');
+      }
+    });
+  });
+}
 
 const homeView    = document.getElementById('home');
 const teamsViewEl = document.getElementById('teams-view');
@@ -2563,10 +2603,12 @@ function renderCcGroups(groups, fixtures){
     return `
       <div class="group-card glow-card glow-gold mini-card">
         <div class="group-title">Group ${g}</div>
-        <table class="group-table">
-          <thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
-          <tbody>${rows||''}</tbody>
-        </table>
+        <div class="overflow-x-auto">
+          <table class="group-table w-full min-w-[420px] text-xs sm:text-sm md:text-base">
+            <thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
+            <tbody>${rows||''}</tbody>
+          </table>
+        </div>
       </div>`;
     }).join('');
   }
