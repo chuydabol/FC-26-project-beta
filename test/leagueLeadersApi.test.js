@@ -30,11 +30,11 @@ test('serves league leaders', async () => {
 
   const stub = mock.method(pool, 'query', async (sql, params) => {
     if (/SUM\(pms\.goals\)/i.test(sql)) {
-      assert.deepStrictEqual(params, [['1'], LEAGUE_START_MS, LEAGUE_END_MS]);
+      assert.deepStrictEqual(params, [[1], LEAGUE_START_MS, LEAGUE_END_MS]);
       return { rows: scorerRows };
     }
     if (/SUM\(pms\.assists\)/i.test(sql)) {
-      assert.deepStrictEqual(params, [['1'], LEAGUE_START_MS, LEAGUE_END_MS]);
+      assert.deepStrictEqual(params, [[1], LEAGUE_START_MS, LEAGUE_END_MS]);
       return { rows: assisterRows };
     }
     return { rows: [] };

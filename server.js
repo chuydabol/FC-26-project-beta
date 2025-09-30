@@ -166,8 +166,18 @@ try {
 } catch (err) {
   logger.error({ err }, 'Failed to load league club mapping');
 }
+
+function normalizeClubIds(ids) {
+  if (!Array.isArray(ids) || !ids.length) {
+    return [];
+  }
+  const asStrings = ids.map(id => String(id).trim()).filter(Boolean);
+  const allNumeric = asStrings.every(id => /^\d+$/.test(id));
+  return allNumeric ? asStrings.map(id => Number(id)) : asStrings;
+}
+
 function clubsForLeague(id) {
-  return LEAGUE_CLUBS[id] || [];
+  return normalizeClubIds(LEAGUE_CLUBS[id] || []);
 }
 const DEFAULT_LEAGUE_ID = process.env.DEFAULT_LEAGUE_ID || 'UPCL_LEAGUE_2025';
 
@@ -192,10 +202,12 @@ const LEAGUE_END_MS = parseDateMs(
 function resolveClubIds() {
   let ids = clubsForLeague(DEFAULT_LEAGUE_ID);
   if (!ids.length) {
-    ids = (process.env.EA_CLUB_IDS || '')
-      .split(',')
-      .map(s => s.trim())
-      .filter(Boolean);
+    ids = normalizeClubIds(
+      (process.env.EA_CLUB_IDS || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+    );
   }
   if (!ids.length) {
     logger.warn(
@@ -770,7 +782,7 @@ app.get('/api/league/leaders', async (_req, res) => {
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1::text[])
+     WHERE pms.club_id = ANY($1)
        AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name
@@ -780,7 +792,7 @@ app.get('/api/league/leaders', async (_req, res) => {
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1::text[])
+     WHERE pms.club_id = ANY($1)
        AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name

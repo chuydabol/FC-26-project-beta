@@ -22,11 +22,11 @@ async function withServer(fn) {
 test('serves league standings table', async () => {
   const stub = mock.method(pool, 'query', async (sql, params) => {
     if (/mv_league_standings/i.test(sql)) {
-      assert.deepStrictEqual(params, [['1']]);
+      assert.deepStrictEqual(params, [[1]]);
       return {
         rows: [
           {
-            club_id: '1',
+            club_id: 1,
             played: 1,
             wins: 0,
             draws: 0,
@@ -48,7 +48,7 @@ test('serves league standings table', async () => {
     assert.deepStrictEqual(body, {
       standings: [
         {
-          club_id: '1',
+          club_id: 1,
           played: 1,
           wins: 0,
           draws: 0,
