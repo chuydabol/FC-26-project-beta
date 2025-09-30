@@ -809,15 +809,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
           </span>
           <span>News</span>
         </button>
-        <button type="button" id="navMarket" aria-pressed="false">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 6h14l-1.2 9.6A2 2 0 0 1 15.82 17H8.18a2 2 0 0 1-1.98-1.4L5 6z" />
-              <path d="M9 6V4a3 3 0 0 1 6 0v2" />
-            </svg>
-          </span>
-          <span>Market</span>
-        </button>
         <button type="button" id="navFixturesPublic" aria-pressed="false">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -883,15 +874,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     <div class="nav-group" aria-label="Admin">
       <span class="nav-group-label">Admin</span>
       <div class="nav-group-items">
-        <button type="button" id="btnManagerLogin">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
-              <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" />
-            </svg>
-          </span>
-          <span>Manager Sign In</span>
-        </button>
         <button type="button" id="btnAdminLogin">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1042,18 +1024,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 
     <div id="detail-footer" style="margin-top:18px" class="muted center">
       <small>Manual squads (EA API disabled).</small>
-    </div>
-  </section>
-
-  <!-- MARKET -->
-  <section id="market-view" class="tab-content" style="display:none">
-    <h2>Transfer Market</h2>
-    <div class="m-card glow-card glow-silver">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-        <strong>Free Agents</strong>
-        <div><button id="btnListFA">List me</button><button id="btnUnlistFA">Unlist</button></div>
-      </div>
-      <div id="faList" style="margin-top:8px" class="muted">Loading…</div>
     </div>
   </section>
 
@@ -1215,31 +1185,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 
 </main>
 
-<!-- Manager Sign-In Modal -->
-<div class="modal" id="mgrModal" aria-hidden="true">
-  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="mgrTitle">
-    <h3 id="mgrTitle">Manager sign in</h3>
-    <div class="grid2">
-      <div>
-        <label class="muted" for="mgrClubSel">Club</label>
-        <select id="mgrClubSel"></select>
-      </div>
-      <div>
-        <label class="muted" for="mgrName">Your name</label>
-        <input id="mgrName" placeholder="Display name" />
-      </div>
-    </div>
-    <div style="margin-top:8px">
-      <label class="muted" for="mgrCode">Manager code</label>
-      <input id="mgrCode" placeholder="8-char code" />
-    </div>
-    <div class="actions">
-      <button id="mgrCancel">Cancel</button>
-      <button id="mgrSubmit">Sign in</button>
-    </div>
-  </div>
-</div>
-
 <!-- Result Sheet Modal -->
 <div class="modal" id="resultModal" aria-hidden="true">
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="resTitle">
@@ -1398,7 +1343,6 @@ async function resolvePlayerName(id){
 const navHome     = document.getElementById('navHome');
 const navTeams    = document.getElementById('navTeams');
 const navNews     = document.getElementById('navNews');
-const navMarket   = document.getElementById('navMarket');
 const navFxPublic = document.getElementById('navFixturesPublic');
 const navFxSched  = document.getElementById('navFixturesSched');
 const navChampions= document.getElementById('navChampions');
@@ -1408,7 +1352,6 @@ const navFriendlies = document.getElementById('navFriendlies');
 const homeView    = document.getElementById('home');
 const teamsViewEl = document.getElementById('teams-view');
 const newsView    = document.getElementById('news-view');
-const marketView  = document.getElementById('market-view');
 const fxPublic    = document.getElementById('fixtures-public');
 const fxSched     = document.getElementById('fixtures-sched');
 const cupView     = document.getElementById('champions-view');
@@ -1416,13 +1359,12 @@ const leagueView  = document.getElementById('leagueView');
 const friendliesView = document.getElementById('friendlies-view');
 
 function setNav(active){
-  if (active==='fixturesSched' && !(isMgr || isAdmin)) { alert('Managers only'); active='fixturesPublic'; }
+  if (active==='fixturesSched' && !isAdmin) { alert('Admins only'); active='fixturesPublic'; }
   document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
   const s = {
     home:[homeView, navHome],
     teams:[teamsViewEl, navTeams],
     news:[newsView, navNews],
-    market:[marketView, navMarket],
     fixturesPublic:[fxPublic, navFxPublic],
     fixturesSched:[fxSched, navFxSched],
     champions:[cupView, navChampions],
@@ -1439,7 +1381,6 @@ function setNav(active){
 navHome.onclick        = async ()=>{ setNav('home'); await loadHome(); };
 navTeams.onclick       = ()=> setNav('teams');
 navNews.onclick        = async ()=>{ setNav('news'); await loadNews(); };
-navMarket.onclick      = ()=> setNav('market');
 navFxPublic.onclick    = ()=> setNav('fixturesPublic');
 navFxSched.onclick     = ()=> setNav('fixturesSched');
 navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
@@ -1449,7 +1390,6 @@ navFriendlies.onclick  = async ()=> { setNav('friendlies'); await loadFriendlies
 // auth / admin / manager
 const btnAdminLogin = document.getElementById('btnAdminLogin');
 const btnAdminLogout= document.getElementById('btnAdminLogout');
-const btnManagerLogin= document.getElementById('btnManagerLogin');
 
 btnAdminLogin.onclick = async ()=>{
   const pw = prompt('Admin password');
@@ -1469,36 +1409,13 @@ btnAdminLogout.onclick = async ()=>{
 async function checkAdmin(){
   try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
   btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
-  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+  navFxSched.style.display = isAdmin ? 'inline-block' : 'none';
 }
 async function checkMe(){
   try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
   isMgr = !!(meUser && meUser.role==='Manager');
-  navFxSched.style.display = (isMgr || isAdmin) ? 'inline-block' : 'none';
+  navFxSched.style.display = isAdmin ? 'inline-block' : 'none';
 }
-
-// Manager modal
-const mgrModal = document.getElementById('mgrModal');
-const mgrClubSel = document.getElementById('mgrClubSel');
-const mgrName = document.getElementById('mgrName');
-const mgrCode = document.getElementById('mgrCode');
-document.getElementById('mgrCancel').onclick = ()=>{ mgrModal.classList.remove('show'); mgrModal.setAttribute('aria-hidden','true'); };
-btnManagerLogin.onclick = ()=>{
-  mgrClubSel.innerHTML = teams.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.id})</option>`).join('');
-  mgrName.value=''; mgrCode.value=''; mgrModal.classList.add('show'); mgrModal.setAttribute('aria-hidden','false');
-};
-document.getElementById('mgrSubmit').onclick = async ()=>{
-  const clubId = mgrClubSel.value;
-  const name = (mgrName.value||'').trim();
-  const code = (mgrCode.value||'').trim();
-  if (!clubId || !name || !code) return alert('Pick a club, enter your name and code.');
-  try{
-    await apiPost(`/api/clubs/${encodeURIComponent(clubId)}/claim-manager`, { name, code });
-    await checkMe(); await refreshFixturesSched(); renderFixturesSched();
-    mgrModal.classList.remove('show'); mgrModal.setAttribute('aria-hidden','true');
-    alert('Manager session started.');
-  }catch(e){ alert('Sign-in failed: '+e.message); }
-};
 
 // =======================
 //   TEAMS LIST / DETAIL
@@ -1744,7 +1661,7 @@ async function renderWallet(clubId){
         await renderWallet(clubId);
       }catch(e){ alert('Collect failed: '+e.message); }
     };
-    hint.textContent = canCollect ? 'Only the club manager can collect.' : 'Sign in as manager to collect.';
+    hint.textContent = canCollect ? 'Only the club manager can collect.' : 'Contact an administrator to collect payouts.';
   }catch(e){
     body.textContent = 'Wallet unavailable';
     hint.textContent = '';
@@ -1794,45 +1711,6 @@ async function loadSquad(clubId){
     }
   }
 }
-
-// =======================
-//   FREE AGENTS
-// =======================
-async function loadFA(){
-  try{
-    const d = await apiGet('/api/free-agents');
-    const arr = d.agents || [];
-    document.getElementById('faList').innerHTML = arr.length ? arr.map(a=>{
-      const pos = (a.positions||[]).join(', ');
-      return `<div class="m-card glow-card glow-silver mini-card" style="margin:8px 0">
-        <strong>${escapeHtml(a.name)}</strong> <span class="muted">(${escapeHtml(a.region||'')})</span><br>
-        <span class="muted">${escapeHtml(pos)}</span>
-        ${a.discord ? `<div>Discord: ${escapeHtml(a.discord)}</div>`:''}
-        ${a.bio ? `<div class="muted">${escapeHtml(a.bio)}</div>`:''}
-      </div>`;
-    }).join('') : 'No free agents listed.';
-  }catch{ document.getElementById('faList').textContent = 'Failed to load.'; }
-}
-
-document.getElementById('btnListFA').onclick = async ()=>{
-  const name = meUser?.name || prompt('Your display name');
-  if (!name) return;
-  const positions = prompt('Positions (comma separated, e.g., ST, CAM, CB)')||'';
-  const region = prompt('Region/Timezone (e.g., EST, EU)')||'';
-  const foot = prompt('Strong foot (L/R)')||'';
-  const availability = prompt('Availability (e.g., Mon-Thu 7-10pm)')||'';
-  const discord = prompt('Discord tag (optional)')||'';
-  const bio = prompt('Short bio (optional)')||'';
-  try{
-    await apiPost('/api/free-agents/me',{ name, positions, region, foot, availability, discord, bio });
-    alert('Listed!');
-    await loadFA();
-  }catch(e){ alert('List failed: '+e.message); }
-};
-document.getElementById('btnUnlistFA').onclick = async ()=>{
-  try{ await fetch('/api/free-agents/me',{ method:'DELETE', credentials:'include' }); alert('Unlisted'); await loadFA(); }
-  catch(e){ alert('Unlist failed: '+e.message); }
-};
 
 // =======================
 //   FIXTURES — PUBLIC
@@ -1972,7 +1850,7 @@ document.querySelectorAll('[data-fxf]').forEach(btn=>{
 });
 
 async function refreshFixturesSched(){
-  if (!(isMgr || isAdmin)) { fixturesSchedCache=[]; return; }
+  if (!isAdmin) { fixturesSchedCache=[]; return; }
   try {
     const d = await apiGet('/api/cup/fixtures/scheduling?cup=UPCL');
     fixturesSchedCache = d.fixtures || [];
@@ -2004,11 +1882,9 @@ function renderFixturesSched(){
   list.forEach(f=>{
     const root = document.getElementById('fx_'+f.id);
     if (!root) return;
-    const isManagerOf = meUser && meUser.role==='Manager' && [f.home,f.away].includes(meUser.teamId);
-
     const btnProp = root.querySelector('.act .prop');
     if (btnProp) btnProp.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isAdmin) return alert('Admins only');
       const atStr = prompt('Propose time (e.g., 2025-08-20 20:30)');
       if (!atStr) return;
       const at = Date.parse(atStr);
@@ -2019,7 +1895,7 @@ function renderFixturesSched(){
 
     const btnAgree = root.querySelector('.act .agree');
     if (btnAgree) btnAgree.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isAdmin) return alert('Admins only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:true }); await refreshFixturesSched(); renderFixturesSched(); await refreshFixturesPublic(); renderFixturesPublic(); }
@@ -2028,7 +1904,7 @@ function renderFixturesSched(){
 
     const btnDecl = root.querySelector('.act .decl');
     if (btnDecl) btnDecl.onclick = async ()=>{
-      if (!isManagerOf && !isAdmin) return alert('Managers only');
+      if (!isAdmin) return alert('Admins only');
       const at = root.querySelector('select[name="slot"]').value;
       if (!at) return alert('Pick a proposed slot first');
       try{ await apiPost(`/api/cup/fixtures/${f.id}/vote`, { at, agree:false }); await refreshFixturesSched(); renderFixturesSched(); }
@@ -2908,8 +2784,7 @@ async function init(){
   setInterval(async () => { await refreshMatches(); }, 10*60*1000);
 
   await refreshFixturesPublic(); renderFixturesPublic();
-  if (isMgr || isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
-  await loadFA();
+  if (isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
 
   // hash-open team
   try{
