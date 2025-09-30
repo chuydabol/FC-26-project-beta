@@ -3132,6 +3132,8 @@ function renderStandings(rows, matches, fallbackRows = []){
 function computeStandings(rows, matches, fallbackRows = []){
   const allowedClubIds = new Set();
   const nameFallbacks = new Map();
+  const hasPrimaryStandings = Array.isArray(rows) && rows.length > 0;
+
   (rows || []).forEach(r => {
     const rawId = r?.club_id ?? r?.clubId ?? r?.id;
     if (!rawId) return;
@@ -3145,9 +3147,14 @@ function computeStandings(rows, matches, fallbackRows = []){
     const rawId = r?.clubId ?? r?.club_id ?? r?.id;
     if (!rawId) return;
     const id = String(rawId);
-    allowedClubIds.add(id);
     const label = r?.name || r?.club_name || r?.club || r?.team;
-    if (label && !nameFallbacks.has(id)) nameFallbacks.set(id, label);
+    if (!hasPrimaryStandings && !allowedClubIds.has(id)){
+      allowedClubIds.add(id);
+    }
+    if (label){
+      const canUseLabel = !hasPrimaryStandings || allowedClubIds.has(id);
+      if (canUseLabel && !nameFallbacks.has(id)) nameFallbacks.set(id, label);
+    }
   });
 
   if (!allowedClubIds.size){
@@ -3159,6 +3166,10 @@ function computeStandings(rows, matches, fallbackRows = []){
   }
 
   const standingsMap = new Map();
+  const clubIsAllowed = clubId => {
+    if (!allowedClubIds.size) return !hasPrimaryStandings;
+    return allowedClubIds.has(String(clubId ?? ''));
+  };
   const ensureEntry = (clubId, clubData = {}) => {
     const id = String(clubId);
     if (!standingsMap.has(id)){
@@ -3219,9 +3230,7 @@ function computeStandings(rows, matches, fallbackRows = []){
     }
   });
 
-  let computed = Array.from(standingsMap.values()).filter(entry => {
-    return !allowedClubIds.size || allowedClubIds.has(String(entry?.clubId ?? ''));
-  });
+  let computed = Array.from(standingsMap.values()).filter(entry => clubIsAllowed(entry?.clubId));
   if (!computed.length){
     computed = (rows || []).map(r => {
       const id = r?.club_id ?? r?.clubId ?? r?.id;
@@ -3242,9 +3251,7 @@ function computeStandings(rows, matches, fallbackRows = []){
         points: Number(r?.points ?? 0)
       };
     }).filter(Boolean);
-    computed = computed.filter(entry => {
-      return !allowedClubIds.size || allowedClubIds.has(String(entry?.clubId ?? ''));
-    });
+    computed = computed.filter(entry => clubIsAllowed(entry?.clubId));
   }
 
   if (!computed.length && fallbackRows && fallbackRows.length){
@@ -3267,11 +3274,10 @@ function computeStandings(rows, matches, fallbackRows = []){
         points: Number(r?.points ?? 0)
       };
     }).filter(Boolean);
+    computed = computed.filter(entry => clubIsAllowed(entry?.clubId));
   }
 
-  computed = computed.filter(entry => {
-    return !allowedClubIds.size || allowedClubIds.has(String(entry?.clubId ?? ''));
-  });
+  computed = computed.filter(entry => clubIsAllowed(entry?.clubId));
 
   computed.forEach(entry => {
     if (!entry.name){
