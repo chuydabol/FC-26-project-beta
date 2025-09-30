@@ -13,11 +13,11 @@
     theme: {
       extend: {
         colors: {
-          crimson: '#8b0000',
-          midnight: '#050000',
+          crimson: '#0f172a',
+          midnight: '#02060d',
           gold: '#d4af37',
           silver: '#aeb7c2',
-          teal: '#2dd4bf'
+          teal: '#1ec9c3'
         },
         fontFamily: {
           montserrat: ['Montserrat', 'sans-serif']
@@ -32,14 +32,14 @@
 <style>
 /* === Core palette === */
 :root{
-  --accent:#8b0000;
-  --accent-rgb:139,0,0;
-  --accent-dark:#1b0000;
-  --accent-soft:#2f0303;
-  --muted:#b07f7f;
+  --accent:#1ec9c3;
+  --accent-rgb:30,201,195;
+  --accent-dark:#041017;
+  --accent-soft:#0a1b23;
+  --muted:#8b97ab;
   --gold:#d4af37;
   --silver:#aeb7c2;
-  --teal:#2dd4bf;
+  --emerald:#34d399;
   --pad:16px;
   --radius:18px;
 }
@@ -49,12 +49,13 @@ body{
   position:relative;
   margin:0;
   min-height:100vh;
-  color:#f8f5f4;
+  color:#f6f9ff;
   font-family:'Montserrat',Arial,system-ui,-apple-system,'Segoe UI',sans-serif;
   -webkit-text-size-adjust:100%;
   background:
-    radial-gradient(120% 90% at 50% -10%, rgba(139,0,0,0.45), transparent 60%),
-    linear-gradient(160deg, rgba(12,0,0,0.92) 0%, rgba(0,0,0,0.95) 45%, #050000 100%);
+    radial-gradient(120% 90% at 50% -15%, rgba(30,201,195,0.25), transparent 65%),
+    radial-gradient(85% 70% at 0% 0%, rgba(212,175,55,0.12), transparent 70%),
+    linear-gradient(165deg, #020308 0%, #02060d 40%, #010208 100%);
   background-attachment:fixed;
   letter-spacing:0.02em;
   line-height:1.55;
@@ -66,7 +67,7 @@ button{
   font-weight:600;
   letter-spacing:0.08em;
   text-transform:uppercase;
-  background:linear-gradient(135deg, rgba(139,0,0,0.4), rgba(0,0,0,0.85));
+  background:linear-gradient(135deg, rgba(45,212,191,0.2), rgba(14,23,32,0.92));
   color:#fdfcfc;
   border:1px solid rgba(212,175,55,0.3);
   border-radius:14px;
@@ -88,15 +89,66 @@ button:disabled{
   transform:none;
   box-shadow:none;
 }
+
+.glow-card{
+  position:relative;
+  background:linear-gradient(145deg, rgba(9,13,20,0.94), rgba(4,7,12,0.92));
+  border-radius:22px;
+  padding:22px;
+  border:1px solid rgba(148,163,184,0.24);
+  box-shadow:0 22px 45px rgba(0,0,0,0.65);
+  overflow:hidden;
+  transition:transform .32s cubic-bezier(.21,.72,.35,1), box-shadow .32s ease, border-color .32s ease;
+  --glow-rgb:148,163,184;
+}
+.glow-card::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius:inherit;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(var(--glow-rgb),0.35), transparent 58%),
+    radial-gradient(circle at 82% 20%, rgba(94,234,212,0.16), transparent 70%);
+  opacity:0.85;
+  pointer-events:none;
+  transition:opacity .32s ease;
+}
+.glow-card::after{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius:inherit;
+  border:1px solid rgba(var(--glow-rgb),0.28);
+  mix-blend-mode:screen;
+  opacity:0.55;
+  pointer-events:none;
+  transition:border-color .32s ease, opacity .32s ease;
+}
+.glow-card > *{position:relative;z-index:1;}
+.glow-card:hover,
+.glow-card:focus-visible{
+  outline:none;
+  transform:translateY(-8px) scale(1.02);
+  border-color:rgba(var(--glow-rgb),0.55);
+  box-shadow:0 28px 65px rgba(0,0,0,0.72), 0 0 32px rgba(var(--glow-rgb),0.45);
+}
+.glow-card:hover::after,
+.glow-card:focus-visible::after{opacity:0.85;border-color:rgba(var(--glow-rgb),0.55);}
+.glow-card:hover::before,
+.glow-card:focus-visible::before{opacity:1;}
+
+.glow-gold{--glow-rgb:212,175,55;}
+.glow-green{--glow-rgb:45,212,191;}
+.glow-silver{--glow-rgb:148,163,184;}
 body::before{
   content:"";
   position:fixed;
   inset:0;
   z-index:-1;
   background-image:
-    linear-gradient(135deg, rgba(139,0,0,0.18) 0%, rgba(0,0,0,0.9) 60%),
-    radial-gradient(65% 55% at 15% 10%, rgba(139,0,0,0.35) 0%, transparent 70%),
-    radial-gradient(45% 45% at 85% 0%, rgba(45,212,191,0.22) 0%, transparent 65%),
+    linear-gradient(135deg, rgba(30,201,195,0.2) 0%, rgba(6,8,12,0.92) 60%),
+    radial-gradient(65% 55% at 15% 10%, rgba(212,175,55,0.18) 0%, transparent 70%),
+    radial-gradient(45% 45% at 85% 0%, rgba(65,120,255,0.15) 0%, transparent 65%),
     url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0" y1="0" x2="1" y2="1"%3E%3Cstop offset="0" stop-color="%23ffffff" stop-opacity="0.08"/%3E%3Cstop offset="1" stop-color="%23ffffff" stop-opacity="0"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="200" height="200" fill="url(%23g)"/%3E%3C/svg%3E');
   background-size:120% 120%, 120% 120%, 120% 120%, 280px;
   mix-blend-mode:screen;
@@ -147,7 +199,7 @@ h1{
   width:44px;
   height:44px;
   border-radius:14px;
-  background:radial-gradient(circle at 25% 25%, rgba(212,175,55,0.65), rgba(139,0,0,0.6) 58%, rgba(0,0,0,0.85));
+  background:radial-gradient(circle at 25% 25%, rgba(212,175,55,0.55), rgba(30,201,195,0.6) 58%, rgba(5,8,12,0.9));
   box-shadow:0 0 25px rgba(212,175,55,0.25);
   display:flex;
   align-items:center;
@@ -196,15 +248,15 @@ h1{
   align-items:center;
   gap:8px;
   padding:10px 16px;
-  background:linear-gradient(135deg, rgba(139,0,0,0.52), rgba(0,0,0,0.72));
-  border:1px solid rgba(174,183,194,0.18);
+  background:linear-gradient(135deg, rgba(14,23,32,0.82), rgba(6,10,16,0.9));
+  border:1px solid rgba(94,234,212,0.2);
   border-radius:999px;
-  color:#fdfcfc;
+  color:#f6f9ff;
   font-weight:600;
   cursor:pointer;
   transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
   white-space:nowrap;
-  box-shadow:0 8px 16px rgba(0,0,0,0.45);
+  box-shadow:0 8px 22px rgba(15,23,42,0.45);
 }
 .navbar button::after{
   content:"";
@@ -226,7 +278,7 @@ h1{
 .navbar button:focus-visible{
   outline:none;
   border-color:rgba(45,212,191,0.48);
-  box-shadow:0 15px 30px rgba(45,212,191,0.25);
+  box-shadow:0 18px 36px rgba(45,212,191,0.22);
   transform:translateY(-2px);
 }
 .navbar button[aria-pressed="true"]{
@@ -255,7 +307,7 @@ main::before{
   inset:0;
   margin-inline:-10vw;
   background:
-    radial-gradient(75% 45% at 50% 0%, rgba(139,0,0,0.35) 0%, transparent 65%),
+    radial-gradient(75% 45% at 50% 0%, rgba(30,201,195,0.18) 0%, transparent 65%),
     linear-gradient(0deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
   opacity:0.7;
   filter:blur(42px);
@@ -266,9 +318,9 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .muted{color:var(--muted)}
 .center{text-align:center}
 .chip{
-  background:linear-gradient(135deg, rgba(45,212,191,0.16), rgba(139,0,0,0.35));
-  border:1px solid rgba(212,175,55,0.28);
-  color:#fdfcfc;
+  background:linear-gradient(135deg, rgba(45,212,191,0.22), rgba(14,23,32,0.82));
+  border:1px solid rgba(45,212,191,0.35);
+  color:#f6f9ff;
   border-radius:999px;
   padding:4px 10px;
   font-size:12px;
@@ -293,8 +345,8 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   position:absolute;
   inset:0;
   background:
-    radial-gradient(90% 65% at 50% 0%, rgba(139,0,0,0.18) 0%, transparent 70%),
-    radial-gradient(45% 35% at 50% 12%, rgba(45,212,191,0.22) 0%, transparent 70%);
+    radial-gradient(90% 65% at 50% 0%, rgba(30,201,195,0.2) 0%, transparent 70%),
+    radial-gradient(45% 35% at 50% 12%, rgba(148,163,184,0.18) 0%, transparent 70%);
   opacity:0.65;
   filter:blur(40px);
   transform:translateY(-12%);
@@ -302,48 +354,18 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   z-index:-1;
 }
 .team-card{
-  position:relative;
-  background:linear-gradient(145deg, rgba(139,0,0,0.38), rgba(10,0,0,0.85));
-  border-radius:20px;
-  padding:22px 22px 20px;
+  padding:24px 24px 22px;
   display:flex;
   flex-direction:column;
   gap:16px;
-  color:#fdfcfc;
-  box-shadow:0 18px 35px rgba(0,0,0,0.55);
-  border:1px solid rgba(174,183,194,0.18);
+  color:#f6f9ff;
   cursor:pointer;
-  overflow:hidden;
-  transition:transform .32s cubic-bezier(.21,.72,.35,1), box-shadow .32s ease, border-color .32s ease;
   transform-style:preserve-3d;
 }
-.team-card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:radial-gradient(circle at 20% -10%, rgba(212,175,55,0.25), transparent 58%);
-  opacity:0.7;
-  pointer-events:none;
+.team-card.glow-card:hover,
+.team-card.glow-card:focus-visible{
+  transform:perspective(800px) rotateX(2deg) translateY(-10px) scale(1.03);
 }
-.team-card::after{
-  content:"";
-  position:absolute;
-  inset:1px;
-  border-radius:18px;
-  border:1px solid rgba(212,175,55,0.18);
-  mix-blend-mode:screen;
-  opacity:0.45;
-  pointer-events:none;
-}
-.team-card:hover,
-.team-card:focus-visible{
-  transform:perspective(800px) rotateX(3deg) translateY(-8px) scale(1.04);
-  border-color:rgba(45,212,191,0.45);
-  box-shadow:0 26px 55px rgba(45,212,191,0.25), 0 0 0 1px rgba(212,175,55,0.35);
-  outline:none;
-}
-.team-card:hover::after,
-.team-card:focus-visible::after{border-color:rgba(45,212,191,0.45);opacity:0.75;}
 .team-card:hover .team-extra,
 .team-card:focus-visible .team-extra{
   opacity:1;
@@ -354,17 +376,17 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 /* Crest & primary metadata */
 .team-crest{
   position:relative;
-  border-radius:16px;
-  background:linear-gradient(135deg, rgba(21,0,0,0.6), rgba(139,0,0,0.35));
-  padding:14px;
-  box-shadow:inset 0 0 0 1px rgba(212,175,55,0.14);
+  border-radius:18px;
+  background:linear-gradient(135deg, rgba(17,24,39,0.8), rgba(6,11,17,0.92));
+  padding:16px;
+  box-shadow:inset 0 0 0 1px rgba(148,163,184,0.25), 0 0 24px rgba(30,201,195,0.18);
 }
 .team-logo{
   width:100%;
   aspect-ratio:5/3;
   object-fit:contain;
   border-radius:12px;
-  background:linear-gradient(135deg, rgba(139,0,0,0.35), rgba(0,0,0,0.85));
+  background:linear-gradient(135deg, rgba(20,28,38,0.85), rgba(9,13,20,0.92));
   padding:12px;
 }
 .team-card-header{
@@ -392,11 +414,11 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   font-weight:700;
   padding:6px 10px;
   border-radius:999px;
-  background:linear-gradient(135deg, rgba(45,212,191,0.18), rgba(139,0,0,0.32));
+  background:linear-gradient(135deg, rgba(45,212,191,0.2), rgba(12,18,28,0.85));
   border:1px solid rgba(45,212,191,0.45);
   letter-spacing:0.14em;
   text-transform:uppercase;
-  color:#fdfcfc;
+  color:#f6f9ff;
 }
 .team-country{
   display:flex;
@@ -428,8 +450,8 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   text-transform:uppercase;
   padding:6px 10px;
   border-radius:999px;
-  border:1px solid rgba(174,183,194,0.22);
-  background:rgba(0,0,0,0.3);
+  border:1px solid rgba(148,163,184,0.3);
+  background:linear-gradient(135deg, rgba(13,19,28,0.8), rgba(8,12,20,0.9));
   color:var(--silver);
 }
 .jersey-dot{
@@ -437,7 +459,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   height:12px;
   border-radius:50%;
   background:var(--gold);
-  box-shadow:0 0 8px rgba(212,175,55,0.6);
+  box-shadow:0 0 10px rgba(212,175,55,0.6);
 }
 .team-manager{
   display:flex;
@@ -449,7 +471,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 }
 .team-manager svg{width:16px;height:16px;color:rgba(212,175,55,0.85);}
 .team-extra{
-  border-top:1px solid rgba(212,175,55,0.18);
+  border-top:1px solid rgba(148,163,184,0.22);
   padding-top:12px;
   display:grid;
   gap:6px;
@@ -457,7 +479,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   transform:translateY(12px);
   max-height:0;
   transition:opacity .3s ease, transform .3s ease, max-height .3s ease;
-  color:rgba(255,255,255,0.72);
+  color:rgba(235,242,255,0.72);
   font-size:12px;
   letter-spacing:0.04em;
 }
@@ -467,26 +489,26 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   margin-top:32px;
   padding:28px;
   border-radius:22px;
-  border:1px dashed rgba(174,183,194,0.28);
-  background:linear-gradient(135deg, rgba(21,0,0,0.65), rgba(0,0,0,0.8));
+  border:1px dashed rgba(148,163,184,0.35);
+  background:linear-gradient(145deg, rgba(11,15,22,0.9), rgba(5,8,13,0.92));
   display:flex;
   flex-direction:column;
   align-items:center;
   gap:12px;
-  color:rgba(255,255,255,0.72);
+  color:rgba(235,242,255,0.72);
   text-align:center;
-  box-shadow:0 14px 28px rgba(0,0,0,0.45);
+  box-shadow:0 18px 35px rgba(0,0,0,0.55);
 }
 .teams-empty .empty-icon{
   width:48px;
   height:48px;
-  border-radius:14px;
+  border-radius:16px;
   display:flex;
   align-items:center;
   justify-content:center;
   background:rgba(45,212,191,0.16);
   border:1px solid rgba(45,212,191,0.45);
-  color:var(--teal);
+  color:var(--accent);
   font-size:22px;
 }
 @media (max-width:1024px){
@@ -526,38 +548,87 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .player-position{font-size:14px;font-weight:600;margin-bottom:8px;text-align:center}
 .player-stats{font-size:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px;text-align:left;width:100%}
 
-/* Generic card */
-.m-card{background:#110000;border:1px solid #2a0000;border-radius:12px;box-shadow:0 6px 18px rgba(255,0,0,.15);padding:12px}
+/* Generic card wrappers */
+.m-card{padding:0;}
+.m-card.glow-card{padding:24px;}
+.m-card strong{font-weight:700;letter-spacing:0.08em;text-transform:uppercase;}
+.mini-card{padding:0;}
+.mini-card.glow-card{padding:18px;}
 
 /* Squad editor */
 .squad-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-top:14px}
 
 /* Fixtures list */
-.fx-list{display:flex;flex-direction:column;gap:12px}
+.fx-list{display:flex;flex-direction:column;gap:16px}
 .fx{
-  background:#110000;border:1px solid #300000;border-radius:12px;padding:12px;
-  display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  gap:12px;
+  align-items:center;
+  padding:0;
 }
+.fx.glow-card{padding:20px;}
 .fx .meta{font-size:12px;color:var(--muted)}
 .fx .act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.fx button{background:#330000;border:1px solid #551111;color:#fff;border-radius:8px;padding:8px 10px;cursor:pointer}
+.fx button{
+  background:linear-gradient(135deg, rgba(45,212,191,0.2), rgba(15,23,42,0.92));
+  border:1px solid rgba(45,212,191,0.45);
+  color:#f6f9ff;
+  border-radius:10px;
+  padding:8px 12px;
+  cursor:pointer;
+  transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.fx button:hover,
+.fx button:focus-visible{
+  outline:none;
+  transform:translateY(-2px);
+  border-color:rgba(212,175,55,0.55);
+  box-shadow:0 12px 24px rgba(212,175,55,0.2);
+}
 .fx-banner{width:100%;max-height:120px;object-fit:cover;border-radius:8px;margin:6px 0}
 .fx-vs{display:flex;align-items:center;gap:10px;font-weight:800}
 .fx-team{display:inline-flex;align-items:center;gap:8px;min-width:0}
-.fx-team img{width:28px;height:28px;border-radius:50%;object-fit:cover;background:#300}
+.fx-team img{width:32px;height:32px;border-radius:50%;object-fit:cover;background:rgba(15,23,42,0.8);box-shadow:0 0 0 2px rgba(45,212,191,0.25)}
 .fx-team span{display:inline-block;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+.score-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 12px;
+  border-radius:999px;
+  font-weight:700;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  background:rgba(15,23,42,0.78);
+  border:1px solid rgba(148,163,184,0.28);
+  color:var(--silver);
+}
+.score-pill.score-final{color:var(--gold);border-color:rgba(212,175,55,0.45);}
+.score-pill.score-upcoming{color:rgba(45,212,191,0.95);border-color:rgba(45,212,191,0.35);}
+
+.match-card{display:flex;flex-direction:column;gap:6px;font-size:16px;padding:0;}
+.match-card.glow-card{padding:18px;}
+.match-card small{color:var(--muted);}
+.match-card .match-line{display:flex;align-items:center;flex-wrap:wrap;gap:6px;justify-content:center;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;}
+.match-card .club{color:#f6f9ff;}
+.match-card .score{font-weight:800;color:rgba(45,212,191,0.95);font-size:20px;}
+.match-card .score.score-gold{color:var(--gold);}
+.match-card .score.score-silver{color:var(--silver);}
+.match-card .score-pill{margin:0 8px;}
+
 /* Results modal (sheet editor) */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal{position:fixed;inset:0;background:rgba(3,6,12,0.85);display:none;align-items:center;justify-content:center;z-index:1000}
 .modal.show{display:flex}
-.dialog{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:16px;width:min(960px,96vw);max-height:96vh;overflow:auto;box-shadow:0 6px 18px rgba(255,0,0,.25)}
+.dialog{background:linear-gradient(145deg, rgba(11,15,22,0.94), rgba(5,8,13,0.95));border:1px solid rgba(94,234,212,0.28);border-radius:20px;padding:22px;width:min(960px,96vw);max-height:96vh;overflow:auto;box-shadow:0 28px 60px rgba(0,0,0,0.65)}
 .dialog h3{margin:0 0 8px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.sheet{border:1px solid #2a0000;border-radius:10px;padding:8px}
+.sheet{border:1px solid rgba(148,163,184,0.24);border-radius:14px;padding:12px;background:linear-gradient(145deg, rgba(13,19,28,0.85), rgba(8,12,20,0.92));box-shadow:inset 0 0 0 1px rgba(45,212,191,0.08)}
 .sheet table{width:100%;border-collapse:collapse}
-.sheet th,.sheet td{border-bottom:1px solid #220000;padding:6px}
+.sheet th,.sheet td{border-bottom:1px solid rgba(148,163,184,0.15);padding:6px}
 .sheet th{font-size:12px;color:var(--muted);text-align:left}
-.sheet select,.sheet input, .dialog textarea{width:100%;background:#0d0000;color:#fff;border:1px solid #3a0000;border-radius:8px;padding:10px}
+.sheet select,.sheet input, .dialog textarea{width:100%;background:rgba(6,10,16,0.85);color:#f6f9ff;border:1px solid rgba(94,234,212,0.28);border-radius:10px;padding:10px}
 /* Ensure numeric inputs in result sheet are wide enough to show values */
 .sheet td input[type=number]{
   padding:4px;
@@ -569,25 +640,37 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 
 /* News feed (social style) */
 .news-wrap{display:flex;flex-direction:column;gap:20px;max-width:700px;margin:0 auto}
-.news-post{background:#110000;border:1px solid #2a0000;border-radius:14px;padding:20px;display:flex;gap:12px;font-size:18px;width:100%}
-.news-avatar{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#300;flex:0 0 auto}
+.news-post{display:flex;gap:16px;font-size:18px;width:100%;padding:0;align-items:center}
+.news-post.glow-card{padding:20px;}
+.news-avatar{width:52px;height:52px;border-radius:12px;object-fit:cover;background:rgba(15,23,42,0.8);flex:0 0 auto;box-shadow:0 0 0 2px rgba(45,212,191,0.25)}
 .news-body{flex:1;text-align:center}
 .news-title{font-weight:800;margin-bottom:8px;font-size:20px}
 .news-meta{font-size:12px;color:var(--muted);margin-top:6px}
 
 /* Champions Cup groups — compact standings only */
-.group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
-.group-card{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:12px}
-.group-title{font-weight:800;margin:0 0 8px}
-.group-table{width:100%;border-collapse:collapse}
-.group-table th,.group-table td{padding:6px 8px;border-bottom:1px solid #2a0000;text-align:right;font-variant-numeric:tabular-nums}
+.group-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.group-card{padding:0;overflow:hidden}
+.group-card.glow-card{padding:18px;}
+.group-title{font-weight:800;margin:0 0 10px;letter-spacing:0.08em;text-transform:uppercase}
+.group-table{width:100%;border-collapse:collapse;background:linear-gradient(145deg, rgba(9,13,20,0.8), rgba(4,6,12,0.85));border-radius:16px;overflow:hidden}
+.group-table th,.group-table td{padding:8px 10px;border-bottom:1px solid rgba(148,163,184,0.16);text-align:right;font-variant-numeric:tabular-nums}
+.group-table th{color:rgba(226,232,240,0.9);text-transform:uppercase;font-size:12px;letter-spacing:0.1em;background:rgba(15,23,42,0.75)}
 .group-table th:first-child,.group-table td:first-child{text-align:left}
-.group-table tbody tr:hover{background:#160000}
-.league-table{width:100%;border-collapse:collapse}
-.league-table th,.league-table td{padding:6px 8px;border-bottom:1px solid #2a0000;text-align:right;font-variant-numeric:tabular-nums}
+.group-table tbody tr{transition:background .25s ease;}
+.group-table tbody tr:hover{background:rgba(45,212,191,0.12)}
+.group-table tbody tr td:last-child{font-weight:700;color:rgba(226,232,240,0.9);}
+.group-table tbody tr:first-child td:last-child{color:var(--gold);}
+.group-table tbody tr:nth-child(2) td:last-child{color:rgba(45,212,191,0.95);}
+.group-table tbody tr:nth-child(3) td:last-child{color:var(--silver);}
+.standings-table{padding:0;overflow:hidden;border-radius:22px;}
+.standings-table.glow-card{padding:0;}
+.league-table{width:100%;border-collapse:collapse;background:linear-gradient(145deg, rgba(9,13,20,0.85), rgba(4,6,12,0.88));}
+.league-table th,.league-table td{padding:10px 12px;border-bottom:1px solid rgba(148,163,184,0.16);text-align:right;font-variant-numeric:tabular-nums}
+.league-table th{color:rgba(226,232,240,0.88);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;background:rgba(15,23,42,0.78)}
 .league-table th:first-child,.league-table td:first-child{text-align:center}
 .league-table th:nth-child(2),.league-table td:nth-child(2){text-align:left}
-.league-table tbody tr:hover{background:#160000}
+.league-table tbody tr{transition:background .25s ease;}
+.league-table tbody tr:hover{background:rgba(45,212,191,0.1)}
 .league-table .club-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
 .league-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px;align-items:start}
 .podium-list{display:flex;flex-direction:column;gap:12px}
@@ -595,17 +678,24 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .podium-row .player-card{width:100px;height:140px;flex:0 0 100px}
 .podium-info{font-size:14px}
 .form-cell{display:flex;gap:4px;justify-content:flex-start}
-.form-cell span{width:12px;height:12px;border-radius:50%}
-.form-cell span.W{background:#0a0}
-.form-cell span.D{background:#777}
-.form-cell span.L{background:#a00}
-.league-table tr.top4{border-left:4px solid #0a0}
-.stats-row{display:flex;align-items:center;gap:10px;padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.form-cell span{width:12px;height:12px;border-radius:50%;box-shadow:0 0 8px rgba(15,23,42,0.45)}
+.form-cell span.W{background:var(--emerald)}
+.form-cell span.D{background:rgba(148,163,184,0.85)}
+.form-cell span.L{background:rgba(239,68,68,0.85)}
+.league-table tr.top4{box-shadow:inset 3px 0 0 rgba(45,212,191,0.6)}
+.league-table tbody tr td:nth-child(8){font-weight:700;color:rgba(226,232,240,0.9);}
+.league-table tbody tr.rank-1 td:nth-child(8){color:var(--gold);}
+.league-table tbody tr.rank-2 td:nth-child(8){color:rgba(45,212,191,0.95);}
+.league-table tbody tr.rank-3 td:nth-child(8){color:var(--silver);}
+.stats-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid rgba(148,163,184,0.12)}
 .stats-row .player-kit,.stats-row .player-silhouette{position:static;transform:none;width:60px;height:auto;flex-shrink:0}
 .stats-row .player-kit-box{position:static;transform:none;width:60px;height:60px;border-radius:6px;flex-shrink:0}
 .stats-row .info{flex:1;min-width:0;line-height:1.2}
 .stats-row .info div:first-child{font-weight:600;font-size:14px}
-.stats-row .value{margin-left:auto;font-size:16px;font-weight:700;color:#fff;text-align:right}
+.stats-row .value{margin-left:auto;font-size:16px;font-weight:700;color:#f6f9ff;text-align:right}
+.stats-row[data-rank="1"] .value{color:var(--gold);}
+.stats-row[data-rank="2"] .value{color:rgba(45,212,191,0.95);}
+.stats-row[data-rank="3"] .value{color:var(--silver);}
 .group-team{display:inline-flex;align-items:center;gap:8px}
 .group-team img{width:18px;height:18px;border-radius:3px;object-fit:cover}
 
@@ -632,8 +722,9 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 }
 
 /* Champions Cup bracket */
-.bracket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.bracket-card{background:#110000;border:1px solid #2a0000;border-radius:12px;padding:12px;text-align:center}
+.bracket-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.bracket-card{padding:0;text-align:center}
+.bracket-card.glow-card{padding:18px;}
 .bracket-match{display:flex;flex-direction:column;gap:4px}
 .bracket-vs{font-size:12px;color:var(--muted)}
 
@@ -828,23 +919,23 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 <main>
   <section id="home" class="tab-content" style="display:none">
     <div class="home-grid">
-      <div class="m-card">
+      <div class="m-card glow-card glow-green">
         <strong>Match of the Day</strong>
         <div id="homeMotd" class="muted" style="margin-top:6px">Loading…</div>
       </div>
-      <div class="m-card">
+      <div class="m-card glow-card glow-silver">
         <strong>Latest News</strong>
         <div id="homeNews" class="news-wrap" style="margin-top:6px"><div class="muted">Loading…</div></div>
       </div>
-      <div class="m-card">
+      <div class="m-card glow-card glow-silver">
         <strong>Featured Clubs</strong>
         <div id="homeClubs" class="teams-grid" style="margin-top:6px"></div>
       </div>
-      <div class="m-card">
+      <div class="m-card glow-card glow-gold">
         <strong>League Standings</strong>
         <div id="homeStandings" class="muted" style="margin-top:6px">Loading…</div>
       </div>
-      <div class="m-card">
+      <div class="m-card glow-card glow-gold">
         <strong>Top Scorers</strong>
         <div id="homeScorers" class="muted" style="margin-top:6px">Loading…</div>
       </div>
@@ -857,7 +948,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       <div class="muted">Total teams: <span id="teams-count">0</span></div>
     </div>
     <div class="teams-grid" id="teamsGrid" role="list">
-        <div class="team-card" data-club-id="585548" role="listitem">
+        <div class="team-card glow-card glow-silver" data-club-id="585548" role="listitem">
           <div class="team-card-header">
             <div class="team-crest">
               <img class="team-logo" src="/assets/logos/club-frijol.png" alt="Club Frijol logo" onerror="this.onerror=null;this.src='https://via.placeholder.com/800x480.png?text=Club%20Frijol';" />
@@ -920,7 +1011,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     </div>
 
     <div id="teamPanels" class="grid-panels" style="display:grid;grid-template-columns:1fr;gap:12px">
-      <div class="m-card">
+      <div class="m-card glow-card glow-silver">
         <strong>Club Wallet</strong>
         <div id="walletBody" class="muted" style="margin-top:6px">Loading…</div>
         <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -929,18 +1020,18 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
         </div>
       </div>
 
-      <div class="m-card">
+      <div class="m-card glow-card glow-green">
         <strong>Next UPCL Match</strong>
         <div id="nextMatchBody" class="muted" style="margin-top:6px">No scheduled match yet.</div>
       </div>
 
-      <div id="teamResultsPanel" class="m-card">
+      <div id="teamResultsPanel" class="m-card glow-card glow-green">
         <strong>Recent Results</strong>
         <div id="teamResultsBody" class="muted" style="margin-top:6px">No finals yet.</div>
       </div>
 
       <!-- Manual squad editor -->
-      <div class="m-card" id="squadPanel">
+      <div class="m-card glow-card glow-silver" id="squadPanel">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
           <strong>Squad</strong>
           <div id="squadTools" style="display:none;gap:8px"><button id="btnBootstrapSlots" title="Create S01..S15">Bootstrap slots</button></div>
@@ -957,7 +1048,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   <!-- MARKET -->
   <section id="market-view" class="tab-content" style="display:none">
     <h2>Transfer Market</h2>
-    <div class="m-card">
+    <div class="m-card glow-card glow-silver">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
         <strong>Free Agents</strong>
         <div><button id="btnListFA">List me</button><button id="btnUnlistFA">Unlist</button></div>
@@ -996,25 +1087,25 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     </div>
 
     <!-- Groups + tables (names once, standings only) -->
-    <div class="m-card" style="margin-top:10px">
+    <div class="m-card glow-card glow-gold" style="margin-top:10px">
       <strong>Groups</strong>
       <div id="ccGroups" class="group-grid" style="margin-top:8px"></div>
     </div>
 
     <!-- Bracket -->
-    <div class="m-card" style="margin-top:10px">
+    <div class="m-card glow-card glow-gold" style="margin-top:10px">
       <strong>Bracket</strong>
       <div id="ccBracket" class="bracket-grid" style="margin-top:8px"></div>
     </div>
 
     <!-- Leaders -->
-    <div class="m-card" style="margin-top:10px">
+    <div class="m-card glow-card glow-green" style="margin-top:10px">
       <strong>Leaders</strong>
       <div id="ccLeaders" style="margin-top:8px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px"></div>
     </div>
 
     <!-- Admin tools (group editor + easy create fixture) -->
-    <div class="m-card" id="ccAdmin" style="display:none;margin-top:10px">
+    <div class="m-card glow-card glow-silver" id="ccAdmin" style="display:none;margin-top:10px">
       <strong>Admin tools</strong>
       <div class="muted">Assign teams to groups, save groups, and create fixtures.</div>
 
@@ -1023,7 +1114,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
         <button id="ccBtnSaveGroups">Save groups</button>
       </div>
 
-      <hr style="border:none;border-top:1px solid #220000;margin:12px 0">
+      <hr style="border:none;border-top:1px solid rgba(148,163,184,0.2);margin:12px 0">
 
       <div>
         <strong>Create Champions Cup fixture</strong>
@@ -1062,7 +1153,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     </div>
 
     <!-- CC Fixtures -->
-    <div class="m-card" style="margin-top:10px">
+    <div class="m-card glow-card glow-green" style="margin-top:10px">
       <strong>Champions Cup Fixtures</strong>
       <div id="ccFixtures" class="fx-list" style="margin-top:8px"></div>
     </div>
@@ -1077,7 +1168,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       </div>
     </div>
     <div class="league-grid">
-      <div class="standings-table">
+      <div class="standings-table glow-card glow-gold">
         <table class="league-table">
           <thead>
             <tr><th>#</th><th>Club</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>Pts</th><th>Form</th></tr>
@@ -1103,12 +1194,12 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       <div class="chip">Cup ID: <span id="frCupId"></span></div>
     </div>
 
-    <div class="m-card" style="margin-top:10px">
+    <div class="m-card glow-card glow-green" style="margin-top:10px">
       <strong>Fixtures</strong>
       <div id="friendliesFixtures" class="fx-list" style="margin-top:8px"></div>
     </div>
 
-    <div class="m-card" id="friendliesAdmin" style="display:none;margin-top:10px">
+    <div class="m-card glow-card glow-silver" id="friendliesAdmin" style="display:none;margin-top:10px">
       <strong>Admin tools</strong>
       <div class="muted">Manage friendly teams and generate fixtures.</div>
       <div id="frTeamList" style="margin-top:8px"></div>
@@ -1713,7 +1804,7 @@ async function loadFA(){
     const arr = d.agents || [];
     document.getElementById('faList').innerHTML = arr.length ? arr.map(a=>{
       const pos = (a.positions||[]).join(', ');
-      return `<div class="m-card" style="margin:8px 0;padding:8px">
+      return `<div class="m-card glow-card glow-silver mini-card" style="margin:8px 0">
         <strong>${escapeHtml(a.name)}</strong> <span class="muted">(${escapeHtml(a.region||'')})</span><br>
         <span class="muted">${escapeHtml(pos)}</span>
         ${a.discord ? `<div>Discord: ${escapeHtml(a.discord)}</div>`:''}
@@ -1768,14 +1859,21 @@ function renderMatches(matches) {
   matches.forEach(m => {
     const teams = Object.values(m.clubs || {}).map(c => ({
       name: c.details?.name || '',
-      score: c.goals
+      score: Number(c.goals ?? c.score ?? 0)
     }));
     if (teams.length < 2) return;
     const card = document.createElement('div');
-    card.className = 'match-card';
+    card.className = 'match-card glow-card glow-green';
+    const status = String(m.status || '').toLowerCase();
+    const isFinal = status === 'final';
+    const homeClass = !isFinal ? 'score score-silver' : (teams[0].score === teams[1].score ? 'score score-silver' : (teams[0].score > teams[1].score ? 'score score-gold' : 'score'));
+    const awayClass = !isFinal ? 'score score-silver' : (teams[1].score === teams[0].score ? 'score score-silver' : (teams[1].score > teams[0].score ? 'score score-gold' : 'score'));
+    const scoreMarkup = isFinal
+      ? `<span class="${homeClass}">${teams[0].score}</span><span class="muted">-</span><span class="${awayClass}">${teams[1].score}</span>`
+      : `<span class="score-pill score-upcoming">vs</span>`;
     card.innerHTML = `
-      <div>${teams[0].name} ${teams[0].score} - ${teams[1].score} ${teams[1].name}</div>
-      <small>${new Date(m.timestamp).toLocaleString()}</small>
+      <div class="match-line"><span class="club">${escapeHtml(teams[0].name)}</span>${scoreMarkup}<span class="club">${escapeHtml(teams[1].name)}</span></div>
+      <small>${fmtDate(m.timestamp)}</small>
     `;
     container.appendChild(card);
   });
@@ -1795,15 +1893,17 @@ function renderFixturesPublic(){
     const hn = H?.name || f.home;
     const an = A?.name || f.away;
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const isFinal = f.status==='final';
+    const scoreTxt = isFinal ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const scoreClass = isFinal ? 'score-final' : 'score-upcoming';
     const ccBadge = (f.cup===CC_ID) ? ' • <span class="chip">Champions Cup</span>' : '';
     return `
-      <div class="fx">
+      <div class="fx glow-card glow-silver">
         <div>
           ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
           <div class="fx-vs">
             <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-            <span class="muted">${scoreTxt}</span>
+            <span class="score-pill ${scoreClass}">${scoreTxt}</span>
             <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
           </div>
           <div class="meta">${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
@@ -1832,7 +1932,7 @@ function renderNextFor(teamId){
   const hn = byId(f.home)?.name || f.home;
   const an = byId(f.away)?.name || f.away;
   el.innerHTML = `<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(byId(f.home))}" alt=""><span>${escapeHtml(hn)}</span></span>
-                  <span class="muted">vs</span>
+                  <span class="score-pill score-upcoming">vs</span>
                   <span class="fx-team"><img src="${teamLogoUrl(byId(f.away))}" alt=""><span>${escapeHtml(an)}</span></span></div>
                   <div class="muted">${fmtDate(f.when)}</div>`;
 }
@@ -1842,7 +1942,7 @@ function renderTeamResults(teamId){
   el.innerHTML = list.length ? list.map(f=>{
     const hn = byId(f.home)?.name || f.home;
     const an = byId(f.away)?.name || f.away;
-    return `<div>FT ${f.score.hs}-${f.score.as}: <strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong> • ${fmtDate(f.when||f.createdAt)}</div>`;
+    return `<div><span class="muted">FT</span> <span class="score-pill score-final">${f.score.hs}–${f.score.as}</span> <strong>${escapeHtml(hn)}</strong> vs <strong>${escapeHtml(an)}</strong> • ${fmtDate(f.when||f.createdAt)}</div>`;
   }).join('') : 'No finals yet.';
 }
 
@@ -1973,15 +2073,20 @@ function renderFxSchedRow(f){
     return `<option value="${p.at}">${fmtDate(p.at)} — proposed by ${escapeHtml(who)}</option>`;
   }).join('');
   const status = f.status || 'pending';
+  const hs = Number(f.score?.hs ?? f.hs ?? 0);
+  const as = Number(f.score?.as ?? f.as ?? 0);
+  const isFinal = status === 'final';
+  const scoreTxt = isFinal ? `${hs}–${as}` : 'vs';
+  const scoreClass = isFinal ? 'score-final' : 'score-upcoming';
   const adminBtns = isAdmin ? `<button class="json">Admin JSON</button>` : '';
   const banner = getFixtureBanner();
   return `
-  <div class="fx" id="fx_${f.id}">
+  <div class="fx glow-card glow-silver" id="fx_${f.id}">
     <div>
       ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
       <div class="fx-vs">
         <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-        <span class="muted">vs</span>
+        <span class="score-pill ${scoreClass}">${scoreTxt}</span>
         <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
       </div>
       <div class="meta">Round: ${escapeHtml(f.round||'')} • When: ${escapeHtml(whenTxt)} • Status: <span class="chip">${escapeHtml(status)}</span></div>
@@ -2176,7 +2281,7 @@ function renderCcGroups(groups, fixtures){
       </tr>`;
     }).join('');
     return `
-      <div class="group-card">
+      <div class="group-card glow-card glow-gold mini-card">
         <div class="group-title">Group ${g}</div>
         <table class="group-table">
           <thead><tr><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead>
@@ -2245,9 +2350,9 @@ function computeGroupTablesClient(groups, fixtures){
     };
 
     el.innerHTML = `
-      <div class="bracket-card"><strong>Semifinal 1</strong>${matchHtml(semi1)}</div>
-      <div class="bracket-card"><strong>Final</strong>${matchHtml(finalMatch)}</div>
-      <div class="bracket-card"><strong>Semifinal 2</strong>${matchHtml(semi2)}</div>
+      <div class="bracket-card glow-card glow-gold mini-card"><strong>Semifinal 1</strong>${matchHtml(semi1)}</div>
+      <div class="bracket-card glow-card glow-gold mini-card"><strong>Final</strong>${matchHtml(finalMatch)}</div>
+      <div class="bracket-card glow-card glow-gold mini-card"><strong>Semifinal 2</strong>${matchHtml(semi2)}</div>
     `;
   }
 
@@ -2268,11 +2373,11 @@ function computeGroupTablesClient(groups, fixtures){
       return;
     }
     wrap.innerHTML = `
-      <div>
+      <div class="mini-card glow-card glow-gold">
         <div class="muted">Top Scorers</div>
         <ol style="margin-top:6px;padding-left:18px">${scorers||''}</ol>
       </div>
-      <div>
+      <div class="mini-card glow-card glow-green">
         <div class="muted">Top Assisters</div>
         <ol style="margin-top:6px;padding-left:18px">${assisters||''}</ol>
       </div>`;
@@ -2285,15 +2390,17 @@ function renderCcFixtures(list){
     const hn = H?.name || f.home;
     const an = A?.name || f.away;
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const scoreTxt = (f.status==='final') ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const isFinal = f.status==='final';
+    const scoreTxt = isFinal ? `${f.score.hs}–${f.score.as}` : 'vs';
+    const scoreClass = isFinal ? 'score-final' : 'score-upcoming';
     const banner = getFixtureBanner();
     const editBtn = isAdmin ? `<div class="act"><button data-ccq="${f.id}">Quick Edit</button><button data-ccj="${f.id}">Admin JSON</button></div>` : '';
-    return `<div class="fx" id="ccfx_${f.id}">
+    return `<div class="fx glow-card glow-gold" id="ccfx_${f.id}">
       <div>
         ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
         <div class="fx-vs">
           <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-          <span class="muted">${scoreTxt}</span>
+          <span class="score-pill ${scoreClass}">${scoreTxt}</span>
           <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
         </div>
         <div class="meta"><span class="chip">Champions Cup${f.group?` • Group ${f.group}`:''}${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div>
@@ -2460,6 +2567,9 @@ function renderStandings(rows, matches){
   sorted.forEach((row, idx) => {
     const tr = document.createElement('tr');
     if (idx < 4) tr.classList.add('top4');
+    if (idx === 0) tr.classList.add('rank-1');
+    else if (idx === 1) tr.classList.add('rank-2');
+    else if (idx === 2) tr.classList.add('rank-3');
     const formHtml = (forms[row.club_id] || []).map(r => `<span class="${r}"></span>`).join('');
     tr.innerHTML = `
       <td>${idx + 1}</td>
@@ -2533,10 +2643,11 @@ function renderStats(players){
     card.innerHTML = `<strong>${cat.label}</strong>`;
     const list = document.createElement('div');
     const clubIds = new Set();
-    rows.forEach(r => {
+    rows.forEach((r, idx) => {
       const rowDiv = document.createElement('div');
       rowDiv.className = 'stats-row';
       rowDiv.dataset.clubId = String(r.p.club_id);
+      rowDiv.dataset.rank = String(idx + 1);
 
       const kitImg = document.createElement('img');
       kitImg.className = 'player-kit';
@@ -2594,10 +2705,12 @@ function renderFriendliesFixtures(list){
     const H=byId(f.home), A=byId(f.away);
     const hn=H?.name||f.home; const an=A?.name||f.away;
     const whenTxt=f.when?fmtDate(f.when):'TBD';
-    const scoreTxt=(f.status==='final')?`${f.score.hs}–${f.score.as}`:'vs';
+    const isFinal=(f.status==='final');
+    const scoreTxt=isFinal?`${f.score.hs}–${f.score.as}`:'vs';
+    const scoreClass=isFinal?'score-final':'score-upcoming';
     const banner=getFixtureBanner();
     const editBtn = isAdmin ? `<div class="act"><button data-frq="${f.id}">Quick Edit</button></div>` : '';
-    return `<div class="fx" id="frfx_${f.id}"><div>${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span><span class="muted">${scoreTxt}</span><span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span></div><div class="meta"><span class="chip">Friendly${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div></div>${editBtn}</div>`;
+    return `<div class="fx glow-card glow-silver" id="frfx_${f.id}"><div>${banner?`<img class="fx-banner" src="${banner}" alt="">`:''}<div class="fx-vs"><span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span><span class="score-pill ${scoreClass}">${scoreTxt}</span><span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span></div><div class="meta"><span class="chip">Friendly${f.round?` • ${escapeHtml(f.round)}`:''}</span> • ${whenTxt} • ${escapeHtml(f.status||'')}</div></div>${editBtn}</div>`;
   }).join('') : `<div class="muted">No friendly fixtures yet.</div>`;
   list.forEach(f=>{ const q=document.querySelector(`[data-frq="${f.id}"]`); if(q) q.onclick=()=> openResultEditor(f); });
 }
@@ -2687,7 +2800,7 @@ function renderNewsItem(n){
   }
   title = replaceClubIds(title);
   body  = replaceClubIds(body);
-  return `<article class="news-post">
+  return `<article class="news-post glow-card glow-silver">
     <img class="news-avatar" src="${teamLogoUrl(club)}" alt="">
     <div class="news-body">
       <div class="news-title">${escapeHtml(title||'')}</div>
