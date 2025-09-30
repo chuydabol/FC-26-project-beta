@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>UPCL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,14 +45,23 @@
 }
 html{scroll-behavior:smooth;}
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+  background:
+    radial-gradient(circle at center, #0a0f1c, #000000);
+  background-size:cover;
+  background-attachment:fixed;
+  background-color:#000;
+  overflow-x:hidden;
+}
 body{
   position:relative;
-  margin:0;
-  min-height:100vh;
   color:#f6f9ff;
   font-family:'Montserrat',Arial,system-ui,-apple-system,'Segoe UI',sans-serif;
   -webkit-text-size-adjust:100%;
+  min-height:100vh;
   background:
     radial-gradient(120% 90% at 50% -15%, rgba(30,201,195,0.25), transparent 65%),
     radial-gradient(85% 70% at 0% 0%, rgba(212,175,55,0.12), transparent 70%),
@@ -60,6 +69,8 @@ body{
   background-attachment:fixed;
   letter-spacing:0.02em;
   line-height:1.55;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
 }
 a{color:#fdfcfc; text-decoration:none}
 img{max-width:100%; display:block}
