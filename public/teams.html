@@ -984,49 +984,50 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
         <div>No teams registered yet.</div>
         <small class="muted">Check back after clubs join the competition.</small>
       </div>
-      <section id="rankings-section" class="mt-24">
-        <div class="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-slate-900/80 shadow-[0_30px_60px_rgba(12,10,5,0.75)]">
-          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-yellow-300/20 bg-gradient-to-r from-yellow-500/10 via-amber-400/5 to-transparent px-6 py-5">
-            <div class="flex flex-col gap-2">
-              <p class="text-xl font-semibold tracking-wide text-yellow-50">Rankings Leaderboard</p>
-              <p id="rankingsMeta" class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">Generating universal rankings…</p>
-            </div>
-            <div class="flex items-center gap-4">
-              <span id="rankingsCount" class="rounded-full border border-yellow-300/50 bg-yellow-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-yellow-50 shadow-[0_0_18px_rgba(250,204,21,0.4)]">0</span>
-              <button
-                id="rankingsRefresh"
-                type="button"
-                class="rounded-full border border-yellow-300/40 bg-yellow-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-yellow-50 shadow-[0_0_25px_rgba(250,204,21,0.35)] transition hover:border-yellow-200/60 hover:bg-yellow-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200/70"
-              >
-                Refresh
-              </button>
-            </div>
-          </div>
-          <div id="rankingsLoading" class="hidden items-center gap-3 px-6 py-10 text-sm font-semibold text-yellow-100">
-            <span class="h-4 w-4 animate-spin rounded-full border-2 border-yellow-200/70 border-t-transparent"></span>
-            <span>Compiling live rankings across all clubs…</span>
-          </div>
-          <div id="rankingsEmpty" class="hidden px-6 py-8 text-sm text-yellow-100/80">
-            Unable to load player data. Try refreshing in a moment.
-          </div>
-          <div id="rankingsTableWrap" class="hidden overflow-x-auto px-4 pb-8">
-            <table class="min-w-full border-separate border-spacing-y-3 text-sm text-slate-100">
-              <thead>
-                <tr class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">
-                  <th scope="col" class="px-4 py-3 text-left">Rank</th>
-                  <th scope="col" class="px-4 py-3 text-left">Player</th>
-                  <th scope="col" class="px-4 py-3 text-left">Club</th>
-                  <th scope="col" class="px-4 py-3 text-left">Position</th>
-                  <th scope="col" class="px-4 py-3 text-left">Points</th>
-                  <th scope="col" class="px-4 py-3 text-left">Value (USD)</th>
-                </tr>
-              </thead>
-              <tbody id="rankingsTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </section>
     </section>
+
+  <section id="rankings-section" class="mt-24">
+    <div class="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-slate-900/80 shadow-[0_30px_60px_rgba(12,10,5,0.75)]">
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-yellow-300/20 bg-gradient-to-r from-yellow-500/10 via-amber-400/5 to-transparent px-6 py-5">
+        <div class="flex flex-col gap-2">
+          <p class="text-xl font-semibold tracking-wide text-yellow-50">Rankings Leaderboard</p>
+          <p id="rankingsMeta" class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">Generating universal rankings…</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="rankingsCount" class="rounded-full border border-yellow-300/50 bg-yellow-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-yellow-50 shadow-[0_0_18px_rgba(250,204,21,0.4)]">0</span>
+          <button
+            id="rankingsRefresh"
+            type="button"
+            class="rounded-full border border-yellow-300/40 bg-yellow-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-yellow-50 shadow-[0_0_25px_rgba(250,204,21,0.35)] transition hover:border-yellow-200/60 hover:bg-yellow-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200/70"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+      <div id="rankingsLoading" class="hidden items-center gap-3 px-6 py-10 text-sm font-semibold text-yellow-100">
+        <span class="h-4 w-4 animate-spin rounded-full border-2 border-yellow-200/70 border-t-transparent"></span>
+        <span>Compiling live rankings across all clubs…</span>
+      </div>
+      <div id="rankingsEmpty" class="hidden px-6 py-8 text-sm text-yellow-100/80">
+        Unable to load player data. Try refreshing in a moment.
+      </div>
+      <div id="rankingsTableWrap" class="hidden overflow-x-auto px-4 pb-8">
+        <table class="min-w-full border-separate border-spacing-y-3 text-sm text-slate-100">
+          <thead>
+            <tr class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">
+              <th scope="col" class="px-4 py-3 text-left">Rank</th>
+              <th scope="col" class="px-4 py-3 text-left">Player</th>
+              <th scope="col" class="px-4 py-3 text-left">Club</th>
+              <th scope="col" class="px-4 py-3 text-left">Position</th>
+              <th scope="col" class="px-4 py-3 text-left">Points</th>
+              <th scope="col" class="px-4 py-3 text-left">Value (USD)</th>
+            </tr>
+          </thead>
+          <tbody id="rankingsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
   <div id="teamView" style="display:none"></div>
 
   <!-- NEWS -->
