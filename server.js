@@ -171,9 +171,16 @@ function normalizeClubIds(ids) {
   if (!Array.isArray(ids) || !ids.length) {
     return [];
   }
-  const asStrings = ids.map(id => String(id).trim()).filter(Boolean);
-  const allNumeric = asStrings.every(id => /^\d+$/.test(id));
-  return allNumeric ? asStrings.map(id => Number(id)) : asStrings;
+  return ids
+    .map(id => {
+      const asString = String(id ?? '').trim();
+      if (!asString) {
+        return null;
+      }
+      const asNumber = Number(asString);
+      return Number.isFinite(asNumber) ? asNumber : null;
+    })
+    .filter(id => id !== null);
 }
 
 function clubsForLeague(id) {
