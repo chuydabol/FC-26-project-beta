@@ -43,6 +43,7 @@
   --pad:16px;
   --radius:18px;
 }
+html{scroll-behavior:smooth;}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
@@ -799,6 +800,18 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
           </span>
           <span>Teams</span>
         </button>
+        <button type="button" id="navRankings" aria-pressed="false">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5" />
+              <path d="M15 18v-8" />
+              <path d="M21 18v-4" />
+              <path d="M3 18v-2" />
+              <path d="M21 20H3" />
+            </svg>
+          </span>
+          <span>Rankings</span>
+        </button>
         <button type="button" id="navNews" aria-pressed="false">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -929,77 +942,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       <h2 style="margin:0">Teams</h2>
       <div class="muted">Total teams: <span id="teams-count">0</span></div>
     </div>
-    <div class="mt-6">
-      <button
-        id="rankingsCard"
-        type="button"
-        aria-expanded="false"
-        aria-controls="rankingsPanel"
-        class="group relative flex w-full items-center justify-between overflow-hidden rounded-3xl border border-yellow-400/60 bg-gradient-to-br from-yellow-500/20 via-amber-400/15 to-yellow-500/10 px-6 py-6 text-left shadow-[0_0_45px_rgba(250,204,21,0.45)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_0_65px_rgba(250,204,21,0.65)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-midnight focus-visible:ring-yellow-300/80">
-        <div class="flex items-center gap-5">
-          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-400/20 shadow-[0_0_25px_rgba(250,204,21,0.45)]">
-            <svg class="h-7 w-7 text-yellow-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="m8 21 4-2 4 2" />
-              <path d="M12 17V3" />
-              <path d="M5 11h14" />
-              <path d="M19 7H5" />
-            </svg>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-xs font-semibold uppercase tracking-[0.48em] text-yellow-200/80">Universal Leaderboard</span>
-            <span class="text-3xl font-black tracking-[0.32em] text-yellow-100 drop-shadow">RANKINGS #</span>
-            <span class="mt-2 text-sm text-yellow-100/70">Tap to reveal the cross-club player standings based on performance metrics.</span>
-          </div>
-        </div>
-        <div class="flex flex-col items-end gap-3">
-          <span id="rankingsCardCount" class="rounded-full border border-yellow-300/50 bg-yellow-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-yellow-50 shadow-[0_0_18px_rgba(250,204,21,0.4)]">0</span>
-          <svg data-chevron class="h-6 w-6 text-yellow-100 transition-transform duration-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </div>
-      </button>
-    </div>
-    <div
-      id="rankingsPanel"
-      class="relative mt-4 overflow-hidden rounded-3xl border border-yellow-400/40 bg-slate-900/80 shadow-[0_30px_60px_rgba(12,10,5,0.75)] transition-all duration-500 ease-in-out pointer-events-none opacity-0 scale-95"
-      style="max-height:0"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-yellow-300/20 bg-gradient-to-r from-yellow-500/10 via-amber-400/5 to-transparent px-6 py-5">
-        <div>
-          <p class="text-xl font-semibold tracking-wide text-yellow-50">Rankings Leaderboard</p>
-          <p id="rankingsMeta" class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">Open to generate the universal rankings.</p>
-        </div>
-        <button
-          id="rankingsRefresh"
-          type="button"
-          class="rounded-full border border-yellow-300/40 bg-yellow-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-yellow-50 shadow-[0_0_25px_rgba(250,204,21,0.35)] transition hover:border-yellow-200/60 hover:bg-yellow-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200/70"
-        >
-          Refresh
-        </button>
-      </div>
-      <div id="rankingsLoading" class="hidden items-center gap-3 px-6 py-10 text-sm font-semibold text-yellow-100">
-        <span class="h-4 w-4 animate-spin rounded-full border-2 border-yellow-200/70 border-t-transparent"></span>
-        <span>Compiling live rankings across all clubs…</span>
-      </div>
-      <div id="rankingsEmpty" class="hidden px-6 py-8 text-sm text-yellow-100/80">
-        Unable to load player data. Try refreshing in a moment.
-      </div>
-      <div id="rankingsTableWrap" class="hidden overflow-x-auto px-4 pb-8">
-        <table class="min-w-full border-separate border-spacing-y-3 text-sm text-slate-100">
-          <thead>
-            <tr class="text-[11px] uppercase tracking-[0.28em] text-yellow-200/70">
-              <th class="rounded-l-2xl bg-yellow-500/10 px-4 py-3 text-left">Rank</th>
-              <th class="bg-yellow-500/10 px-4 py-3 text-left">Player</th>
-              <th class="bg-yellow-500/10 px-4 py-3 text-left">Club</th>
-              <th class="bg-yellow-500/10 px-4 py-3 text-left">Position</th>
-              <th class="bg-yellow-500/10 px-4 py-3 text-left">Points</th>
-              <th class="rounded-r-2xl bg-yellow-500/10 px-4 py-3 text-left">Value (USD)</th>
-            </tr>
-          </thead>
-          <tbody id="rankingsTableBody"></tbody>
-        </table>
-      </div>
-    </div>
     <div class="teams-grid" id="teamsGrid" role="list">
         <div class="team-card glow-card glow-silver" data-club-id="585548" role="listitem">
           <div class="team-card-header">
@@ -1042,6 +984,48 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
         <div>No teams registered yet.</div>
         <small class="muted">Check back after clubs join the competition.</small>
       </div>
+      <section id="rankings-section" class="mt-24">
+        <div class="relative overflow-hidden rounded-3xl border border-yellow-400/40 bg-slate-900/80 shadow-[0_30px_60px_rgba(12,10,5,0.75)]">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-yellow-300/20 bg-gradient-to-r from-yellow-500/10 via-amber-400/5 to-transparent px-6 py-5">
+            <div class="flex flex-col gap-2">
+              <p class="text-xl font-semibold tracking-wide text-yellow-50">Rankings Leaderboard</p>
+              <p id="rankingsMeta" class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">Generating universal rankings…</p>
+            </div>
+            <div class="flex items-center gap-4">
+              <span id="rankingsCount" class="rounded-full border border-yellow-300/50 bg-yellow-500/20 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-yellow-50 shadow-[0_0_18px_rgba(250,204,21,0.4)]">0</span>
+              <button
+                id="rankingsRefresh"
+                type="button"
+                class="rounded-full border border-yellow-300/40 bg-yellow-500/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-yellow-50 shadow-[0_0_25px_rgba(250,204,21,0.35)] transition hover:border-yellow-200/60 hover:bg-yellow-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-200/70"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+          <div id="rankingsLoading" class="hidden items-center gap-3 px-6 py-10 text-sm font-semibold text-yellow-100">
+            <span class="h-4 w-4 animate-spin rounded-full border-2 border-yellow-200/70 border-t-transparent"></span>
+            <span>Compiling live rankings across all clubs…</span>
+          </div>
+          <div id="rankingsEmpty" class="hidden px-6 py-8 text-sm text-yellow-100/80">
+            Unable to load player data. Try refreshing in a moment.
+          </div>
+          <div id="rankingsTableWrap" class="hidden overflow-x-auto px-4 pb-8">
+            <table class="min-w-full border-separate border-spacing-y-3 text-sm text-slate-100">
+              <thead>
+                <tr class="text-xs uppercase tracking-[0.32em] text-yellow-200/70">
+                  <th scope="col" class="px-4 py-3 text-left">Rank</th>
+                  <th scope="col" class="px-4 py-3 text-left">Player</th>
+                  <th scope="col" class="px-4 py-3 text-left">Club</th>
+                  <th scope="col" class="px-4 py-3 text-left">Position</th>
+                  <th scope="col" class="px-4 py-3 text-left">Points</th>
+                  <th scope="col" class="px-4 py-3 text-left">Value (USD)</th>
+                </tr>
+              </thead>
+              <tbody id="rankingsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </section>
   <div id="teamView" style="display:none"></div>
 
@@ -1343,23 +1327,13 @@ function buildStaticTeams(){
   leaderboardState.players = [];
   leaderboardState.lastUpdated = null;
   if(leaderboardEls.count) leaderboardEls.count.textContent = '0';
-  if(leaderboardEls.meta) leaderboardEls.meta.textContent = 'Open to generate the universal rankings.';
+  if(leaderboardEls.meta) leaderboardEls.meta.textContent = 'Generating universal rankings…';
   if(leaderboardEls.body) leaderboardEls.body.innerHTML = '';
   leaderboardEls.tableWrap?.classList.add('hidden');
   leaderboardEls.loading?.classList.add('hidden');
   if(leaderboardEls.empty){
     leaderboardEls.empty.classList.add('hidden');
     leaderboardEls.empty.textContent = 'Unable to load player data. Try refreshing in a moment.';
-  }
-  if(leaderboardEls.panel){
-    leaderboardEls.panel.style.maxHeight = '0px';
-    leaderboardEls.panel.classList.add('pointer-events-none','opacity-0','scale-95');
-  }
-  if(leaderboardEls.card){
-    leaderboardEls.card.setAttribute('aria-expanded','false');
-    leaderboardEls.card.classList.remove('ring-2','ring-yellow-200/60');
-    const chevron = leaderboardEls.card.querySelector('[data-chevron]');
-    if(chevron) chevron.classList.remove('rotate-180');
   }
   document.getElementById('teams-count').textContent = teams.length;
   const emptyState = document.getElementById('teamsEmpty');
@@ -1425,6 +1399,13 @@ const PRO_POSITION_MAP = {
   31:'CAM'
 };
 
+const FAVORITE_POSITION_MAP = {
+  'forward':'ST',
+  'midfielder':'CM',
+  'defender':'CB',
+  'goalkeeper':'GK'
+};
+
 const usdFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
   currency: 'USD',
@@ -1437,10 +1418,22 @@ function numberFrom(value){
 }
 
 function resolvePlayerPosition(player){
+  const fav = player?.favoritePosition ?? player?.favoriteposition;
+  if(fav != null){
+    const favKey = String(fav).trim().toLowerCase();
+    if(FAVORITE_POSITION_MAP[favKey]){
+      return FAVORITE_POSITION_MAP[favKey];
+    }
+    if(favKey){
+      return favKey.toUpperCase();
+    }
+  }
   const raw = player.position || player.pos || player.proPos || player.proPosition;
   if(raw == null) return '—';
   const str = String(raw).trim();
   if(!str) return '—';
+  const lower = str.toLowerCase();
+  if(FAVORITE_POSITION_MAP[lower]) return FAVORITE_POSITION_MAP[lower];
   const num = Number(str);
   if(!Number.isNaN(num) && PRO_POSITION_MAP[num]) return PRO_POSITION_MAP[num];
   return str.toUpperCase();
@@ -1523,33 +1516,6 @@ function formatUsd(value){
   return usdFormatter.format(Math.round(value || 0));
 }
 
-function updateRankingsPanelHeight(){
-  if(!leaderboardEls.panel || leaderboardEls.card?.getAttribute('aria-expanded') !== 'true') return;
-  const panel = leaderboardEls.panel;
-  panel.style.maxHeight = `${panel.scrollHeight + 24}px`;
-}
-
-function toggleRankingsPanel(show){
-  if(!leaderboardEls.panel || !leaderboardEls.card) return;
-  const { panel, card } = leaderboardEls;
-  card.setAttribute('aria-expanded', String(show));
-  const chevron = card.querySelector('[data-chevron]');
-  if(chevron) chevron.classList.toggle('rotate-180', show);
-  card.classList.toggle('ring-2', show);
-  card.classList.toggle('ring-yellow-200/60', show);
-  if(show){
-    panel.classList.remove('pointer-events-none');
-    panel.classList.remove('opacity-0');
-    panel.classList.remove('scale-95');
-    requestAnimationFrame(updateRankingsPanelHeight);
-  }else{
-    panel.classList.add('opacity-0');
-    panel.classList.add('scale-95');
-    panel.style.maxHeight = '0px';
-    setTimeout(()=> panel.classList.add('pointer-events-none'), 320);
-  }
-}
-
 async function fetchLeaderboardPlayers(){
   if(!teams.length){
     buildStaticTeams();
@@ -1583,7 +1549,6 @@ function renderLeaderboard(players){
       leaderboardEls.empty.textContent = 'No player data available yet.';
       leaderboardEls.empty.classList.remove('hidden');
     }
-    updateRankingsPanelHeight();
     return;
   }
 
@@ -1595,7 +1560,7 @@ function renderLeaderboard(players){
     const baseClass = 'group relative overflow-hidden rounded-2xl border bg-slate-950/70 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-yellow-300/60 hover:shadow-[0_18px_35px_rgba(250,204,21,0.25)]';
     let topClass = 'border-slate-700/60 shadow-[0_10px_25px_rgba(5,6,12,0.65)]';
     if(index === 0){
-      topClass = 'border-yellow-300/80 shadow-[0_0_55px_rgba(250,204,21,0.55)]';
+      topClass = 'border-yellow-300/90 shadow-[0_0_55px_rgba(250,204,21,0.55)]';
     }else if(index === 1){
       topClass = 'border-slate-200/80 shadow-[0_0_45px_rgba(226,232,240,0.4)]';
     }else if(index === 2){
@@ -1628,7 +1593,7 @@ function renderLeaderboard(players){
           <span>${escapeHtml(player.name)}</span>
           <span class="text-xs font-medium uppercase tracking-[0.24em] text-yellow-200/70">Rating ${player.rating.toFixed(2)} • Win ${player.winRate.toFixed(1)}%</span>
         </div>
-        <div class="pointer-events-none absolute left-1/2 top-full z-30 hidden w-[min(320px,80vw)] -translate-x-1/2 -translate-y-3 rounded-2xl border border-yellow-300/30 bg-slate-950/95 px-4 py-3 text-xs text-yellow-50 shadow-[0_28px_55px_rgba(8,8,3,0.9)] opacity-0 transition-all duration-200 group-hover:flex group-hover:-translate-y-1 group-hover:opacity-100">
+        <div aria-hidden="true" class="pointer-events-none absolute left-1/2 top-full z-30 w-[min(320px,80vw)] -translate-x-1/2 -translate-y-3 rounded-2xl border border-yellow-300/30 bg-slate-950/95 px-4 py-3 text-xs text-yellow-50 shadow-[0_28px_55px_rgba(8,8,3,0.9)] opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-y-1 group-focus-within:opacity-100 group-focus-within:-translate-y-1">
           ${tooltip}
         </div>
       </td>
@@ -1640,12 +1605,10 @@ function renderLeaderboard(players){
 
     leaderboardEls.body.appendChild(row);
   });
-
-  updateRankingsPanelHeight();
 }
 
 async function ensureRankingsLoaded(force){
-  if(!leaderboardEls.card) return;
+  if(!leaderboardEls.section) return;
   if(leaderboardState.loading) return;
   if(leaderboardState.loaded && !force){
     renderLeaderboard(leaderboardState.players);
@@ -1687,15 +1650,13 @@ async function ensureRankingsLoaded(force){
   }finally{
     leaderboardEls.loading?.classList.add('hidden');
     leaderboardState.loading = false;
-    updateRankingsPanelHeight();
   }
 }
 
 function setupRankings(){
   leaderboardEls = {
-    card: document.getElementById('rankingsCard'),
-    panel: document.getElementById('rankingsPanel'),
-    count: document.getElementById('rankingsCardCount'),
+    section: document.getElementById('rankings-section'),
+    count: document.getElementById('rankingsCount'),
     meta: document.getElementById('rankingsMeta'),
     loading: document.getElementById('rankingsLoading'),
     empty: document.getElementById('rankingsEmpty'),
@@ -1704,25 +1665,23 @@ function setupRankings(){
     refresh: document.getElementById('rankingsRefresh')
   };
 
-  if(!leaderboardEls.card) return;
-
-  leaderboardEls.card.addEventListener('click', async ()=>{
-    const expanded = leaderboardEls.card.getAttribute('aria-expanded') === 'true';
-    if(expanded){
-      toggleRankingsPanel(false);
-      return;
-    }
-    toggleRankingsPanel(true);
-    await ensureRankingsLoaded(false);
-  });
+  if(!leaderboardEls.section) return;
 
   if(leaderboardEls.refresh){
-    leaderboardEls.refresh.addEventListener('click', async (ev)=>{
-      ev.stopPropagation();
-      toggleRankingsPanel(true);
-      await ensureRankingsLoaded(true);
+    leaderboardEls.refresh.addEventListener('click', async ()=>{
+      if(leaderboardState.loading) return;
+      leaderboardEls.refresh.disabled = true;
+      leaderboardEls.refresh.setAttribute('aria-busy','true');
+      try{
+        await ensureRankingsLoaded(true);
+      }finally{
+        leaderboardEls.refresh.removeAttribute('aria-busy');
+        leaderboardEls.refresh.disabled = false;
+      }
     });
   }
+
+  ensureRankingsLoaded(false);
 }
 
 let isAdmin = false;
@@ -1771,17 +1730,19 @@ async function resolvePlayerName(id){
 }
 
 // nav elements
-const navHome     = document.getElementById('navHome');
-const navTeams    = document.getElementById('navTeams');
-const navNews     = document.getElementById('navNews');
-const navFxPublic = document.getElementById('navFixturesPublic');
-const navFxSched  = document.getElementById('navFixturesSched');
-const navChampions= document.getElementById('navChampions');
-const navLeague   = document.getElementById('navLeague');
+const navHome       = document.getElementById('navHome');
+const navTeams      = document.getElementById('navTeams');
+const navRankings   = document.getElementById('navRankings');
+const navNews       = document.getElementById('navNews');
+const navFxPublic   = document.getElementById('navFixturesPublic');
+const navFxSched    = document.getElementById('navFixturesSched');
+const navChampions  = document.getElementById('navChampions');
+const navLeague     = document.getElementById('navLeague');
 const navFriendlies = document.getElementById('navFriendlies');
 
 const homeView    = document.getElementById('home');
 const teamsViewEl = document.getElementById('teams-view');
+const rankingsSection = document.getElementById('rankings-section');
 const newsView    = document.getElementById('news-view');
 const fxPublic    = document.getElementById('fixtures-public');
 const fxSched     = document.getElementById('fixtures-sched');
@@ -1808,15 +1769,33 @@ function setNav(active){
     if(is) view.style.display = 'block';
     btn.setAttribute('aria-pressed', String(is));
   }
+  if(navRankings){
+    navRankings.setAttribute('aria-pressed','false');
+  }
 }
 navHome.onclick        = async ()=>{ setNav('home'); await loadHome(); };
-navTeams.onclick       = ()=> setNav('teams');
+navTeams.onclick       = ()=> { setNav('teams'); ensureRankingsLoaded(false); };
 navNews.onclick        = async ()=>{ setNav('news'); await loadNews(); };
 navFxPublic.onclick    = ()=> setNav('fixturesPublic');
 navFxSched.onclick     = ()=> setNav('fixturesSched');
 navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
 navLeague.onclick      = ()=> { setNav('league'); loadLeague(); };
 navFriendlies.onclick  = async ()=> { setNav('friendlies'); await loadFriendlies(); };
+if(navRankings){
+  navRankings.onclick = ()=>{
+    setNav('teams');
+    ensureRankingsLoaded(false);
+    navRankings.setAttribute('aria-pressed','true');
+    if(rankingsSection){
+      requestAnimationFrame(()=>{
+        rankingsSection.scrollIntoView({ behavior:'smooth', block:'start' });
+      });
+    }
+    setTimeout(()=>{
+      navRankings.setAttribute('aria-pressed','false');
+    }, 800);
+  };
+}
 
 // auth / admin / manager
 const btnAdminLogin = document.getElementById('btnAdminLogin');
@@ -2020,7 +1999,7 @@ async function openTeamView(clubId){
       ? parseVpro(m.vproattr)
       : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' });
     const tier = tierFromOvr(stats.ovr);
-    const card = buildPlayerCard({ ...m, position: m.proPos }, stats, tier);
+    const card = buildPlayerCard({ ...m, position: resolvePlayerPosition(m) }, stats, tier);
     grid.appendChild(card);
   });
   upgradeClubPlayers(clubId, grid);
