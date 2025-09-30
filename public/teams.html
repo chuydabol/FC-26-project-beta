@@ -2881,14 +2881,24 @@ async function loadLeague(){
 }
 
 function renderStandings(rows, matches){
+  const allowedClubIds = new Set();
   const nameFallbacks = new Map();
   (rows || []).forEach(r => {
-    const id = r?.club_id ?? r?.clubId ?? r?.id;
-    if (!id) return;
-    const key = String(id);
+    const rawId = r?.club_id ?? r?.clubId ?? r?.id;
+    if (!rawId) return;
+    const id = String(rawId);
+    allowedClubIds.add(id);
     const label = r?.club_name || r?.name || r?.club || r?.team;
-    if (label) nameFallbacks.set(key, label);
+    if (label) nameFallbacks.set(id, label);
   });
+
+  if (!allowedClubIds.size){
+    (teams || []).forEach(team => {
+      const teamId = team?.id;
+      if (!teamId) return;
+      allowedClubIds.add(String(teamId));
+    });
+  }
 
   const standingsMap = new Map();
   const ensureEntry = (clubId, clubData = {}) => {
@@ -2951,7 +2961,9 @@ function renderStandings(rows, matches){
     }
   });
 
-  let computed = Array.from(standingsMap.values());
+  let computed = Array.from(standingsMap.values()).filter(entry => {
+    return !allowedClubIds.size || allowedClubIds.has(String(entry?.clubId ?? ''));
+  });
   if (!computed.length){
     computed = (rows || []).map(r => {
       const id = r?.club_id ?? r?.clubId ?? r?.id;
@@ -2972,6 +2984,9 @@ function renderStandings(rows, matches){
         points: Number(r?.points ?? 0)
       };
     }).filter(Boolean);
+    computed = computed.filter(entry => {
+      return !allowedClubIds.size || allowedClubIds.has(String(entry?.clubId ?? ''));
+    });
   }
 
   computed.forEach(entry => {
