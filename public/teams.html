@@ -301,12 +301,16 @@ main{
   max-width:1280px;
   margin:0 auto;
   z-index:1;
+  overflow-x:hidden;
 }
 main::before{
   content:"";
   position:absolute;
   inset:0;
-  margin-inline:-10vw;
+  left:50%;
+  right:auto;
+  width:calc(100% + min(20vw, 120px));
+  transform:translateX(-50%);
   background:
     radial-gradient(75% 45% at 50% 0%, rgba(30,201,195,0.18) 0%, transparent 65%),
     linear-gradient(0deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
