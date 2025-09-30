@@ -24,7 +24,7 @@ test('serves league standings', async () => {
       return {
         rows: [
           {
-            club_id: '1',
+            club_id: 1,
             played: 1,
             wins: 1,
             draws: 0,
@@ -38,7 +38,7 @@ test('serves league standings', async () => {
       };
     }
     if (/from\s+public\.clubs/i.test(sql)) {
-      return { rows: [ { id: '1', name: 'Team 1' } ] };
+      return { rows: [ { id: 1, name: 'Team 1' } ] };
     }
     return { rows: [] };
   });
@@ -46,9 +46,9 @@ test('serves league standings', async () => {
   await withServer(async port => {
     const res = await fetch(`http://localhost:${port}/api/leagues/test`);
     const body = await res.json();
-    assert.deepStrictEqual(body.teams, [ { id: '1', name: 'Team 1' } ]);
+    assert.deepStrictEqual(body.teams, [ { id: 1, name: 'Team 1' } ]);
     assert.deepStrictEqual(body.standings, [ {
-      club_id: '1',
+      club_id: 1,
       played: 1,
       wins: 1,
       draws: 0,
@@ -69,7 +69,7 @@ test('standings include teams with zero matches', async () => {
       return {
         rows: [
           {
-            club_id: '1',
+            club_id: 1,
             played: 0,
             wins: 0,
             draws: 0,
@@ -83,7 +83,7 @@ test('standings include teams with zero matches', async () => {
       };
     }
     if (/from\s+public\.clubs/i.test(sql)) {
-      return { rows: [ { id: '1', name: 'Team 1' } ] };
+      return { rows: [ { id: 1, name: 'Team 1' } ] };
     }
     return { rows: [] };
   });
@@ -92,7 +92,7 @@ test('standings include teams with zero matches', async () => {
     const res = await fetch(`http://localhost:${port}/api/leagues/test`);
     const body = await res.json();
     assert.deepStrictEqual(body.standings, [ {
-      club_id: '1',
+      club_id: 1,
       played: 0,
       wins: 0,
       draws: 0,
@@ -102,7 +102,7 @@ test('standings include teams with zero matches', async () => {
       goal_diff: 0,
       points: 0,
     } ]);
-    assert.deepStrictEqual(body.teams, [ { id: '1', name: 'Team 1' } ]);
+    assert.deepStrictEqual(body.teams, [ { id: 1, name: 'Team 1' } ]);
   });
 
   stub.mock.restore();
@@ -114,7 +114,7 @@ test('standings include matches against non-league opponents', async () => {
       return {
         rows: [
           {
-            club_id: '1',
+            club_id: 1,
             played: 1,
             wins: 0,
             draws: 0,
@@ -128,7 +128,7 @@ test('standings include matches against non-league opponents', async () => {
       };
     }
     if (/from\s+public\.clubs/i.test(sql)) {
-      return { rows: [ { id: '1', name: 'Team 1' } ] };
+      return { rows: [ { id: 1, name: 'Team 1' } ] };
     }
     return { rows: [] };
   });
@@ -138,7 +138,7 @@ test('standings include matches against non-league opponents', async () => {
     const body = await res.json();
     assert.deepStrictEqual(body.standings, [
       {
-        club_id: '1',
+        club_id: 1,
         played: 1,
         wins: 0,
         draws: 0,
@@ -254,9 +254,9 @@ test('different leagueIds return appropriate clubs', async () => {
   await withServer(async port => {
     let res = await fetch(`http://localhost:${port}/api/leagues/alpha`);
     let body = await res.json();
-    assert.deepStrictEqual(body.teams, [ { id: '1', name: 'Team 1' } ]);
+    assert.deepStrictEqual(body.teams, [ { id: 1, name: 'Team 1' } ]);
     assert.deepStrictEqual(body.standings, [ {
-      club_id: '1',
+      club_id: 1,
       played: 1,
       wins: 1,
       draws: 0,
@@ -269,9 +269,9 @@ test('different leagueIds return appropriate clubs', async () => {
 
     res = await fetch(`http://localhost:${port}/api/leagues/beta`);
     body = await res.json();
-    assert.deepStrictEqual(body.teams, [ { id: '2', name: 'Team 2' } ]);
+    assert.deepStrictEqual(body.teams, [ { id: 2, name: 'Team 2' } ]);
     assert.deepStrictEqual(body.standings, [ {
-      club_id: '2',
+      club_id: 2,
       played: 1,
       wins: 1,
       draws: 0,
