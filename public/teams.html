@@ -768,6 +768,8 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .league-table tbody tr.rank-2 td:nth-child(8){color:rgba(45,212,191,0.95);}
 .league-table tbody tr.rank-3 td:nth-child(8){color:var(--silver);}
 .stats-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid rgba(148,163,184,0.12)}
+.stats-row .rank-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(148,163,184,0.16);font-weight:700;font-size:13px;color:#f6f9ff;box-shadow:0 0 12px rgba(148,163,184,0.12);}
+.stats-row .rank-badge+img{margin-left:4px;}
 .stats-row .player-kit,.stats-row .player-silhouette{position:static;transform:none;width:60px;height:auto;flex-shrink:0}
 .stats-row .player-kit-box{position:static;transform:none;width:60px;height:60px;border-radius:6px;flex-shrink:0}
 .stats-row .info{flex:1;min-width:0;line-height:1.2}
@@ -1012,11 +1014,11 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       </div>
       <div class="m-card glow-card glow-gold">
         <strong>League Standings</strong>
-        <div id="homeStandings" class="muted" style="margin-top:6px">Loading…</div>
+        <div id="homepage-standings" class="muted" style="margin-top:6px">Loading…</div>
       </div>
       <div class="m-card glow-card glow-gold">
         <strong>Top Scorers</strong>
-        <div id="homeScorers" class="muted" style="margin-top:6px">Loading…</div>
+        <div id="homepage-topscorers" class="muted" style="margin-top:6px">Loading…</div>
       </div>
     </div>
   </section>
@@ -1280,12 +1282,18 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
     <div class="league-grid">
       <div class="standings-table glow-card glow-gold">
         <div class="overflow-x-auto">
-        <table class="league-table min-w-[560px] text-left text-xs sm:text-sm md:text-base">
-          <thead>
-            <tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
-          </thead>
-          <tbody id="leagueTableBody"></tbody>
-        </table>
+          <table class="league-table min-w-[560px] text-left text-xs sm:text-sm md:text-base">
+            <thead>
+              <tr><th>#</th><th>Team</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr>
+            </thead>
+            <tbody id="league-standings"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="m-card glow-card glow-green">
+        <strong>Top Scorers</strong>
+        <div id="league-topscorers" class="mt-2 space-y-2">
+          <div class="muted">Loading…</div>
         </div>
       </div>
     </div>
@@ -1398,6 +1406,31 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 const API_BASE = '';
 const CC_ID = 'UPCL_CC_2025_08'; // current Champions Cup id
 const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
+
+let leagueDataCache = null;
+let leagueDataPromise = null;
+
+async function fetchLeagueData(force = false){
+  if (!force && leagueDataCache) return leagueDataCache;
+  if (!leagueDataPromise || force){
+    leagueDataPromise = (async () => {
+      const [standingsRes, matchesRes, playersRes, leadersRes] = await Promise.all([
+        apiGet('/api/league').catch(()=>({ standings: [] })),
+        apiGet('/api/matches').catch(()=>({ matches: [] })),
+        apiGet('/api/players').catch(()=>({ players: [] })),
+        apiGet('/api/league/leaders').catch(()=>({ scorers: [] }))
+      ]);
+      leagueDataCache = {
+        standings: standingsRes.standings || [],
+        matches: matchesRes.matches || [],
+        players: playersRes.players || [],
+        scorers: leadersRes.scorers || []
+      };
+      return leagueDataCache;
+    })();
+  }
+  return leagueDataPromise;
+}
 
 // Teams
 let teams = [];
@@ -2926,14 +2959,11 @@ function setupCcFixtureForm(){
   };
 }
 
-async function loadLeague(){
-  const [standings, players, matches] = await Promise.all([
-    apiGet('/api/league'),
-    apiGet('/api/players'),
-    apiGet('/api/matches')
-  ]);
-  renderStandings(standings.standings || [], matches.matches || []);
-  renderStats(players.players || []);
+async function loadLeague(force = false){
+  const data = await fetchLeagueData(force);
+  renderStandings(data.standings || [], data.matches || []);
+  renderStats(data.players || []);
+  renderTopScorers(data.scorers || []);
 
   const toggleBtn = document.getElementById('statsToggleBtn');
   const leagueView = document.getElementById('leagueView');
@@ -2957,6 +2987,13 @@ async function loadLeague(){
 }
 
 function renderStandings(rows, matches){
+  const computed = computeStandings(rows, matches);
+  renderLeagueStandings(computed);
+  renderHomepageStandings(computed);
+  return computed;
+}
+
+function computeStandings(rows, matches){
   const allowedClubIds = new Set();
   const nameFallbacks = new Map();
   (rows || []).forEach(r => {
@@ -3071,7 +3108,7 @@ function renderStandings(rows, matches){
     }
   });
 
-  const sorted = computed.sort((a,b) => {
+  computed.sort((a,b) => {
     if (b.points !== a.points) return b.points - a.points;
     const gdA = a.goalsFor - a.goalsAgainst;
     const gdB = b.goalsFor - b.goalsAgainst;
@@ -3080,15 +3117,17 @@ function renderStandings(rows, matches){
     return (a.name || '').localeCompare(b.name || '');
   });
 
-  const body = document.getElementById('leagueTableBody');
-  body.innerHTML = '';
-  sorted.forEach((row, idx) => {
-    const tr = document.createElement('tr');
-    if (idx < 4) tr.classList.add('top4');
-    if (idx === 0) tr.classList.add('rank-1');
-    else if (idx === 1) tr.classList.add('rank-2');
-    else if (idx === 2) tr.classList.add('rank-3');
+  return computed;
+}
 
+function renderLeagueStandings(sorted){
+  const body = document.getElementById('league-standings');
+  if (!body) return;
+  if (!sorted.length){
+    body.innerHTML = '<tr><td colspan="10" class="muted">No standings.</td></tr>';
+    return;
+  }
+  const rowsHtml = sorted.map((row, idx) => {
     const played = Number(row.played ?? 0);
     const wins = Number(row.wins ?? 0);
     const draws = Number(row.draws ?? 0);
@@ -3097,21 +3136,78 @@ function renderStandings(rows, matches){
     const ga = Number(row.goalsAgainst ?? 0);
     const gd = gf - ga;
     const pts = Number(row.points ?? 0);
+    const classes = [];
+    if (idx < 4) classes.push('top4');
+    if (idx === 0) classes.push('rank-1');
+    else if (idx === 1) classes.push('rank-2');
+    else if (idx === 2) classes.push('rank-3');
+    const classAttr = classes.length ? ` class="${classes.join(' ')}"` : '';
+    const name = row.name || byId(row.clubId)?.name || row.clubId;
+    return `<tr${classAttr}><td>${idx + 1}</td><td class="club-name">${escapeHtml(name)}</td><td>${played}</td><td>${wins}</td><td>${draws}</td><td>${losses}</td><td>${gf}</td><td>${ga}</td><td>${gd}</td><td>${pts}</td></tr>`;
+  }).join('');
+  body.innerHTML = rowsHtml;
+}
 
-    tr.innerHTML = `
-      <td>${idx + 1}</td>
-      <td class="club-name">${escapeHtml(row.name || byId(row.clubId)?.name || row.clubId)}</td>
-      <td>${played}</td>
-      <td>${wins}</td>
-      <td>${draws}</td>
-      <td>${losses}</td>
-      <td>${gf}</td>
-      <td>${ga}</td>
-      <td>${gd}</td>
-      <td>${pts}</td>
-    `;
-    body.appendChild(tr);
+function renderHomepageStandings(sorted){
+  const container = document.getElementById('homepage-standings');
+  if (!container) return;
+  if (!sorted.length){
+    container.innerHTML = '<div class="muted">No standings.</div>';
+    return;
+  }
+  const top = sorted.slice(0,5);
+  const rows = top.map((row, idx) => {
+    const rank = idx + 1;
+    const name = row.name || byId(row.clubId)?.name || row.clubId;
+    return `<tr><td>${rank}</td><td>${escapeHtml(name)}</td><td>${Number(row.wins ?? 0)}</td><td>${Number(row.draws ?? 0)}</td><td>${Number(row.losses ?? 0)}</td><td>${Number(row.points ?? 0)}</td></tr>`;
+  }).join('');
+  container.innerHTML = `<table class="league-table"><thead><tr><th>#</th><th>Club</th><th>W</th><th>D</th><th>L</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function renderTopScorers(rows){
+  const homepage = document.getElementById('homepage-topscorers');
+  const league = document.getElementById('league-topscorers');
+  const normalized = (rows || []).map(r => {
+    const clubId = r?.club_id ?? r?.clubId ?? r?.team_id ?? r?.teamId ?? r?.club;
+    return {
+      clubId: clubId ? String(clubId) : '',
+      name: r?.name || r?.player || 'Unknown',
+      goals: Number(r?.count ?? r?.goals ?? r?.total ?? 0)
+    };
+  }).filter(r => r.name);
+  normalized.sort((a,b) => {
+    if (b.goals !== a.goals) return b.goals - a.goals;
+    return a.name.localeCompare(b.name);
   });
+  const top = normalized.slice(0,5);
+
+  if (homepage){
+    if (!top.length){
+      homepage.innerHTML = '<div class="muted">No data.</div>';
+    } else {
+      homepage.innerHTML = top.map((r, idx) => {
+        const clubName = byId(r.clubId)?.name || r.clubId || '';
+        return `<div class="stats-row" data-rank="${idx + 1}" data-club-id="${r.clubId}"><img class="player-kit" src="/assets/silhouette.png" alt=""><div class="info"><div>${escapeHtml(r.name)}</div><div class="muted">${escapeHtml(clubName)}</div></div><div class="value">${r.goals}</div></div>`;
+      }).join('');
+      const unique = new Set(top.map(r => r.clubId).filter(Boolean));
+      unique.forEach(cid => renderClubKits(cid, homepage));
+    }
+  }
+
+  if (league){
+    if (!top.length){
+      league.innerHTML = '<div class="muted">No data.</div>';
+    } else {
+      league.innerHTML = top.map((r, idx) => {
+        const clubName = byId(r.clubId)?.name || r.clubId || '';
+        return `<div class="stats-row" data-rank="${idx + 1}" data-club-id="${r.clubId}"><span class="rank-badge">${idx + 1}</span><img class="player-kit" src="/assets/silhouette.png" alt=""><div class="info"><div>${escapeHtml(r.name)}</div><div class="muted">${escapeHtml(clubName)}</div></div><div class="value">${r.goals}</div></div>`;
+      }).join('');
+      const unique = new Set(top.map(r => r.clubId).filter(Boolean));
+      unique.forEach(cid => renderClubKits(cid, league));
+    }
+  }
+
+  return top;
 }
 
 const STAT_CATEGORIES = [
