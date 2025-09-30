@@ -220,10 +220,6 @@ const LEAGUE_START_MS = parseDateMs(
   process.env.LEAGUE_START_MS,
   Date.parse('2025-08-27T23:59:00-07:00')
 );
-const LEAGUE_END_MS = parseDateMs(
-  process.env.LEAGUE_END_MS,
-  Date.parse('2025-09-03T23:59:00-07:00')
-);
 
 function resolveClubIds() {
   let ids = clubsForLeague(DEFAULT_LEAGUE_ID);
@@ -809,7 +805,6 @@ app.get('/api/league/leaders', async (_req, res) => {
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
      WHERE pms.club_id = ANY($1::bigint[])
-       AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name
      LIMIT 10`;
@@ -819,14 +814,13 @@ app.get('/api/league/leaders', async (_req, res) => {
       JOIN public.matches m ON m.match_id = pms.match_id
       JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
      WHERE pms.club_id = ANY($1::bigint[])
-       AND m.ts_ms BETWEEN $2 AND $3
      GROUP BY pms.club_id, p.name
      ORDER BY count DESC, p.name
      LIMIT 10`;
   try {
     const [scorers, assisters] = await Promise.all([
-      q(scorerSql, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS]),
-      q(assisterSql, [clubIds, LEAGUE_START_MS, LEAGUE_END_MS])
+      q(scorerSql, [clubIds]),
+      q(assisterSql, [clubIds])
     ]);
     res.json({
       scorers: scorers.rows,
