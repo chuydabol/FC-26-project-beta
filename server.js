@@ -600,12 +600,15 @@ async function saveEaMatch(match) {
   const clubEntries = Object.entries(clubs).map(([cid, c]) => {
     const details = c?.details || {};
     const name = typeof details.name === 'string' ? details.name.trim() : '';
+    const hasHomeFlag = details.isHome !== undefined && details.isHome !== null;
     return {
       clubId: cid,
       name,
-      isHome: parseHomeIndicator(details.isHome),
+      isHome: hasHomeFlag ? parseHomeIndicator(details.isHome) : null,
+      hasHomeFlag,
     };
   });
+  const normalizedHomeFlags = new Map();
 
   let homeDivision = null;
   let awayDivision = null;
@@ -631,14 +634,33 @@ async function saveEaMatch(match) {
       })
     );
 
-    let homeEntry = divisionLookups.find(entry => entry.isHome === true) || null;
-    let awayEntry = divisionLookups.find(entry => entry.isHome === false) || null;
+    let homeEntry =
+      divisionLookups.find(entry => entry.hasHomeFlag && entry.isHome === true) ||
+      null;
+    let awayEntry =
+      divisionLookups.find(entry => entry.hasHomeFlag && entry.isHome === false) ||
+      null;
 
     if (!homeEntry && divisionLookups.length) {
-      homeEntry = divisionLookups[0];
+      if (awayEntry && divisionLookups.length > 1) {
+        homeEntry = divisionLookups.find(entry => entry !== awayEntry) || awayEntry;
+      } else {
+        homeEntry = divisionLookups[0];
+      }
+    }
+
+    if (awayEntry && homeEntry && awayEntry.clubId === homeEntry.clubId) {
+      awayEntry = null;
     }
     if (!awayEntry) {
       awayEntry = divisionLookups.find(entry => entry !== homeEntry) || null;
+    }
+
+    if (homeEntry) {
+      for (const entry of divisionLookups) {
+        const isHomeNormalized = entry.clubId === homeEntry.clubId;
+        normalizedHomeFlags.set(entry.clubId, isHomeNormalized);
+      }
     }
 
     homeDivision = homeEntry?.division ?? null;
@@ -658,7 +680,9 @@ async function saveEaMatch(match) {
     const c = clubs[cid];
     const name = c?.details?.name || `Club ${cid}`;
     const goals = Number(c?.goals || 0);
-    const isHome = parseHomeIndicator(c?.details?.isHome);
+    const isHome = normalizedHomeFlags.has(cid)
+      ? normalizedHomeFlags.get(cid)
+      : parseHomeIndicator(c?.details?.isHome);
     await q(SQL_UPSERT_CLUB, [cid, name]);
     await q(SQL_UPSERT_PARTICIPANT, [matchId, cid, isHome, goals]);
   }
