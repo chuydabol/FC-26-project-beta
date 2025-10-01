@@ -38,7 +38,10 @@ function renderHomeMatch(m){
 function renderHomeNews(items){
   const wrap = document.getElementById('homeNews');
   if(!wrap) return;
-  wrap.innerHTML = items.slice(0,3).map(renderNewsItem).join('') || '<div class="muted">No news yet.</div>';
+  const sorted = [...(items || [])]
+    .sort((a,b)=> new Date(b.createdAt || b.ts || 0) - new Date(a.createdAt || a.ts || 0))
+    .slice(0,3);
+  renderNewsCollection(wrap, sorted, '<div class="muted">No news yet.</div>');
 }
 
 function renderFeaturedClubs(standings){
