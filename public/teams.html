@@ -617,6 +617,11 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   .leaderboard-table tbody tr td:last-child{padding-bottom:0;}
   .leaderboard-table tbody tr td > .pointer-events-none{display:none !important;}
   .brand-tagline{letter-spacing:0.24em;font-size:10px;}
+  .players-grid{gap:14px;}
+  .player-card{min-height:260px;padding:18px;}
+  .player-stat-grid{gap:10px;}
+  .player-stat .stat-value{font-size:18px;}
+  .player-name{font-size:16px;}
 }
 @media (max-width:480px){
   .team-card{padding:14px 16px;gap:12px;}
@@ -630,27 +635,183 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   .leaderboard-table tbody tr{padding:16px 14px;}
   .leaderboard-table tbody tr td{font-size:12px;gap:10px;}
   .leaderboard-table tbody tr td::before{font-size:10px;letter-spacing:0.16em;}
+  .player-card{padding:16px;min-height:240px;}
+  .player-avatar{width:80px;height:80px;}
+  .player-stat-grid{grid-template-columns:1fr;}
 }
 .players-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 12px; /* pick 12px instead of 10px for consistency */
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  justify-items: stretch;
+  margin-top: 12px;
   width: 100%;
 }
+.players-grid.compact{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+@media (min-width:640px){
+  .players-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (min-width:1024px){
+  .players-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+}
 .team-card > .players-grid{display:none}
-.player-card{position:relative;width:180px;min-height:260px;margin:0 auto;display:flex;flex-direction:column;align-items:center;overflow:hidden}
-.player-card img{max-width:100%;object-fit:contain}
-.card-frame{width:100%;height:100%;object-fit:cover;border-radius:12px}
-.card-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px;color:#fff;text-shadow:0 0 6px black;z-index:3;text-align:center}
-.player-silhouette{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;opacity:.85;z-index:1}
-.player-kit{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;z-index:2}
-.player-kit-box{position:absolute;top:20%;left:50%;transform:translateX(-50%);width:70%;height:70%;z-index:2;border-radius:8px}
-.player-overall{font-size:28px;font-weight:900;margin-top:auto}
-.player-name{font-size:16px;font-weight:bold;text-align:center}
-.player-position{font-size:14px;font-weight:600;margin-bottom:8px;text-align:center}
-.player-stats{font-size:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:2px;text-align:left;width:100%}
+.player-card{
+  --card-primary:#0f172a;
+  --card-secondary:#1f2937;
+  --card-accent:#38bdf8;
+  --card-glow:var(--card-accent);
+  --card-glow-shadow:rgba(56,189,248,0.45);
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  padding:20px;
+  border-radius:20px;
+  background:linear-gradient(160deg,var(--card-primary),var(--card-secondary));
+  color:#f8fafc;
+  box-shadow:0 18px 45px rgba(2,6,23,0.55);
+  border:1px solid rgba(255,255,255,0.08);
+  min-height:280px;
+  overflow:hidden;
+  transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+.player-card::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(15,23,42,0.05));
+  mix-blend-mode:screen;
+  opacity:0.4;
+  pointer-events:none;
+  transition:opacity .3s ease;
+}
+.player-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  border:1px solid rgba(255,255,255,0.06);
+  pointer-events:none;
+  transition:box-shadow .3s ease, border-color .3s ease, opacity .3s ease;
+  opacity:0.7;
+}
+.player-card:hover,
+.player-card:focus-visible{
+  outline:none;
+  transform:translateY(-8px) scale(1.02);
+  box-shadow:0 26px 60px rgba(2,6,23,0.65),0 0 40px var(--card-glow-shadow, rgba(56,189,248,0.18));
+  border-color:var(--card-glow);
+}
+.player-card:hover::before,
+.player-card:focus-visible::before{opacity:0.65;}
+.player-card:hover::after,
+.player-card:focus-visible::after{
+  border-color:var(--card-glow);
+  box-shadow:0 0 0 2px var(--card-glow-shadow, rgba(56,189,248,0.45));
+  opacity:1;
+}
+.player-card[data-is-captain="false"] .player-card-badge{display:none;}
+.player-card-badge{
+  position:absolute;
+  top:14px;
+  right:14px;
+  font-size:20px;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,0.55));
+  z-index:2;
+}
+.player-avatar{
+  --avatar-primary:rgba(15,23,42,0.92);
+  --avatar-secondary:rgba(30,64,175,0.68);
+  position:relative;
+  width:92px;
+  height:92px;
+  margin:12px auto 0;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,var(--avatar-primary),var(--avatar-secondary));
+  border:3px solid rgba(255,255,255,0.12);
+  box-shadow:0 16px 36px rgba(2,6,23,0.55);
+  transition:transform .3s ease, box-shadow .3s ease;
+  overflow:hidden;
+}
+.player-card:hover .player-avatar,
+.player-card:focus-visible .player-avatar{
+  transform:translateY(-2px);
+  box-shadow:0 22px 44px rgba(2,6,23,0.6);
+}
+.player-avatar::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background:radial-gradient(circle at 30% 30%,rgba(255,255,255,0.22),transparent 65%);
+  mix-blend-mode:screen;
+  pointer-events:none;
+}
+.player-avatar-initial{
+  font-size:28px;
+  font-weight:800;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  z-index:1;
+}
+.player-avatar.has-image .player-avatar-initial{opacity:0;}
+.player-meta{
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.player-name-row{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.player-name{font-size:18px;font-weight:800;letter-spacing:0.04em;}
+.player-flag{width:22px;height:22px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,0.18);}
+.player-position{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.24em;
+  text-transform:uppercase;
+  color:rgba(226,232,240,0.7);
+}
+.player-stat-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin-top:auto;
+}
+.player-stat{
+  background:rgba(15,23,42,0.58);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  min-height:72px;
+  transition:border-color .3s ease, transform .3s ease;
+}
+.player-card:hover .player-stat,
+.player-card:focus-visible .player-stat{border-color:rgba(255,255,255,0.14);}
+.player-stat .stat-label{
+  font-size:11px;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  color:rgba(226,232,240,0.6);
+}
+.player-stat .stat-value{
+  font-size:20px;
+  font-weight:800;
+  color:#f8fafc;
+}
+.player-stat.top-scorer .stat-value{color:var(--gold);}
 
 /* Generic card wrappers */
 .m-card{padding:0;}
@@ -2406,18 +2567,178 @@ function getKitUrl(teamId){
   return `https://proclubsdatabase.s3.us-east-2.amazonaws.com/minikits/j0_${teamId}_0.png`;
 }
 
+function toHexColor(value){
+  if(value === null || value === undefined) return null;
+  if(typeof value === 'number' && Number.isFinite(value)){
+    let hex = value.toString(16);
+    if(hex.length < 6) hex = hex.padStart(6, '0');
+    if(hex.length > 6) hex = hex.slice(-6);
+    return `#${hex.toLowerCase()}`;
+  }
+  let str = String(value).trim();
+  if(!str) return null;
+  str = str.replace(/^#/, '');
+  if(/^[0-9a-f]{6}$/i.test(str)) return `#${str.toLowerCase()}`;
+  if(/^[0-9a-f]{3}$/i.test(str)){
+    str = str.split('').map(ch => ch + ch).join('');
+    return `#${str.toLowerCase()}`;
+  }
+  return null;
+}
+
+function parseHexColor(value){
+  const hex = toHexColor(value);
+  if(!hex) return null;
+  return [
+    parseInt(hex.slice(1,3), 16),
+    parseInt(hex.slice(3,5), 16),
+    parseInt(hex.slice(5,7), 16)
+  ];
+}
+
+function mixColors(colorA, colorB, weight){
+  const a = parseHexColor(colorA);
+  const b = parseHexColor(colorB);
+  if(!a && !b) return null;
+  if(!a) return toHexColor(colorB);
+  if(!b) return toHexColor(colorA);
+  const w = Math.min(1, Math.max(0, weight ?? 0.5));
+  const mix = a.map((chan, idx) => Math.round(chan * (1 - w) + b[idx] * w));
+  return `#${mix.map(v => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function hexToRgba(hex, alpha){
+  const rgb = parseHexColor(hex);
+  if(!rgb) return null;
+  const a = Math.min(1, Math.max(0, alpha ?? 1));
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
+}
+
+function extractKitColors(customKit){
+  if(!customKit) return [];
+  const keys = ['kitColor1','kitColor2','kitColor3','kitColor4'];
+  return keys.map(k => toHexColor(customKit[k])).filter(Boolean);
+}
+
 function applyGradient(img, customKit){
   const box = document.createElement('div');
   box.className = 'player-kit-box';
-  const colors = [customKit?.kitColor1,customKit?.kitColor2,customKit?.kitColor3,customKit?.kitColor4]
-    .filter(Boolean)
-    .map(c=>`#${Number(c).toString(16).padStart(6,'0')}`);
-  box.style.background = colors.length ? `linear-gradient(45deg, ${colors.join(',')})` : '#666';
+  const colors = extractKitColors(customKit);
+  if(colors.length){
+    box.style.background = `linear-gradient(45deg, ${colors.join(',')})`;
+  }else{
+    box.style.background = 'linear-gradient(45deg, #1f2937, #0f172a)';
+  }
   img.replaceWith(box);
+}
+
+function applyCardTheme(card, customKit){
+  if(!card) return;
+  const colors = extractKitColors(customKit);
+  const primary = colors[0] || '#0f172a';
+  const secondary = colors[1] || mixColors(primary, '#1f2937', 0.35) || '#1f2937';
+  const accent = colors[2] || colors[0] || '#38bdf8';
+  const glowShadow = hexToRgba(accent, 0.45);
+  card.style.setProperty('--card-primary', primary);
+  card.style.setProperty('--card-secondary', secondary);
+  card.style.setProperty('--card-accent', accent);
+  card.style.setProperty('--card-glow', accent);
+  if(glowShadow) card.style.setProperty('--card-glow-shadow', glowShadow);
+  const avatar = card.querySelector('.player-avatar');
+  if(avatar){
+    const avatarPrimary = mixColors(primary, '#020617', 0.45) || primary;
+    const avatarSecondary = mixColors(accent, '#0f172a', 0.25) || accent;
+    avatar.style.setProperty('--avatar-primary', avatarPrimary);
+    avatar.style.setProperty('--avatar-secondary', avatarSecondary);
+    avatar.style.background = `linear-gradient(135deg, ${avatarPrimary}, ${avatarSecondary})`;
+    avatar.style.backgroundSize = 'cover';
+    avatar.style.backgroundPosition = 'center';
+    avatar.classList.remove('has-image');
+  }
 }
 
 const clubInfoCache = new Map();
 const kitUrlCache = new Map();
+
+function getPlayerInitials(name){
+  if(!name) return '?';
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if(!parts.length) return '?';
+  const initials = parts.slice(0,2).map(part => part[0]).join('');
+  return initials.toUpperCase();
+}
+
+function readNumeric(source, keys){
+  if(!source) return null;
+  for(const key of keys){
+    if(Object.prototype.hasOwnProperty.call(source, key)){
+      const raw = source[key];
+      if(raw === null || raw === undefined || raw === '') continue;
+      const num = Number(raw);
+      if(Number.isFinite(num)) return num;
+    }
+  }
+  return null;
+}
+
+function resolvePlayerRating(source, stats){
+  const candidates = [
+    source?.rating,
+    source?.averageRating,
+    source?.avgMatchRating,
+    source?.averageMatchRating,
+    source?.matchRating,
+    source?.overallRating,
+    source?.ovr,
+    source?.proOverall,
+    source?.prooverall,
+    stats?.rating,
+    stats?.ovr
+  ];
+  for(const value of candidates){
+    if(value === null || value === undefined || value === '') continue;
+    const num = Number(value);
+    if(Number.isFinite(num)) return num;
+  }
+  return null;
+}
+
+function formatRatingValue(num){
+  if(num === null || num === undefined || Number.isNaN(num)) return '–';
+  if(num >= 10) return String(Math.round(num));
+  return (Math.round(num * 10) / 10).toFixed(1);
+}
+
+function formatStatValue(value){
+  if(value === null || value === undefined || value === '') return '–';
+  if(typeof value === 'number'){
+    return Number.isFinite(value) ? value.toLocaleString() : '–';
+  }
+  const str = String(value).trim();
+  return str ? str : '–';
+}
+
+function composePlayerMeta(player, stats, overrides = {}){
+  const base = player || {};
+  const matches = readNumeric(overrides, ['matches','gamesPlayed','appearances']) ?? readNumeric(base, ['matches','gamesPlayed','appearances']);
+  const goals = readNumeric(overrides, ['goals','totalGoals']) ?? readNumeric(base, ['goals','totalGoals']);
+  const assists = readNumeric(overrides, ['assists','totalAssists']) ?? readNumeric(base, ['assists','totalAssists']);
+  const ratingNum = resolvePlayerRating(overrides, stats) ?? resolvePlayerRating(base, stats);
+  const rating = formatRatingValue(ratingNum);
+  const name = overrides.name ?? base.name ?? 'Unknown';
+  const position = overrides.position ?? base.position ?? '';
+  const clubId = overrides.clubId ?? base.clubId ?? null;
+  const flag = overrides.countryFlag ?? overrides.flag ?? base.countryFlag ?? base.flag ?? base.flagUrl ?? null;
+  const isCaptain = Boolean(overrides.isCaptain ?? base.isCaptain);
+  const isTopScorer = Boolean(overrides.isTopScorer);
+  return { matches, goals, assists, rating, ratingNum, name, position, clubId, flag, isCaptain, isTopScorer };
+}
+
+function renderPlayerStat(key, label, value, highlight){
+  const classes = ['player-stat'];
+  if(highlight) classes.push('top-scorer');
+  return `<div class="${classes.join(' ')}" data-stat="${key}"><span class="stat-label">${label}</span><span class="stat-value">${escapeHtml(formatStatValue(value))}</span></div>`;
+}
 
 async function renderClubKits(clubId, container){
   if(!clubId) return;
@@ -2438,7 +2759,7 @@ async function renderClubKits(clubId, container){
     imgs = container.querySelectorAll(`[data-club-id="${clubId}"] .player-kit`);
     if(!imgs.length) imgs = container.querySelectorAll('.player-kit');
   }else{
-    imgs = document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit`);
+    imgs = document.querySelectorAll(`.team-card[data-club-id="${clubId}"] .player-kit, [data-club-id="${clubId}"] .player-kit`);
   }
   imgs.forEach(img=>{
     if(kitUrl){
@@ -2448,45 +2769,124 @@ async function renderClubKits(clubId, container){
       applyGradient(img, customKit);
     }
   });
+  const scope = container || document;
+  const cards = scope.querySelectorAll(`.player-card[data-club-id="${clubId}"]`);
+  cards.forEach(card => applyCardTheme(card, customKit));
 }
 
-function buildPlayerCard(p, stats, tier){
-  const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-  const t = tier || tierFromOvr(stats?stats.ovr:null);
+function buildPlayerCard(p, stats, tier, overrides){
+  const t = tier || tierFromOvr(stats?.ovr);
+  const meta = composePlayerMeta(p, stats, overrides);
   const card = document.createElement('div');
-  card.className = `player-card ${t.className}`;
-  if(p.player_id||p.playerId) card.dataset.playerId = String(p.player_id||p.playerId);
-  if(p.name) card.dataset.playerName = p.name;
+  const classes = ['player-card'];
+  if(t?.className) classes.push(t.className);
+  card.className = classes.join(' ');
+  const playerId = p.player_id || p.playerId;
+  if(playerId) card.dataset.playerId = String(playerId);
+  if(meta.clubId) card.dataset.clubId = String(meta.clubId);
+  if(meta.name) card.dataset.playerName = meta.name;
+  if(meta.position !== undefined) card.dataset.playerPosition = meta.position;
+  card.dataset.isCaptain = meta.isCaptain ? 'true' : 'false';
+  card.dataset.topScorer = meta.isTopScorer ? 'true' : 'false';
+  const badgeTitle = 'Team Captain';
+  const flagHtml = meta.flag ? `<img src="${escapeHtml(meta.flag)}" class="player-flag" alt="">` : '';
   card.innerHTML = `
-    <img src="/assets/cards/${t.frame}" class="card-frame" />
-    <img src="/assets/silhouette.png" class="player-silhouette" />
-    <img class="player-kit" />
-    <div class="card-overlay">
-      <div class="player-overall">${s.ovr}</div>
-      <div class="player-name">${escapeHtml(p.name||'Unknown')}</div>
-      <div class="player-position">${escapeHtml(p.position||'')}</div>
-      <div class="player-stats">
-        <span>PAC ${s.pac}</span>
-        <span>SHO ${s.sho}</span>
-        <span>PAS ${s.pas}</span>
-        <span>DRI ${s.dri}</span>
-        <span>DEF ${s.def}</span>
-        <span>PHY ${s.phy}</span>
+    <div class="player-card-badge" title="${badgeTitle}" aria-label="${badgeTitle}">🏅</div>
+    <div class="player-avatar"><span class="player-avatar-initial">${escapeHtml(getPlayerInitials(meta.name))}</span></div>
+    <div class="player-meta">
+      <div class="player-name-row">
+        <span class="player-name">${escapeHtml(meta.name)}</span>
+        ${flagHtml}
       </div>
-    </div>`;
+      <div class="player-position">${escapeHtml(meta.position || '')}</div>
+    </div>
+    <div class="player-stat-grid">
+      ${renderPlayerStat('matches','Matches',meta.matches,false)}
+      ${renderPlayerStat('goals','Goals',meta.goals,meta.isTopScorer)}
+      ${renderPlayerStat('assists','Assists',meta.assists,false)}
+      ${renderPlayerStat('rating','Rating',meta.rating,false)}
+    </div>
+  `;
+  const badge = card.querySelector('.player-card-badge');
+  if(badge){
+    if(meta.isCaptain){
+      badge.hidden = false;
+      badge.setAttribute('title', badgeTitle);
+      badge.setAttribute('aria-label', badgeTitle);
+    }else{
+      badge.hidden = true;
+      badge.removeAttribute('title');
+      badge.removeAttribute('aria-label');
+    }
+  }
   return card;
 }
 
-function updatePlayerCard(card, stats){
-  const tier = tierFromOvr(stats.ovr);
-  card.className = `player-card ${tier.className}`;
-  const img = card.querySelector('.card-frame');
-  if(img) img.src = `/assets/cards/${tier.frame}`;
-  const over = card.querySelector('.player-overall');
-  if(over) over.textContent = stats.ovr;
-  const spans = card.querySelectorAll('.player-stats span');
-  const labels = [stats.pac,stats.sho,stats.pas,stats.dri,stats.def,stats.phy];
-  spans.forEach((span,i)=>{ span.textContent = `${['PAC','SHO','PAS','DRI','DEF','PHY'][i]} ${labels[i]}`; });
+function updatePlayerCard(card, stats, overrides={}){
+  if(!card) return;
+  const tier = tierFromOvr(stats?.ovr);
+  const classes = ['player-card'];
+  if(tier?.className) classes.push(tier.className);
+  card.className = classes.join(' ');
+  const existing = {
+    name: card.dataset.playerName,
+    position: card.dataset.playerPosition,
+    clubId: card.dataset.clubId,
+    isCaptain: card.dataset.isCaptain === 'true'
+  };
+  const meta = composePlayerMeta(existing, stats, overrides);
+  card.dataset.playerName = meta.name;
+  card.dataset.playerPosition = meta.position || '';
+  if(meta.clubId !== null && meta.clubId !== undefined) card.dataset.clubId = String(meta.clubId);
+  card.dataset.isCaptain = meta.isCaptain ? 'true' : 'false';
+  card.dataset.topScorer = meta.isTopScorer ? 'true' : 'false';
+  const badge = card.querySelector('.player-card-badge');
+  if(badge){
+    badge.hidden = !meta.isCaptain;
+    if(meta.isCaptain){
+      badge.setAttribute('title', 'Team Captain');
+      badge.setAttribute('aria-label', 'Team Captain');
+    }else{
+      badge.removeAttribute('title');
+      badge.removeAttribute('aria-label');
+    }
+  }
+  const nameEl = card.querySelector('.player-name');
+  if(nameEl) nameEl.textContent = meta.name;
+  const initialsEl = card.querySelector('.player-avatar-initial');
+  if(initialsEl) initialsEl.textContent = getPlayerInitials(meta.name);
+  const positionEl = card.querySelector('.player-position');
+  if(positionEl) positionEl.textContent = meta.position || '';
+  const nameRow = card.querySelector('.player-name-row');
+  let flagEl = card.querySelector('.player-flag');
+  if(meta.flag){
+    if(!flagEl){
+      flagEl = document.createElement('img');
+      flagEl.className = 'player-flag';
+      flagEl.alt = '';
+      if(nameRow) nameRow.appendChild(flagEl);
+    }
+    flagEl.src = meta.flag;
+    flagEl.style.display = '';
+  }else if(flagEl){
+    flagEl.remove();
+    flagEl = null;
+  }
+  const statMap = {
+    matches: meta.matches,
+    goals: meta.goals,
+    assists: meta.assists,
+    rating: meta.rating
+  };
+  Object.entries(statMap).forEach(([key,value])=>{
+    const statEl = card.querySelector(`.player-stat[data-stat="${key}"] .stat-value`);
+    if(statEl) statEl.textContent = formatStatValue(value);
+  });
+  const goalsStat = card.querySelector('.player-stat[data-stat="goals"]');
+  if(goalsStat){
+    if(meta.isTopScorer) goalsStat.classList.add('top-scorer');
+    else goalsStat.classList.remove('top-scorer');
+  }
 }
 
 async function upgradeClubPlayers(clubId, container){
@@ -2494,15 +2894,35 @@ async function upgradeClubPlayers(clubId, container){
     const d = await fetch(`/api/clubs/${encodeURIComponent(clubId)}/player-cards`).then(r=>r.json());
     const grid = container || document.querySelector(`.team-card[data-club-id="${clubId}"] .players-grid`);
     if(!grid) return;
-    (d.members||[]).forEach(m=>{
+    const members = Array.isArray(d.members) ? d.members : [];
+    const topGoals = members.reduce((max, m) => {
+      const goals = readNumeric(m, ['goals','totalGoals']);
+      return Math.max(max, goals ?? 0);
+    }, 0);
+    members.forEach(m=>{
       const id = m.playerId || m.playerid;
       let card = grid.querySelector(`.player-card[data-player-id="${id}"]`);
       if(!card){
         card = Array.from(grid.querySelectorAll('.player-card')).find(el=>el.dataset.playerName === m.name);
       }
-      const stats = m.stats;
-      if(card && stats) updatePlayerCard(card, stats);
+      const stats = m.stats || (m.vproattr ? parseVpro(m.vproattr) : null);
+      if(card && stats){
+        const goals = readNumeric(m, ['goals','totalGoals']);
+        const overrides = {
+          matches: readNumeric(m, ['matches','gamesPlayed','appearances']),
+          goals,
+          assists: readNumeric(m, ['assists','totalAssists']),
+          rating: resolvePlayerRating(m, stats),
+          isCaptain: m.isCaptain,
+          isTopScorer: topGoals > 0 && goals === topGoals,
+          name: m.name,
+          position: typeof resolvePlayerPosition === 'function' ? resolvePlayerPosition(m) : (m.position || ''),
+          clubId: clubId
+        };
+        updatePlayerCard(card, stats, overrides);
+      }
     });
+    renderClubKits(clubId, grid);
   }catch(e){
     console.error('upgrade failed', e);
   }
@@ -2525,16 +2945,32 @@ async function openTeamView(clubId){
     const data = await res.json();
     members = data.members || [];
   }catch(e){console.error(e);} 
+  const topGoals = members.reduce((max, m) => {
+    const goals = readNumeric(m, ['goals','totalGoals']);
+    return Math.max(max, goals ?? 0);
+  }, 0);
   members.forEach(m => {
     const stats = m.stats || (m.vproattr
       ? parseVpro(m.vproattr)
       : { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: m.proOverall || '??' });
     const tier = tierFromOvr(stats.ovr);
-    const card = buildPlayerCard({ ...m, position: resolvePlayerPosition(m) }, stats, tier);
+    const position = typeof resolvePlayerPosition === 'function' ? resolvePlayerPosition(m) : (m.position || '');
+    const goals = readNumeric(m, ['goals','totalGoals']);
+    const overrides = {
+      matches: readNumeric(m, ['matches','gamesPlayed','appearances']),
+      goals,
+      assists: readNumeric(m, ['assists','totalAssists']),
+      rating: resolvePlayerRating(m, stats),
+      isCaptain: m.isCaptain,
+      isTopScorer: topGoals > 0 && goals === topGoals,
+      position,
+      clubId
+    };
+    const card = buildPlayerCard({ ...m, clubId, position }, stats, tier, overrides);
     grid.appendChild(card);
   });
-  upgradeClubPlayers(clubId, grid);
   renderClubKits(clubId, teamView);
+  upgradeClubPlayers(clubId, grid);
 }
 
 function closeTeamView(){
@@ -2636,9 +3072,10 @@ async function loadSquad(clubId){
       const name = nameRaw ? nameRaw : `Unknown_${p.playerId||p.playerid||''}`;
       const pos = p.position || p.pos || '';
       const stats = parseVpro(p.vproattr);
-      const t = tierFromOvr(stats?stats.ovr:null);
-      const s = stats || {pac:'??',sho:'??',pas:'??',dri:'??',def:'??',phy:'??',ovr:'??'};
-      const card = buildPlayerCard({ name, position: pos, playerId: p.playerId||p.playerid }, s, t);
+      const t = tierFromOvr(stats?.ovr);
+      const baseStats = stats || { pac:'??', sho:'??', pas:'??', dri:'??', def:'??', phy:'??', ovr: stats?.ovr || '??' };
+      const overrides = { position: pos, clubId };
+      const card = buildPlayerCard({ name, position: pos, playerId: p.playerId||p.playerid, clubId }, baseStats, t, overrides);
       body.appendChild(card);
     });
     renderClubKits(clubId, body);
