@@ -46,6 +46,43 @@ test('saveEaMatch stores home/away flags for clubs', async () => {
   }
 });
 
+test('saveEaMatch infers home/away flags when missing', async () => {
+  const divisionStub = mock.method(eaApi, 'fetchClubDivisionByName', async () => null);
+  const calls = [];
+  const queryStub = mock.method(pool, 'query', async (sql, params) => {
+    if (/INSERT INTO public\.match_participants/i.test(sql)) {
+      calls.push(params);
+    }
+    return { rows: [], rowCount: 1 };
+  });
+
+  try {
+    const match = {
+      matchId: 'm1-missing',
+      timestamp: LEAGUE_START_SEC + 90,
+      clubs: {
+        '10': { details: { name: 'Alpha' }, goals: 2 },
+        '20': { details: { name: 'Beta' }, goals: 1 },
+      },
+    };
+
+    await saveEaMatch(match);
+
+    assert.strictEqual(calls.length, 2);
+    const homeRecord = calls.find(([, cid]) => cid === '10');
+    const awayRecord = calls.find(([, cid]) => cid === '20');
+    assert.ok(homeRecord, 'expected a participant record for club 10');
+    assert.ok(awayRecord, 'expected a participant record for club 20');
+    assert.strictEqual(homeRecord[2], true);
+    assert.strictEqual(awayRecord[2], false);
+    const trueCount = calls.filter(([, , isHome]) => isHome === true).length;
+    assert.strictEqual(trueCount, 1);
+  } finally {
+    queryStub.mock.restore();
+    divisionStub.mock.restore();
+  }
+});
+
 test('saveEaMatch persists club divisions from leaderboard search', async () => {
   const divisionStub = mock.method(eaApi, 'fetchClubDivisionByName', async name => {
     if (name === 'Alpha') return 5;
