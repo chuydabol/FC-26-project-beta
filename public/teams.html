@@ -2158,6 +2158,8 @@ const adminNewsForm   = document.getElementById('adminNewsForm');
 const adminNewsStatus = document.getElementById('adminNewsStatus');
 const adminNewsList   = document.getElementById('adminNewsList');
 const adminNewsRefresh= document.getElementById('adminNewsRefresh');
+const generalNewsForm = document.getElementById('generalNewsForm');
+const generalNewsStatus = document.getElementById('generalNewsStatus');
 const fxPublic    = document.getElementById('fixtures-public');
 const fxSched     = document.getElementById('fixtures-sched');
 const cupView     = document.getElementById('champions-view');
@@ -2197,6 +2199,69 @@ function resolveInitialNav(){
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const pathView = path === '/admin/news' ? 'news' : null;
   return queryView || hashView || pathView || 'teams';
+}
+
+function setupCommunityNewsForm(){
+  if (!generalNewsForm) return;
+  const submitBtn = generalNewsForm.querySelector('button[type="submit"]');
+  generalNewsForm.addEventListener('submit', async (event)=>{
+    event.preventDefault();
+    const formData = new FormData(generalNewsForm);
+    const title = String(formData.get('title') || '').trim();
+    const body = String(formData.get('body') || '').trim();
+    const author = String(formData.get('author') || '').trim();
+    const imageUrl = String(formData.get('imageUrl') || '').trim();
+    const videoUrl = String(formData.get('videoUrl') || '').trim();
+    if (generalNewsStatus){
+      generalNewsStatus.textContent = 'Posting…';
+    }
+    if (submitBtn){
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy','true');
+    }
+    if (!title || !body){
+      if (generalNewsStatus){
+        generalNewsStatus.textContent = 'Headline and story are required.';
+      }
+      if (submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+      }
+      return;
+    }
+    const payload = { title, body };
+    if (author) payload.author = author;
+    if (imageUrl) payload.imageUrl = imageUrl;
+    if (videoUrl) payload.videoUrl = videoUrl;
+    try{
+      const res = await fetch(`${API_BASE}/api/news`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      let data = null;
+      try{ data = await res.json(); }
+      catch{ data = null; }
+      if (!res.ok){
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      if (generalNewsStatus){
+        generalNewsStatus.textContent = 'Thanks for sharing! Your post is live.';
+      }
+      generalNewsForm.reset();
+      await loadNews();
+    }catch(err){
+      if (generalNewsStatus){
+        generalNewsStatus.textContent = err?.message || 'Failed to publish your update.';
+      }
+    }finally{
+      if (submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+      }
+    }
+  });
 }
 
 function setNav(active){
@@ -4158,73 +4223,6 @@ function renderLegacyNewsItem(n){
       body  = 'Full time score';
   }
 }
-
-const generalNewsForm = document.getElementById('generalNewsForm');
-const generalNewsStatus = document.getElementById('generalNewsStatus');
-
-function setupCommunityNewsForm(){
-  if (!generalNewsForm) return;
-  const submitBtn = generalNewsForm.querySelector('button[type="submit"]');
-  generalNewsForm.addEventListener('submit', async (event)=>{
-    event.preventDefault();
-    const formData = new FormData(generalNewsForm);
-    const title = String(formData.get('title') || '').trim();
-    const body = String(formData.get('body') || '').trim();
-    const author = String(formData.get('author') || '').trim();
-    const imageUrl = String(formData.get('imageUrl') || '').trim();
-    const videoUrl = String(formData.get('videoUrl') || '').trim();
-    if (generalNewsStatus){
-      generalNewsStatus.textContent = 'Posting…';
-    }
-    if (submitBtn){
-      submitBtn.disabled = true;
-      submitBtn.setAttribute('aria-busy','true');
-    }
-    if (!title || !body){
-      if (generalNewsStatus){
-        generalNewsStatus.textContent = 'Headline and story are required.';
-      }
-      if (submitBtn){
-        submitBtn.disabled = false;
-        submitBtn.removeAttribute('aria-busy');
-      }
-      return;
-    }
-    const payload = { title, body };
-    if (author) payload.author = author;
-    if (imageUrl) payload.imageUrl = imageUrl;
-    if (videoUrl) payload.videoUrl = videoUrl;
-    try{
-      const res = await fetch(`${API_BASE}/api/news`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
-      let data = null;
-      try{ data = await res.json(); }
-      catch{ data = null; }
-      if (!res.ok){
-        throw new Error(data?.error || `HTTP ${res.status}`);
-      }
-      if (generalNewsStatus){
-        generalNewsStatus.textContent = 'Thanks for sharing! Your post is live.';
-      }
-      generalNewsForm.reset();
-      await loadNews();
-    }catch(err){
-      if (generalNewsStatus){
-        generalNewsStatus.textContent = err?.message || 'Failed to publish your update.';
-      }
-    }finally{
-      if (submitBtn){
-        submitBtn.disabled = false;
-        submitBtn.removeAttribute('aria-busy');
-      }
-    }
-  });
-}
-setupCommunityNewsForm();
   title = replaceClubIds(title);
   body  = replaceClubIds(body);
   const metaBits = [];
@@ -4367,6 +4365,7 @@ async function computeNewsFromFixtures(list){
 //   INIT
 // =======================
 setupRankings();
+setupCommunityNewsForm();
 async function init(){
 
   buildStaticTeams();
