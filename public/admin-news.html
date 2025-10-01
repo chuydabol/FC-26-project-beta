@@ -232,7 +232,7 @@
       try {
         const res = await fetch('/api/news');
         const data = await res.json();
-        const manual = (data.items || []).filter(item => item.type === 'manual');
+        const manual = Array.isArray(data.general) ? data.general : (data.items || []).filter(item => item.type === 'manual');
         manual.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
         renderManualList(manual);
       } catch {

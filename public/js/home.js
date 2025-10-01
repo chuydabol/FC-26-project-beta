@@ -13,7 +13,10 @@ async function loadHome(){
     renderTopScorers(leagueData.scorers || []);
     const match = (leagueData.matches || [])[0];
     renderHomeMatch(match);
-    renderHomeNews(newsRes.items || []);
+    const mainNews = Array.isArray(newsRes.main) && newsRes.main.length
+      ? newsRes.main
+      : (newsRes.items || []);
+    renderHomeNews(mainNews);
     renderFeaturedClubs(standingsComputed);
   } catch (e) {
     if (motdEl) motdEl.textContent = 'Failed to load.';

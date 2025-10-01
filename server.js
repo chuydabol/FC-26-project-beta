@@ -287,15 +287,23 @@ function mapNewsRow(row = {}) {
   const createdAt = row.createdAt instanceof Date
     ? row.createdAt.toISOString()
     : row.createdAt;
+  const type = row.type || 'manual';
+  const normalizedAuthor = row.author || (type === 'manual' ? 'Community Reporter' : 'UPCL Admin');
+  const badge = row.badge
+    || (type === 'manual'
+      ? (/admin/i.test(normalizedAuthor) ? 'League Bulletin' : 'Community Post')
+      : 'Auto Update');
   return {
     id: row.id,
-    type: row.type || 'manual',
+    type,
     title: row.title || '',
     body: row.body || '',
     imageUrl: row.imageUrl || null,
     videoUrl: row.videoUrl || null,
     createdAt: createdAt || new Date().toISOString(),
-    author: row.author || 'UPCL Admin'
+    author: normalizedAuthor,
+    badge,
+    category: row.category || (type === 'manual' ? 'general' : 'main')
   };
 }
 
@@ -793,23 +801,33 @@ app.get('/api/news', async (_req, res) => {
       buildAutoNewsItems()
     ]);
     const manual = (manualRes.rows || []).map(mapNewsRow);
-    const combined = [...manual, ...(Array.isArray(autoItems) ? autoItems : [])];
-    combined.sort((a, b) => {
+    const autos = Array.isArray(autoItems) ? autoItems.map(item => ({
+      ...item,
+      category: item.category || 'main'
+    })) : [];
+    const main = [...autos].sort((a, b) => {
+      const aTs = new Date(a.createdAt || a.ts || 0).getTime();
+      const bTs = new Date(b.createdAt || b.ts || 0).getTime();
+      return bTs - aTs;
+    });
+    const general = [...manual].sort((a, b) => {
       const aTs = new Date(a.createdAt || 0).getTime();
       const bTs = new Date(b.createdAt || 0).getTime();
       return bTs - aTs;
     });
-    res.json({ items: combined });
+    const combined = [...main, ...general].sort((a, b) => {
+      const aTs = new Date(a.createdAt || a.ts || 0).getTime();
+      const bTs = new Date(b.createdAt || b.ts || 0).getTime();
+      return bTs - aTs;
+    });
+    res.json({ items: combined, main, general });
   } catch (err) {
     logger.error({ err }, 'Failed to fetch news feed');
-    res.status(500).json({ items: [] });
+    res.status(500).json({ items: [], main: [], general: [] });
   }
 });
 
 app.post('/api/news', async (req, res) => {
-  if (!req.session?.isAdmin) {
-    return res.status(403).json({ error: 'Admin only' });
-  }
   const { title, body, imageData, imageUrl, videoUrl, author } = req.body || {};
   if (!title || !String(title).trim()) {
     return res.status(400).json({ error: 'Title required' });
@@ -820,7 +838,9 @@ app.post('/api/news', async (req, res) => {
   try {
     const savedImageUrl = await persistNewsImage(imageData || imageUrl);
     const safeVideo = sanitizeVideoUrl(videoUrl);
-    const authorName = (author && String(author).trim()) || 'UPCL Admin';
+    const isAdminSession = !!req.session?.isAdmin;
+    const defaultAuthor = isAdminSession ? 'UPCL Admin' : 'Community Reporter';
+    const authorName = (author && String(author).trim()) || defaultAuthor;
     const { rows } = await q(SQL_INSERT_MANUAL_NEWS, [
       String(title).trim(),
       String(body).trim(),

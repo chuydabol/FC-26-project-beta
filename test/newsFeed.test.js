@@ -67,10 +67,12 @@ test('auto standings card excludes clubs outside the league', async () => {
     const res = await fetch(`http://localhost:${port}/api/news`);
     assert.strictEqual(res.status, 200);
     const body = await res.json();
-    const standingsCard = body.items.find(item => item.id === 'auto-standings');
+    const mainFeed = Array.isArray(body.main) ? body.main : body.items;
+    const standingsCard = mainFeed.find(item => item.id === 'auto-standings');
     assert(standingsCard, 'expected auto standings card');
     assert.deepStrictEqual(standingsCard.stats.map(s => s.clubId), ['1']);
     assert.strictEqual(standingsCard.stats.length, 1);
+    assert(Array.isArray(body.general));
   });
 
   stub.mock.restore();
