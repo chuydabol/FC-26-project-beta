@@ -3163,9 +3163,70 @@ async function loadLeague(force = false){
 
 function renderStandings(rows, matches, fallbackRows = []){
   const computed = computeStandings(rows, matches, fallbackRows);
+  applyStandingsToTeamCards(computed);
   renderLeagueStandings(computed);
   renderHomepageStandings(computed);
   return computed;
+}
+
+function applyStandingsToTeamCards(standings){
+  if (!Array.isArray(standings) || !standings.length) return;
+
+  const parseCount = value => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const escapeForSelector = value => {
+    const str = String(value);
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function'){
+      return CSS.escape(str);
+    }
+    return str.replace(/[`"'\\]/g, "\\$&");
+  };
+
+  standings.forEach(entry => {
+    if (!entry) return;
+    const rawId = entry.clubId ?? entry.club_id ?? entry.id;
+    if (rawId === undefined || rawId === null) return;
+    const clubId = String(rawId);
+
+    const wins = parseCount(entry.wins);
+    const draws = parseCount(entry.draws);
+    const losses = parseCount(entry.losses);
+    const record = `${wins}-${draws}-${losses}`;
+
+    entry.wins = wins;
+    entry.draws = draws;
+    entry.losses = losses;
+    entry.record = record;
+
+    let card = null;
+    try {
+      card = document.querySelector(`.team-card[data-club-id="${escapeForSelector(clubId)}"]`);
+    } catch {
+      card = document.querySelector(`.team-card[data-club-id="${clubId}"]`);
+    }
+
+    if (card){
+      const recordEl = card.querySelector('.record');
+      if (recordEl) recordEl.textContent = record;
+      const extraRecordEl = card.querySelector('.team-extra-record');
+      if (extraRecordEl) extraRecordEl.textContent = record;
+    }
+
+    const normalizedClubId = normalizeId(clubId);
+    const team = teams.find(t => {
+      const teamId = t?.id ?? '';
+      return String(teamId) === clubId || normalizeId(teamId) === normalizedClubId;
+    });
+    if (team){
+      team.wins = wins;
+      team.draws = draws;
+      team.losses = losses;
+      team.record = record;
+    }
+  });
 }
 
 function computeStandings(rows, matches, fallbackRows = []){
