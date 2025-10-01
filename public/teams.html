@@ -254,6 +254,59 @@ h1{
   display:flex;
   gap:8px;
 }
+.nav-item-dropdown{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+}
+.nav-button-caret{
+  display:flex;
+  margin-left:auto;
+  color:rgba(148,163,184,0.85);
+  transition:transform .24s ease;
+}
+.nav-item-dropdown.open .nav-button-caret{
+  transform:rotate(180deg);
+}
+.nav-dropdown{
+  position:absolute;
+  top:calc(100% + 12px);
+  left:0;
+  display:none;
+  flex-direction:column;
+  gap:8px;
+  min-width:220px;
+  padding:12px;
+  background:linear-gradient(160deg, rgba(10,16,26,0.96), rgba(6,10,16,0.94));
+  border:1px solid rgba(94,234,212,0.25);
+  border-radius:18px;
+  box-shadow:0 22px 46px rgba(15,23,42,0.55);
+  z-index:15;
+}
+.nav-item-dropdown.open > .nav-dropdown{
+  display:flex;
+}
+.nav-dropdown button{
+  width:100%;
+  justify-content:flex-start;
+  border-radius:14px;
+  border:1px solid rgba(94,234,212,0.18);
+  background:rgba(10,16,26,0.9);
+  box-shadow:none;
+  padding:10px 14px;
+  font-size:14px;
+}
+.nav-dropdown button::after{display:none;}
+.nav-dropdown button:hover,
+.nav-dropdown button:focus-visible{
+  border-color:rgba(45,212,191,0.45);
+  box-shadow:0 16px 30px rgba(45,212,191,0.2);
+  transform:translateY(0);
+}
+.nav-dropdown button[aria-pressed="true"]{
+  border-color:rgba(212,175,55,0.55);
+  box-shadow:0 16px 30px rgba(212,175,55,0.18);
+}
 .navbar button{
   position:relative;
   display:flex;
@@ -865,6 +918,25 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   .fx{grid-template-columns:1fr;gap:8px}
   .fx .act{justify-content:flex-start}
 }
+@media (max-width: 767px){
+  .nav-group-items{flex-direction:column;align-items:stretch;}
+  .nav-item-dropdown{width:100%;}
+  .nav-dropdown{
+    position:static;
+    margin-top:8px;
+    padding:10px;
+    background:rgba(15,23,42,0.65);
+    border-radius:16px;
+    border:1px solid rgba(94,234,212,0.2);
+    box-shadow:none;
+  }
+}
+@media (min-width: 768px){
+  .nav-item-dropdown:hover > .nav-dropdown,
+  .nav-item-dropdown:focus-within > .nav-dropdown{
+    display:flex;
+  }
+}
 /* Motion-safe */
 @media (prefers-reduced-motion: reduce){
   .team-card,.navbar button{transition:none}
@@ -976,46 +1048,69 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
           </span>
           <span>Scheduling</span>
         </button>
-        <button type="button" id="navLeague" aria-pressed="false">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 4h16l-1 12-7 4-7-4-1-12z" />
-              <path d="m8 11 4 2 4-2" />
-            </svg>
-          </span>
-          <span>League</span>
-        </button>
       </div>
     </div>
-    <div class="nav-group" aria-label="Tournaments">
-      <span class="nav-group-label">Tournaments</span>
+    <div class="nav-group" aria-label="Competitions">
+      <span class="nav-group-label">Competitions</span>
       <div class="nav-group-items">
-        <button type="button" id="navChampions" aria-pressed="false">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 4h14a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1" />
-              <path d="M19 4a5 5 0 0 1-10 0" />
-              <path d="M7 4h-.5A1.5 1.5 0 0 0 5 5.5V7a5 5 0 0 0 5 5h1" />
-              <path d="M8 15h8" />
-              <path d="M9 21h6" />
-              <path d="M10 15v6" />
-              <path d="M14 15v6" />
-            </svg>
-          </span>
-          <span>Champions Cup</span>
-        </button>
-        <button type="button" id="navFriendlies" aria-pressed="false">
-          <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M7 11a5 5 0 1 1 5-5" />
-              <path d="m12 6.5 3.5 3.5" />
-              <path d="M17 11a5 5 0 1 0-5-5" />
-              <path d="m12 17-2.5 2.5a2 2 0 0 1-2.83 0L4 16" />
-              <path d="m12 17 2.5 2.5a2 2 0 0 0 2.83 0L20 16" />
-            </svg>
-          </span>
-          <span>Friendlies</span>
-        </button>
+        <div class="nav-item-dropdown" id="navCompetitionsWrapper">
+          <button type="button" id="navCompetitions" data-keep-open="true" aria-haspopup="true" aria-expanded="false">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 4h14a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1" />
+                <path d="M19 4a5 5 0 0 1-10 0" />
+                <path d="M7 4h-.5A1.5 1.5 0 0 0 5 5.5V7a5 5 0 0 0 5 5h1" />
+                <path d="M8 15h8" />
+                <path d="M9 21h6" />
+                <path d="M10 15v6" />
+                <path d="M14 15v6" />
+              </svg>
+            </span>
+            <span>Competitions</span>
+            <span class="nav-button-caret" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </button>
+          <div class="nav-dropdown" id="navCompetitionsMenu" role="menu">
+            <button type="button" id="navLeague" aria-pressed="false" role="menuitem">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16l-1 12-7 4-7-4-1-12z" />
+                  <path d="m8 11 4 2 4-2" />
+                </svg>
+              </span>
+              <span>League</span>
+            </button>
+            <button type="button" id="navChampions" aria-pressed="false" role="menuitem">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 4h14a2 2 0 0 1 2 2v1a5 5 0 0 1-5 5h-1" />
+                  <path d="M19 4a5 5 0 0 1-10 0" />
+                  <path d="M7 4h-.5A1.5 1.5 0 0 0 5 5.5V7a5 5 0 0 0 5 5h1" />
+                  <path d="M8 15h8" />
+                  <path d="M9 21h6" />
+                  <path d="M10 15v6" />
+                  <path d="M14 15v6" />
+                </svg>
+              </span>
+              <span>Champions Cup</span>
+            </button>
+            <button type="button" id="navFriendlies" aria-pressed="false" role="menuitem">
+              <span class="nav-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M7 11a5 5 0 1 1 5-5" />
+                  <path d="m12 6.5 3.5 3.5" />
+                  <path d="M17 11a5 5 0 1 0-5-5" />
+                  <path d="m12 17-2.5 2.5a2 2 0 0 1-2.83 0L4 16" />
+                  <path d="m12 17 2.5 2.5a2 2 0 0 0 2.83 0L20 16" />
+                </svg>
+              </span>
+              <span>Friendlies</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="nav-group" aria-label="Admin">
@@ -2121,11 +2216,14 @@ const navRankings   = document.getElementById('navRankings');
 const navNews       = document.getElementById('navNews');
 const navFxPublic   = document.getElementById('navFixturesPublic');
 const navFxSched    = document.getElementById('navFixturesSched');
+const navCompetitionsBtn = document.getElementById('navCompetitions');
 const navChampions  = document.getElementById('navChampions');
 const navLeague     = document.getElementById('navLeague');
 const navFriendlies = document.getElementById('navFriendlies');
 const navToggle     = document.getElementById('navToggle');
 const primaryNav    = document.getElementById('primaryNav');
+const navCompetitionsWrapper = document.getElementById('navCompetitionsWrapper');
+const navCompetitionsMenu = document.getElementById('navCompetitionsMenu');
 
 if(navToggle && primaryNav){
   const syncNavForViewport = ()=>{
@@ -2148,11 +2246,78 @@ if(navToggle && primaryNav){
   primaryNav.querySelectorAll('button').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       if(window.innerWidth < 768){
+        if(btn.dataset.keepOpen === 'true') return;
         primaryNav.classList.add('hidden');
         navToggle.setAttribute('aria-expanded','false');
+        if(navCompetitionsWrapper){
+          navCompetitionsWrapper.classList.remove('open');
+        }
+        if(navCompetitionsBtn){
+          navCompetitionsBtn.setAttribute('aria-expanded','false');
+        }
       }
     });
   });
+}
+
+if(navCompetitionsBtn && navCompetitionsWrapper){
+  const closeDropdown = ()=>{
+    navCompetitionsWrapper.classList.remove('open');
+    navCompetitionsBtn.setAttribute('aria-expanded','false');
+  };
+  const isDesktop = ()=> window.innerWidth >= 768;
+
+  navCompetitionsBtn.setAttribute('aria-expanded','false');
+
+  navCompetitionsBtn.addEventListener('click', (event)=>{
+    if(isDesktop()) return;
+    event.preventDefault();
+    const isOpen = navCompetitionsWrapper.classList.toggle('open');
+    navCompetitionsBtn.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  navCompetitionsWrapper.addEventListener('mouseenter', ()=>{
+    if(isDesktop()){
+      navCompetitionsBtn.setAttribute('aria-expanded','true');
+    }
+  });
+  navCompetitionsWrapper.addEventListener('mouseleave', ()=>{
+    if(isDesktop()){
+      navCompetitionsBtn.setAttribute('aria-expanded','false');
+    }
+  });
+  navCompetitionsWrapper.addEventListener('focusin', ()=>{
+    if(isDesktop()){
+      navCompetitionsBtn.setAttribute('aria-expanded','true');
+    }
+  });
+  navCompetitionsWrapper.addEventListener('focusout', (event)=>{
+    if(isDesktop() && !navCompetitionsWrapper.contains(event.relatedTarget)){
+      navCompetitionsBtn.setAttribute('aria-expanded','false');
+    }
+  });
+
+  window.addEventListener('resize', ()=>{
+    if(isDesktop()){
+      closeDropdown();
+    }
+  });
+
+  document.addEventListener('click', (event)=>{
+    if(!isDesktop() && navCompetitionsWrapper.classList.contains('open')){
+      if(!navCompetitionsWrapper.contains(event.target)){
+        closeDropdown();
+      }
+    }
+  });
+
+  if(navCompetitionsMenu){
+    navCompetitionsMenu.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        closeDropdown();
+      });
+    });
+  }
 }
 
 const homeView    = document.getElementById('home');
