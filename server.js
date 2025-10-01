@@ -769,7 +769,7 @@ app.get('/admin/news', (req, res) => {
   if (!req.session?.isAdmin) {
     return res.redirect('/');
   }
-  res.sendFile(path.join(__dirname, 'public', 'admin-news.html'));
+  res.sendFile(path.join(__dirname, 'public', 'teams.html'));
 });
 
 // Basic admin session endpoints

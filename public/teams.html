@@ -1169,6 +1169,55 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   <section id="news-view" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
     <h2>League News</h2>
     <div class="space-y-10">
+      <div id="newsAdminPanel" class="space-y-4" style="display:none">
+        <div class="glow-card glow-silver space-y-2" style="padding:20px">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-xl font-semibold">Admin newsroom</h3>
+              <p class="muted text-sm">Publish official bulletins that appear alongside the community feed.</p>
+            </div>
+            <button id="adminNewsRefresh" type="button" class="rounded-full border border-emerald-300/60 bg-emerald-400/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-emerald-100 shadow-[0_0_20px_rgba(34,197,94,0.28)] transition hover:border-emerald-200/80 hover:bg-emerald-400/30">Refresh feed</button>
+          </div>
+          <form id="adminNewsForm" class="space-y-4" enctype="multipart/form-data">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="space-y-1">
+                <span class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200/80">Headline *</span>
+                <input name="title" type="text" required class="w-full rounded-xl border border-emerald-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100" maxlength="180" placeholder="UPCL Media delivers breaking news">
+              </label>
+              <label class="space-y-1">
+                <span class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200/80">Author</span>
+                <input name="author" type="text" class="w-full rounded-xl border border-emerald-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100" maxlength="120" placeholder="UPCL Media">
+              </label>
+            </div>
+            <label class="space-y-1">
+              <span class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200/80">Story *</span>
+              <textarea name="body" rows="5" required class="w-full rounded-xl border border-emerald-300/30 bg-slate-950/60 px-3 py-2 text-sm leading-relaxed text-slate-100" maxlength="2000" placeholder="Share the full bulletin here…"></textarea>
+            </label>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="space-y-1">
+                <span class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200/80">Feature image</span>
+                <input name="image" type="file" accept="image/*" class="w-full rounded-xl border border-emerald-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100">
+                <small class="muted block text-[0.65rem] tracking-[0.2em]">PNG, JPG, GIF up to 3MB.</small>
+              </label>
+              <label class="space-y-1">
+                <span class="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-200/80">Video embed URL</span>
+                <input name="video" type="url" placeholder="https://www.youtube.com/embed/..." class="w-full rounded-xl border border-emerald-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100">
+              </label>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <small class="muted">Stories publish instantly for all viewers. Double-check embeds before posting.</small>
+              <button type="submit" class="rounded-full border border-emerald-300/70 bg-emerald-400/30 px-5 py-2 text-xs font-semibold uppercase tracking-[0.32em] text-emerald-100 shadow-[0_0_22px_rgba(16,185,129,0.32)] transition hover:border-emerald-200/80 hover:bg-emerald-400/40">Publish story</button>
+            </div>
+            <div id="adminNewsStatus" class="text-xs uppercase tracking-[0.3em] text-emerald-200/70"></div>
+          </form>
+        </div>
+        <div class="glow-card glow-gold" style="padding:20px">
+          <h4 class="text-lg font-semibold">Manual stories</h4>
+          <div id="adminNewsList" class="news-wrap" style="margin-top:12px">
+            <div class="muted">Administrator tools appear here after signing in.</div>
+          </div>
+        </div>
+      </div>
       <div class="space-y-3">
         <div>
           <h3 class="text-xl font-semibold">Main</h3>
@@ -1509,6 +1558,9 @@ const FRIENDLIES_ID = 'UPCL_FRIENDLIES_2025'; // current Friendlies id
 
 let leagueDataCache = null;
 let leagueDataPromise = null;
+let latestManualNews = [];
+let adminNewsSetup = false;
+let adminNewsFetched = false;
 
 async function fetchLeagueData(force = false){
   if (!force && leagueDataCache) return leagueDataCache;
@@ -2101,11 +2153,51 @@ const homeView    = document.getElementById('home');
 const teamsViewEl = document.getElementById('teams-view');
 const rankingsSection = document.getElementById('rankings-section');
 const newsView    = document.getElementById('news-view');
+const adminNewsPanel  = document.getElementById('newsAdminPanel');
+const adminNewsForm   = document.getElementById('adminNewsForm');
+const adminNewsStatus = document.getElementById('adminNewsStatus');
+const adminNewsList   = document.getElementById('adminNewsList');
+const adminNewsRefresh= document.getElementById('adminNewsRefresh');
 const fxPublic    = document.getElementById('fixtures-public');
 const fxSched     = document.getElementById('fixtures-sched');
 const cupView     = document.getElementById('champions-view');
 const leagueView  = document.getElementById('leagueView');
 const friendliesView = document.getElementById('friendlies-view');
+
+function normalizeInitialView(raw){
+  if (!raw) return null;
+  const value = String(raw).toLowerCase();
+  switch(value){
+    case 'home':
+    case 'teams':
+    case 'news':
+    case 'champions':
+    case 'league':
+    case 'friendlies':
+    case 'rankings':
+      return value;
+    case 'fixtures':
+    case 'fixturespublic':
+    case 'fixtures-public':
+      return 'fixturesPublic';
+    case 'fixturessched':
+    case 'fixtures-sched':
+    case 'schedule':
+    case 'scheduling':
+      return 'fixturesSched';
+    default:
+      return null;
+  }
+}
+
+function resolveInitialNav(){
+  const search = new URLSearchParams(window.location.search || '');
+  const queryView = normalizeInitialView(search.get('view'));
+  const hashView = normalizeInitialView(window.location.hash ? window.location.hash.replace(/^#/, '') : '');
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const pathView = path === '/admin/news' ? 'news' : null;
+  return queryView || hashView || pathView || 'teams';
+}
 
 function setNav(active){
   if (active==='fixturesSched' && !isAdmin) { alert('Admins only'); active='fixturesPublic'; }
@@ -2187,6 +2279,7 @@ async function checkAdmin(){
   try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
   btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
   navFxSched.style.display = isAdmin ? 'inline-block' : 'none';
+  updateAdminNewsPanel();
 }
 async function checkMe(){
   try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
@@ -3689,6 +3782,173 @@ function buildFriendliesAdmin(teamIds){
 
 
 // =======================
+//   NEWS ADMIN PANEL
+// =======================
+function renderAdminManualNews(items){
+  if (!adminNewsList) return;
+  if (!isAdmin){
+    adminNewsList.innerHTML = '<div class="muted">Administrator tools available after signing in.</div>';
+    return;
+  }
+  const normalized = Array.isArray(items) ? items.map(item => ({ ...item, type: (item.type || 'manual') })) : [];
+  renderNewsCollection(adminNewsList, normalized, '<div class="muted">No manual stories published yet.</div>');
+}
+
+function readFileAsDataURL(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Failed to read image file.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleAdminNewsSubmit(event){
+  event.preventDefault();
+  if (!isAdmin){
+    alert('Admins only');
+    return;
+  }
+  if (!adminNewsForm) return;
+  const submitBtn = adminNewsForm.querySelector('button[type="submit"]');
+  const formData = new FormData(adminNewsForm);
+  const title = String(formData.get('title') || '').trim();
+  const body = String(formData.get('body') || '').trim();
+  const author = String(formData.get('author') || '').trim();
+  const videoUrl = String(formData.get('video') || '').trim();
+  const imageFile = formData.get('image');
+
+  if (adminNewsStatus){
+    adminNewsStatus.textContent = 'Publishing…';
+  }
+  if (submitBtn){
+    submitBtn.disabled = true;
+    submitBtn.setAttribute('aria-busy','true');
+  }
+
+  if (!title || !body){
+    if (adminNewsStatus){
+      adminNewsStatus.textContent = 'Headline and story are required.';
+    }
+    if (submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.removeAttribute('aria-busy');
+    }
+    return;
+  }
+
+  let imageData = null;
+  if (imageFile && imageFile.size){
+    if (imageFile.size > 3 * 1024 * 1024){
+      if (adminNewsStatus){
+        adminNewsStatus.textContent = 'Image is larger than 3MB.';
+      }
+      if (submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+      }
+      return;
+    }
+    try{
+      imageData = await readFileAsDataURL(imageFile);
+    }catch(err){
+      if (adminNewsStatus){
+        adminNewsStatus.textContent = err?.message || 'Image upload failed.';
+      }
+      if (submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+      }
+      return;
+    }
+  }
+
+  const payload = { title, body };
+  if (author) payload.author = author;
+  if (videoUrl) payload.videoUrl = videoUrl;
+  if (imageData) payload.imageData = imageData;
+
+  try{
+    const res = await fetch(`${API_BASE}/api/news`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(payload)
+    });
+    let data = null;
+    try{ data = await res.json(); }
+    catch{ data = null; }
+    if (!res.ok){
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    if (adminNewsStatus){
+      adminNewsStatus.textContent = 'Story published successfully!';
+    }
+    adminNewsForm.reset();
+    await loadNews();
+  }catch(err){
+    if (adminNewsStatus){
+      adminNewsStatus.textContent = err?.message || 'Publish failed.';
+    }
+  }finally{
+    if (submitBtn){
+      submitBtn.disabled = false;
+      submitBtn.removeAttribute('aria-busy');
+    }
+  }
+}
+
+function setupAdminNewsPanel(){
+  if (adminNewsSetup) return;
+  if (!adminNewsForm) return;
+  adminNewsSetup = true;
+  adminNewsForm.addEventListener('submit', handleAdminNewsSubmit);
+  if (adminNewsRefresh){
+    adminNewsRefresh.addEventListener('click', async ()=>{
+      if (!isAdmin) return;
+      if (adminNewsRefresh){
+        adminNewsRefresh.disabled = true;
+        adminNewsRefresh.setAttribute('aria-busy','true');
+      }
+      if (adminNewsList){
+        adminNewsList.innerHTML = '<div class="muted">Refreshing…</div>';
+      }
+      try{ await loadNews(); }
+      finally{
+        if (adminNewsRefresh){
+          adminNewsRefresh.disabled = false;
+          adminNewsRefresh.removeAttribute('aria-busy');
+        }
+      }
+    });
+  }
+}
+
+function updateAdminNewsPanel(){
+  if (!adminNewsPanel) return;
+  if (isAdmin){
+    adminNewsPanel.style.display = 'block';
+    setupAdminNewsPanel();
+    if (!adminNewsFetched){
+      if (adminNewsList){
+        adminNewsList.innerHTML = '<div class="muted">Loading manual stories…</div>';
+      }
+      loadNews();
+    }else{
+      renderAdminManualNews(latestManualNews);
+    }
+  }else{
+    adminNewsPanel.style.display = 'none';
+    if (adminNewsStatus){
+      adminNewsStatus.textContent = '';
+    }
+    if (adminNewsList){
+      adminNewsList.innerHTML = '<div class="muted">Administrator tools available after signing in.</div>';
+    }
+  }
+}
+
+// =======================
 //   NEWS (dynamic; client-side fallback from fixtures)
 // =======================
 function normalizeNewsItem(n){
@@ -3730,6 +3990,9 @@ async function loadNews(){
   const generalWrap = document.getElementById('newsGeneralFeed');
   if (mainWrap) mainWrap.innerHTML = '<div class="muted">Loading main news…</div>';
   if (generalWrap) generalWrap.innerHTML = '<div class="muted">Loading community posts…</div>';
+  if (isAdmin && adminNewsList){
+    adminNewsList.innerHTML = '<div class="muted">Loading manual stories…</div>';
+  }
   try{
     const d = await apiGet('/api/news');
     const mainItems = Array.isArray(d.main) && d.main.length
@@ -3744,9 +4007,17 @@ async function loadNews(){
     if (generalWrap){
       renderNewsCollection(generalWrap, generalItems, '<div class="muted">No community posts yet.</div>');
     }
+    latestManualNews = generalItems.map(item => ({ ...item, type: (item.type || 'manual') }));
+    adminNewsFetched = true;
+    if (isAdmin){
+      renderAdminManualNews(latestManualNews);
+    }
     return;
   }catch(err){
     console.warn('Failed to load news feed via API', err);
+    if (isAdmin && adminNewsList){
+      adminNewsList.innerHTML = '<div class="muted">Unable to load manual stories.</div>';
+    }
   }
   try{
     await refreshFixturesPublic();
@@ -3767,6 +4038,11 @@ async function loadNews(){
   }
   if (generalWrap){
     generalWrap.innerHTML = '<div class="muted">No community posts yet.</div>';
+  }
+  if (isAdmin && adminNewsList){
+    adminNewsList.innerHTML = '<div class="muted">No manual stories yet.</div>';
+    latestManualNews = [];
+    adminNewsFetched = true;
   }
 }
 
@@ -4099,8 +4375,27 @@ async function init(){
   await checkMe();
   await loadHome();
 
-  // default
-  setNav('teams');
+  const initialNav = resolveInitialNav();
+  setNav(initialNav);
+  if (initialNav === 'news'){
+    await loadNews();
+  }else if (initialNav === 'friendlies'){
+    await loadFriendlies();
+  }else if (initialNav === 'champions'){
+    await loadChampions();
+  }else if (initialNav === 'league'){
+    loadLeague();
+  }
+  if (window.location.pathname.replace(/\/+$/, '') === '/admin/news'){
+    try{
+      const nextUrl = new URL(window.location.href);
+      nextUrl.pathname = '/';
+      if (!nextUrl.searchParams.get('view')){
+        nextUrl.searchParams.set('view','news');
+      }
+      history.replaceState(null, '', nextUrl);
+    }catch{}
+  }
 
   await refreshMatches();
   setInterval(async () => { await refreshMatches(); }, 10*60*1000);
