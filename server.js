@@ -146,6 +146,12 @@ const SQL_SELECT_MANUAL_NEWS = `
    LIMIT 50
 `;
 
+const SQL_DELETE_MANUAL_NEWS = `
+  DELETE FROM public.news
+   WHERE id = $1 AND type = 'manual'
+  RETURNING id
+`;
+
 const SQL_TOP_STANDINGS = `
   SELECT club_id,
          pts,
@@ -853,6 +859,26 @@ app.post('/api/news', async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Failed to save manual news');
     res.status(500).json({ error: 'Failed to save news' });
+  }
+});
+
+app.delete('/api/news/:id', async (req, res) => {
+  if (!req.session?.isAdmin) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  const { id } = req.params;
+  if (!/^\d+$/.test(String(id || ''))) {
+    return res.status(400).json({ error: 'Invalid news id' });
+  }
+  try {
+    const result = await q(SQL_DELETE_MANUAL_NEWS, [Number(id)]);
+    if (!result?.rowCount) {
+      return res.status(404).json({ error: 'News item not found' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err, id }, 'Failed to delete manual news');
+    res.status(500).json({ error: 'Failed to delete news' });
   }
 });
 
