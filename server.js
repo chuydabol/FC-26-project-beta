@@ -19,6 +19,8 @@ try {
   };
 }
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
 const { q } = require('./services/pgwrap');
@@ -122,6 +124,68 @@ const SQL_UPSERT_PLAYERCARD = `
         last_updated = NOW()
 `;
 
+const SQL_INSERT_MANUAL_NEWS = `
+  INSERT INTO public.news (type, title, body, image_url, video_url, author)
+  VALUES ('manual', $1, $2, $3, $4, $5)
+  RETURNING id, type, title, body,
+            image_url AS "imageUrl",
+            video_url AS "videoUrl",
+            created_at AS "createdAt",
+            author
+`;
+
+const SQL_SELECT_MANUAL_NEWS = `
+  SELECT id, type, title, body,
+         image_url AS "imageUrl",
+         video_url AS "videoUrl",
+         created_at AS "createdAt",
+         author
+    FROM public.news
+   WHERE type = 'manual'
+   ORDER BY created_at DESC
+   LIMIT 50
+`;
+
+const SQL_TOP_STANDINGS = `
+  SELECT club_id,
+         pts,
+         w,
+         d,
+         l,
+         gf,
+         ga,
+         gd,
+         updated_at
+    FROM public.upcl_standings
+   ORDER BY pts DESC, gd DESC, gf DESC
+   LIMIT 5
+`;
+
+const SQL_TOP_LEADERS = `
+  SELECT type,
+         club_id,
+         name,
+         count
+    FROM public.upcl_leaders
+   ORDER BY type, count DESC, name
+`;
+
+const SQL_RECENT_MATCHES_NEWS = `
+  SELECT m.match_id,
+         m.ts_ms,
+         home.club_id AS home_id,
+         away.club_id AS away_id,
+         home.goals    AS home_goals,
+         away.goals    AS away_goals
+    FROM public.matches m
+    JOIN public.match_participants home
+      ON home.match_id = m.match_id AND home.is_home = true
+    JOIN public.match_participants away
+      ON away.match_id = m.match_id AND away.is_home = false
+   ORDER BY m.ts_ms DESC
+   LIMIT 3
+`;
+
 // Help node:test mocks that intercept global.fetch in environments without real modules
 if (process.env.NODE_ENV === 'test') {
   const _includes = String.prototype.includes;
@@ -188,6 +252,17 @@ function clubsForLeague(id) {
 }
 const DEFAULT_LEAGUE_ID = process.env.DEFAULT_LEAGUE_ID || 'UPCL_LEAGUE_2025';
 
+const fsp = fs.promises;
+const NEWS_UPLOAD_DIR = path.join(__dirname, 'public', 'uploads', 'news');
+const MAX_NEWS_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB
+const NEWS_IMAGE_EXTENSIONS = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp'
+};
+
 function parseHomeIndicator(value) {
   if (typeof value === 'boolean') {
     return value;
@@ -205,6 +280,179 @@ function parseHomeIndicator(value) {
     }
   }
   return Boolean(value);
+}
+
+function mapNewsRow(row = {}) {
+  const createdAt = row.createdAt instanceof Date
+    ? row.createdAt.toISOString()
+    : row.createdAt;
+  return {
+    id: row.id,
+    type: row.type || 'manual',
+    title: row.title || '',
+    body: row.body || '',
+    imageUrl: row.imageUrl || null,
+    videoUrl: row.videoUrl || null,
+    createdAt: createdAt || new Date().toISOString(),
+    author: row.author || 'UPCL Admin'
+  };
+}
+
+function clubDisplayName(clubId) {
+  if (!clubId && clubId !== 0) return '';
+  return CLUB_NAMES[String(clubId)] || String(clubId);
+}
+
+function sanitizeVideoUrl(url) {
+  if (!url) return null;
+  const trimmed = String(url).trim();
+  if (!trimmed) return null;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
+}
+
+async function persistNewsImage(imageData) {
+  if (!imageData) return null;
+  const trimmed = String(imageData).trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(trimmed);
+  if (!match) {
+    return null;
+  }
+  const mime = match[1].toLowerCase();
+  const base64 = match[2];
+  const ext = NEWS_IMAGE_EXTENSIONS[mime] || 'png';
+  const buffer = Buffer.from(base64, 'base64');
+  if (!buffer.length) return null;
+  if (buffer.length > MAX_NEWS_IMAGE_SIZE) {
+    throw new Error('Image too large');
+  }
+  await fsp.mkdir(NEWS_UPLOAD_DIR, { recursive: true });
+  const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10);
+  const fileName = `news-${Date.now()}-${id}.${ext}`;
+  await fsp.writeFile(path.join(NEWS_UPLOAD_DIR, fileName), buffer);
+  return `/uploads/news/${fileName}`;
+}
+
+async function buildAutoNewsItems() {
+  const now = new Date();
+  try {
+    const [standingsRes, leadersRes, matchesRes] = await Promise.all([
+      q(SQL_TOP_STANDINGS).catch(() => ({ rows: [] })),
+      q(SQL_TOP_LEADERS).catch(() => ({ rows: [] })),
+      q(SQL_RECENT_MATCHES_NEWS).catch(() => ({ rows: [] }))
+    ]);
+
+    const auto = [];
+
+    if (standingsRes.rows.length) {
+      const createdAt = standingsRes.rows[0].updated_at instanceof Date
+        ? standingsRes.rows[0].updated_at.toISOString()
+        : new Date(now.getTime() - 2 * 60 * 1000).toISOString();
+      auto.push({
+        id: 'auto-standings',
+        type: 'auto',
+        badge: 'Standings',
+        title: 'Standings Snapshot',
+        body: 'Top clubs in the UPCL table after the latest matches.',
+        createdAt,
+        author: 'Auto Feed',
+        stats: standingsRes.rows.map((row, idx) => ({
+          rank: idx + 1,
+          clubId: String(row.club_id),
+          points: Number(row.pts || 0),
+          record: `${Number(row.w || 0)}-${Number(row.d || 0)}-${Number(row.l || 0)}`,
+          goalDiff: Number(row.gd || 0)
+        }))
+      });
+    }
+
+    const scorers = leadersRes.rows.filter(r => r.type === 'scorer').slice(0, 5);
+    if (scorers.length) {
+      auto.push({
+        id: 'auto-scorers',
+        type: 'auto',
+        badge: 'Goal Leaders',
+        title: 'Golden Boot Race',
+        body: 'Who leads the league in goals?',
+        createdAt: new Date(now.getTime() - 90 * 1000).toISOString(),
+        author: 'Auto Feed',
+        chart: {
+          type: 'bar',
+          color: '#facc15',
+          data: scorers.map(row => ({
+            name: row.name,
+            value: Number(row.count || 0),
+            clubId: String(row.club_id || '')
+          }))
+        }
+      });
+    }
+
+    const assists = leadersRes.rows.filter(r => r.type === 'assister').slice(0, 5);
+    if (assists.length) {
+      auto.push({
+        id: 'auto-assists',
+        type: 'auto',
+        badge: 'Assist Leaders',
+        title: 'Playmakers on Fire',
+        body: 'Top assist leaders in the league.',
+        createdAt: new Date(now.getTime() - 60 * 1000).toISOString(),
+        author: 'Auto Feed',
+        chart: {
+          type: 'area',
+          color: '#38bdf8',
+          data: assists.map(row => ({
+            name: row.name,
+            value: Number(row.count || 0),
+            clubId: String(row.club_id || '')
+          }))
+        }
+      });
+    }
+
+    const latestMatch = matchesRes.rows.find(r => Number(r.ts_ms));
+    if (latestMatch) {
+      const tsMs = Number(latestMatch.ts_ms);
+      auto.push({
+        id: `auto-match-${latestMatch.match_id}`,
+        type: 'auto',
+        badge: 'Match Recap',
+        title: 'Latest Final Score',
+        body: `${clubDisplayName(latestMatch.home_id)} vs ${clubDisplayName(latestMatch.away_id)}`,
+        createdAt: new Date(tsMs || now.getTime()).toISOString(),
+        author: 'Auto Feed',
+        highlight: {
+          home: {
+            clubId: String(latestMatch.home_id),
+            goals: Number(latestMatch.home_goals || 0)
+          },
+          away: {
+            clubId: String(latestMatch.away_id),
+            goals: Number(latestMatch.away_goals || 0)
+          }
+        }
+      });
+    }
+
+    return auto;
+  } catch (err) {
+    logger.error({ err }, 'Failed to build auto news items');
+    return [];
+  }
 }
 
 // League standings include only matches within this date range (Unix ms)
@@ -495,6 +743,13 @@ app.get('/', (_req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'teams.html'))
 );
 
+app.get('/admin/news', (req, res) => {
+  if (!req.session?.isAdmin) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'admin-news.html'));
+});
+
 // Basic admin session endpoints
 app.post('/api/admin/login', (req, res) => {
   const { password } = req.body || {};
@@ -515,6 +770,56 @@ app.post('/api/admin/logout', (req, res) => {
 
 app.get('/api/admin/me', (req, res) => {
   res.json({ admin: !!req.session?.isAdmin });
+});
+
+app.get('/api/news', async (_req, res) => {
+  try {
+    const [manualRes, autoItems] = await Promise.all([
+      q(SQL_SELECT_MANUAL_NEWS),
+      buildAutoNewsItems()
+    ]);
+    const manual = (manualRes.rows || []).map(mapNewsRow);
+    const combined = [...manual, ...(Array.isArray(autoItems) ? autoItems : [])];
+    combined.sort((a, b) => {
+      const aTs = new Date(a.createdAt || 0).getTime();
+      const bTs = new Date(b.createdAt || 0).getTime();
+      return bTs - aTs;
+    });
+    res.json({ items: combined });
+  } catch (err) {
+    logger.error({ err }, 'Failed to fetch news feed');
+    res.status(500).json({ items: [] });
+  }
+});
+
+app.post('/api/news', async (req, res) => {
+  if (!req.session?.isAdmin) {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  const { title, body, imageData, imageUrl, videoUrl, author } = req.body || {};
+  if (!title || !String(title).trim()) {
+    return res.status(400).json({ error: 'Title required' });
+  }
+  if (!body || !String(body).trim()) {
+    return res.status(400).json({ error: 'Body required' });
+  }
+  try {
+    const savedImageUrl = await persistNewsImage(imageData || imageUrl);
+    const safeVideo = sanitizeVideoUrl(videoUrl);
+    const authorName = (author && String(author).trim()) || 'UPCL Admin';
+    const { rows } = await q(SQL_INSERT_MANUAL_NEWS, [
+      String(title).trim(),
+      String(body).trim(),
+      savedImageUrl,
+      safeVideo,
+      authorName
+    ]);
+    const item = mapNewsRow(rows[0]);
+    res.json({ ok: true, item });
+  } catch (err) {
+    logger.error({ err }, 'Failed to save manual news');
+    res.status(500).json({ error: 'Failed to save news' });
+  }
 });
 
 app.post('/admin/migrate', async (req, res) => {

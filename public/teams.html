@@ -743,13 +743,28 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 
 /* News feed (social style) */
-.news-wrap{display:flex;flex-direction:column;gap:20px;max-width:700px;margin:0 auto}
-.news-post{display:flex;gap:16px;font-size:18px;width:100%;padding:0;align-items:center}
-.news-post.glow-card{padding:20px;}
-.news-avatar{width:52px;height:52px;border-radius:12px;object-fit:cover;background:rgba(15,23,42,0.8);flex:0 0 auto;box-shadow:0 0 0 2px rgba(45,212,191,0.25)}
-.news-body{flex:1;text-align:center}
-.news-title{font-weight:800;margin-bottom:8px;font-size:20px}
-.news-meta{font-size:12px;color:var(--muted);margin-top:6px}
+.news-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;width:100%;margin:0 auto}
+.news-post{display:flex;flex-direction:column;gap:12px;width:100%;padding:22px;position:relative}
+.news-post.glow-card{padding:22px}
+.news-post.news-manual{grid-column:1/-1;padding:28px;gap:18px}
+.news-avatar{width:52px;height:52px;border-radius:14px;object-fit:cover;background:rgba(15,23,42,0.8);flex:0 0 auto;box-shadow:0 0 0 2px rgba(45,212,191,0.25)}
+.news-body{flex:1;text-align:left;font-size:16px;line-height:1.6;color:#f8fafc}
+.news-title{font-weight:800;margin-bottom:4px;font-size:22px}
+.news-meta{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.18em;margin-top:4px}
+.news-badge{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(148,163,184,0.75)}
+.news-stats{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.news-stat-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-radius:14px;background:rgba(15,23,42,0.55);border:1px solid rgba(148,163,184,0.15)}
+.news-stat-row .rank{font-size:18px;font-weight:800;color:var(--gold);margin-right:12px}
+.news-stat-row .stat-club{flex:1;font-weight:600}
+.news-stat-row .stat-meta{font-size:13px;color:var(--muted)}
+.news-chart{width:100%;height:220px}
+.news-highlight{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 18px;border-radius:18px;background:rgba(148,163,184,0.08);border:1px solid rgba(148,163,184,0.18)}
+.news-highlight .club{display:flex;align-items:center;gap:12px;font-weight:700;font-size:16px}
+.news-highlight .club img{width:46px;height:46px;border-radius:50%;object-fit:cover;background:rgba(15,23,42,0.9);box-shadow:0 0 0 2px rgba(148,163,184,0.2)}
+.news-highlight .score{font-size:34px;font-weight:800;color:var(--gold);text-shadow:0 0 18px rgba(250,204,21,0.25)}
+.news-media{border-radius:18px;overflow:hidden;box-shadow:0 26px 50px rgba(0,0,0,0.45)}
+.news-media img,.news-media iframe,.news-media video{display:block;width:100%}
+.news-manual .news-body{font-size:17px}
 
 /* Champions Cup groups — compact standings only */
 .group-grid{display:grid;gap:16px}
@@ -835,8 +850,12 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   main{padding:14px}
   .team-logo{aspect-ratio:16/9}       /* slightly shorter on phones */
   .teams-grid{gap:14px}
-  .news-post{gap:10px}
-  .news-avatar{width:42px;height:42px}
+  .news-wrap{grid-template-columns:1fr}
+  .news-post{padding:18px}
+  .news-post.news-manual{padding:22px}
+  .news-highlight{flex-direction:column;align-items:flex-start}
+  .news-highlight .score{font-size:28px}
+  .news-avatar{width:44px;height:44px}
   .grid2{grid-template-columns:1fr}   /* modals stack */
   .fx{grid-template-columns:1fr;gap:8px}
   .fx .act{justify-content:flex-start}
@@ -1428,6 +1447,9 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   </div>
 </div>
 
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
 <script src="js/home.js"></script>
 <script>
 // =======================
@@ -1603,8 +1625,22 @@ function escapeHtml(s){
   const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
   return String(s).replace(/[&<>"']/g, c => map[c]);
 }
+function escapeAttr(s){
+  if (s === undefined || s === null) return '';
+  const map = { '&':'&amp;', '<':'&lt;', '"':'&quot;' };
+  return String(s).replace(/[&<"]/g, c => map[c]);
+}
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
-function fmtDate(ms){ try{ return new Date(ms).toLocaleString(); } catch{ return ''; } }
+function fmtDate(value){
+  try{
+    if (!value && value !== 0) return '';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString();
+  }catch{
+    return '';
+  }
+}
 function getFixtureBanner(){ return '/assets/ui/fixture-banner.png'; }
 
 const PRO_POSITION_MAP = {
@@ -3546,19 +3582,50 @@ function buildFriendliesAdmin(teamIds){
 // =======================
 //   NEWS (dynamic; client-side fallback from fixtures)
 // =======================
+function normalizeNewsItem(n){
+  if (!n) return null;
+  const item = { ...n };
+  if (item.createdAt){
+    const d = new Date(item.createdAt);
+    if (!Number.isNaN(d.getTime())) item.createdAt = d.toISOString();
+  } else if (item.ts){
+    const d = new Date(item.ts);
+    if (!Number.isNaN(d.getTime())) item.createdAt = d.toISOString();
+  }
+  if (item.type) item.type = String(item.type).toLowerCase();
+  return item;
+}
+
+function renderNewsCollection(target, items, emptyHtml){
+  if (!target) return;
+  const list = (items || []).map(normalizeNewsItem).filter(Boolean);
+  list.sort((a,b)=>{
+    const aTs = new Date(a.createdAt || a.ts || 0).getTime();
+    const bTs = new Date(b.createdAt || b.ts || 0).getTime();
+    return bTs - aTs;
+  });
+  if (!list.length){
+    target.innerHTML = emptyHtml || '<div class="muted">No news yet.</div>';
+    return;
+  }
+  const charts = [];
+  target.innerHTML = list.map(item => renderNewsItem(item, charts)).join('');
+  if (charts.length){
+    requestAnimationFrame(()=>hydrateNewsCharts(charts));
+  }
+}
+
 async function loadNews(){
   const wrap = document.getElementById('newsFeed');
-  // Try server feed first (if you implemented /api/news). Fallback to client compute.
+  if (!wrap) return;
   try{
     const d = await apiGet('/api/news');
-    const items = d.items || [];
-    const complete = items.every(n=>n.title && n.body);
-    if (complete && items.length){
-      wrap.innerHTML = items.map(renderNewsItem).join('');
+    const items = (d.items || []).map(normalizeNewsItem).filter(Boolean);
+    if (items.length){
+      renderNewsCollection(wrap, items);
       return;
     }
   }catch{}
-  // Fallback: compute from fixtures (league + CC + friendlies)
   try{
     await refreshFixturesPublic();
     const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
@@ -3568,10 +3635,102 @@ async function loadNews(){
       ...normalizeFixtures(cc.fixtures||[]),
       ...normalizeFixtures(fr.fixtures||[])
     ]);
-    wrap.innerHTML = computed.length ? computed.map(renderNewsItem).join('') : '<div class="muted">No news yet.</div>';
-  }catch{ wrap.innerHTML = '<div class="muted">Failed to load news.</div>'; }
+    renderNewsCollection(wrap, computed, '<div class="muted">No news yet.</div>');
+  }catch{
+    wrap.innerHTML = '<div class="muted">Failed to load news.</div>';
+  }
 }
-function renderNewsItem(n){
+
+function renderNewsItem(n, chartsCollector){
+  if (!n) return '';
+  const charts = chartsCollector || [];
+  const type = (n.type || '').toLowerCase();
+  if (type === 'manual') return renderManualNewsItem(n);
+  if (type === 'auto') return renderAutoNewsItem(n, charts);
+  return renderLegacyNewsItem(n);
+}
+
+function renderManualNewsItem(n){
+  const title = escapeHtml(n.title || '');
+  const body = n.body ? escapeHtml(n.body).replace(/\n/g, '<br>') : '';
+  const metaParts = [];
+  const whenTxt = fmtDate(n.createdAt || n.ts || Date.now());
+  if (whenTxt) metaParts.push(escapeHtml(whenTxt));
+  if (n.author) metaParts.push(escapeHtml(n.author));
+  const meta = metaParts.join(' • ');
+  const media = [];
+  if (n.imageUrl){
+    media.push(`<div class="news-media"><img src="${escapeAttr(n.imageUrl)}" alt="${title}"></div>`);
+  }
+  if (n.videoUrl){
+    media.push(`<div class="news-media news-video"><iframe src="${escapeAttr(n.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`);
+  }
+  return `<article class="news-post news-manual glow-card glow-gold">
+    <div class="news-badge">Manual Bulletin</div>
+    <div class="news-title">${title}</div>
+    ${meta ? `<div class="news-meta">${meta}</div>` : ''}
+    ${body ? `<div class="news-body">${body}</div>` : ''}
+    ${media.join('')}
+  </article>`;
+}
+
+function renderAutoNewsItem(n, charts){
+  const title = escapeHtml(replaceClubIds(n.title || ''));
+  const summary = n.body ? `<div class="news-body">${escapeHtml(replaceClubIds(n.body))}</div>` : '';
+  let detail = '';
+  if (Array.isArray(n.stats) && n.stats.length){
+    detail = renderNewsStats(n.stats);
+  } else if (n.chart && Array.isArray(n.chart.data) && n.chart.data.length){
+    const chartId = `newsChart_${Math.random().toString(36).slice(2,10)}`;
+    charts.push({ id: chartId, config: n.chart });
+    detail = `<div class="news-chart" id="${chartId}"></div>`;
+  } else if (n.highlight){
+    detail = renderNewsHighlight(n.highlight);
+  }
+  const meta = fmtDate(n.createdAt || n.ts || Date.now());
+  return `<article class="news-post news-auto glow-card glow-silver">
+    <div class="news-badge">${escapeHtml(n.badge || 'Auto Update')}</div>
+    <div class="news-title">${title}</div>
+    ${summary}
+    ${detail}
+    ${meta ? `<div class="news-meta">${escapeHtml(meta)}</div>` : ''}
+  </article>`;
+}
+
+function renderNewsStats(stats){
+  return `<ul class="news-stats">${stats.map((row, idx)=>{
+    const club = row.clubId ? byId(row.clubId) : null;
+    const rank = row.rank ?? (idx + 1);
+    const label = row.label ? replaceClubIds(row.label) : (club?.name || row.clubId || '');
+    const metaBits = [];
+    if (row.points !== undefined) metaBits.push(`${row.points} pts`);
+    if (row.record) metaBits.push(row.record);
+    if (row.goalDiff !== undefined) metaBits.push(`GD ${row.goalDiff}`);
+    if (row.value !== undefined && !metaBits.length) metaBits.push(String(row.value));
+    const meta = metaBits.filter(Boolean).join(' • ');
+    return `<li class="news-stat-row">
+      <span class="rank">${escapeHtml(rank)}</span>
+      <span class="stat-club">${escapeHtml(label)}</span>
+      <span class="stat-meta">${escapeHtml(meta)}</span>
+    </li>`;
+  }).join('')}</ul>`;
+}
+
+function renderNewsHighlight(highlight){
+  const homeClub = highlight?.home?.clubId ? byId(highlight.home.clubId) : null;
+  const awayClub = highlight?.away?.clubId ? byId(highlight.away.clubId) : null;
+  const homeName = escapeHtml(homeClub?.name || highlight?.home?.clubId || 'Home');
+  const awayName = escapeHtml(awayClub?.name || highlight?.away?.clubId || 'Away');
+  const homeGoals = Number(highlight?.home?.goals ?? 0);
+  const awayGoals = Number(highlight?.away?.goals ?? 0);
+  return `<div class="news-highlight">
+    <div class="club"><img src="${teamLogoUrl(homeClub)}" alt="${homeName}"><span>${homeName}</span></div>
+    <div class="score">${homeGoals}–${awayGoals}</div>
+    <div class="club"><img src="${teamLogoUrl(awayClub)}" alt="${awayName}"><span>${awayName}</span></div>
+  </div>`;
+}
+
+function renderLegacyNewsItem(n){
   const club = byId(n.clubId);
   let title = n.title;
   let body  = n.body;
@@ -3596,14 +3755,60 @@ function renderNewsItem(n){
   }
   title = replaceClubIds(title);
   body  = replaceClubIds(body);
-  return `<article class="news-post glow-card glow-silver">
-    <img class="news-avatar" src="${teamLogoUrl(club)}" alt="">
-    <div class="news-body">
-      <div class="news-title">${escapeHtml(title||'')}</div>
-      <div>${escapeHtml(body||'')}</div>
-      <div class="news-meta">${fmtDate(n.ts)} • ${escapeHtml(n.tag||'')}</div>
-    </div>
+  const metaBits = [];
+  if (n.ts) metaBits.push(escapeHtml(fmtDate(n.ts)));
+  if (n.tag) metaBits.push(escapeHtml(n.tag));
+  return `<article class="news-post news-auto glow-card glow-silver">
+    <div class="news-badge">${escapeHtml(n.tag || 'Auto Update')}</div>
+    <div class="news-title">${escapeHtml(title||'')}</div>
+    <div class="news-body">${escapeHtml(body||'')}</div>
+    ${metaBits.length ? `<div class="news-meta">${metaBits.join(' • ')}</div>` : ''}
   </article>`;
+}
+
+function hydrateNewsCharts(charts){
+  if (!charts || !charts.length) return;
+  if (!window.React || !window.ReactDOM || !window.Recharts) return;
+  const React = window.React;
+  const ReactDOM = window.ReactDOM;
+  const { ResponsiveContainer, BarChart, Bar, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } = window.Recharts;
+  const axisTick = { fill:'#cbd5f5', fontSize:12 };
+  const tooltipStyle = { background:'rgba(15,23,42,0.92)', border:'1px solid rgba(148,163,184,0.35)', borderRadius:12, color:'#f8fafc' };
+  charts.forEach(cfg => {
+    const el = document.getElementById(cfg.id);
+    if (!el) return;
+    const data = (cfg.config?.data || []).map(d => ({
+      name: d.name || '',
+      value: Number(d.value || 0)
+    }));
+    if (!data.length) return;
+    const color = cfg.config?.color || '#facc15';
+    const type = (cfg.config?.type || 'bar').toLowerCase();
+    const margin = { top:10, right:16, left:0, bottom:0 };
+    const content = type === 'area'
+      ? React.createElement(ResponsiveContainer, { width:'100%', height:'100%' },
+          React.createElement(AreaChart, { data, margin },
+            React.createElement(CartesianGrid, { strokeDasharray:'3 3', stroke:'rgba(148,163,184,0.25)' }),
+            React.createElement(XAxis, { dataKey:'name', stroke:'#94a3b8', tick:axisTick }),
+            React.createElement(YAxis, { stroke:'#94a3b8', allowDecimals:false, tick:axisTick }),
+            React.createElement(Tooltip, { contentStyle:tooltipStyle }),
+            React.createElement(Area, { dataKey:'value', stroke:color, fill:color, fillOpacity:0.32, strokeWidth:3, dot:{ r:4, stroke:'#0f172a', strokeWidth:1, fill:color } })
+          )
+        )
+      : React.createElement(ResponsiveContainer, { width:'100%', height:'100%' },
+          React.createElement(BarChart, { data, margin },
+            React.createElement(CartesianGrid, { strokeDasharray:'3 3', stroke:'rgba(148,163,184,0.25)' }),
+            React.createElement(XAxis, { dataKey:'name', stroke:'#94a3b8', tick:axisTick }),
+            React.createElement(YAxis, { stroke:'#94a3b8', allowDecimals:false, tick:axisTick }),
+            React.createElement(Tooltip, { contentStyle:tooltipStyle }),
+            React.createElement(Bar, { dataKey:'value', fill:color, radius:[8,8,0,0] })
+          )
+        );
+    if (!el.__newsRoot){
+      el.__newsRoot = ReactDOM.createRoot(el);
+    }
+    el.__newsRoot.render(content);
+  });
 }
 async function computeNewsFromFixtures(list){
   const out = [];

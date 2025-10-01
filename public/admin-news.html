@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UPCL News Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            midnight: '#02060d',
+            aurora: '#1ec9c3',
+            gold: '#facc15',
+            slate: '#0f172a'
+          },
+          fontFamily: {
+            montserrat: ['Montserrat', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      background:
+        radial-gradient(120% 90% at 50% -15%, rgba(30,201,195,0.25), transparent 65%),
+        radial-gradient(85% 70% at 0% 0%, rgba(250,204,21,0.12), transparent 70%),
+        linear-gradient(165deg, #020308 0%, #02060d 40%, #010208 100%);
+      color: #f8fafc;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .glass {
+      backdrop-filter: blur(18px);
+      background: linear-gradient(145deg, rgba(9,13,20,0.92), rgba(4,7,12,0.88));
+      border: 1px solid rgba(148,163,184,0.25);
+      box-shadow: 0 30px 60px rgba(0,0,0,0.45);
+      border-radius: 24px;
+    }
+    .field-label {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.7rem;
+      color: rgba(226,232,240,0.7);
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,0.25);
+      background: rgba(15,23,42,0.6);
+      color: #f8fafc;
+      padding: 12px 16px;
+      font-family: inherit;
+      transition: border-color .25s ease, box-shadow .25s ease;
+    }
+    input[type="text"]:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(250,204,21,0.6);
+      box-shadow: 0 0 0 2px rgba(30,201,195,0.2);
+    }
+    textarea {
+      min-height: 160px;
+      resize: vertical;
+    }
+    button {
+      font-family: inherit;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, rgba(250,204,21,0.35), rgba(30,201,195,0.15));
+      border: 1px solid rgba(250,204,21,0.4);
+      border-radius: 18px;
+      padding: 12px 24px;
+      color: #0f172a;
+      cursor: pointer;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px rgba(250,204,21,0.25);
+    }
+    .news-card {
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid rgba(148,163,184,0.2);
+      background: linear-gradient(155deg, rgba(9,13,20,0.9), rgba(4,7,12,0.85));
+    }
+    .muted { color: rgba(226,232,240,0.65); }
+    .preview-media { border-radius: 16px; overflow: hidden; margin-top: 16px; }
+    .preview-media img,
+    .preview-media iframe { width: 100%; display: block; }
+  </style>
+</head>
+<body>
+  <main class="glass w-full max-w-5xl p-6 md:p-10 space-y-10">
+    <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div>
+        <p class="text-sm uppercase tracking-[0.4em] text-aurora">UPCL Control Center</p>
+        <h1 class="text-3xl md:text-4xl font-bold">Newsroom</h1>
+        <p class="muted mt-2 max-w-2xl">Publish spotlight stories, media recaps, and official announcements. Manual posts instantly appear alongside the automated match intelligence feed.</p>
+      </div>
+      <div class="flex flex-col gap-3 items-stretch md:items-end">
+        <button id="btnBack" class="bg-transparent border border-aurora/40 text-aurora hover:text-midnight hover:bg-aurora/80">Back to Hub</button>
+        <span id="adminStatus" class="muted text-xs text-right"></span>
+      </div>
+    </header>
+
+    <section class="news-card space-y-6">
+      <h2 class="text-2xl font-semibold">Create Manual Post</h2>
+      <form id="newsForm" class="space-y-6">
+        <div>
+          <label class="field-label block mb-2" for="title">Headline</label>
+          <input id="title" name="title" type="text" placeholder="Championship banners raised under Aurora Sky" required />
+        </div>
+        <div>
+          <label class="field-label block mb-2" for="author">Author</label>
+          <input id="author" name="author" type="text" placeholder="UPCL Media" value="UPCL Media" />
+        </div>
+        <div>
+          <label class="field-label block mb-2" for="body">Story</label>
+          <textarea id="body" name="body" placeholder="Recap the night, share highlights, or tease upcoming fixtures." required></textarea>
+        </div>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div>
+            <label class="field-label block mb-2" for="image">Feature Image</label>
+            <input id="image" name="image" type="file" accept="image/*" class="block w-full text-sm" />
+            <p class="muted text-xs mt-2">PNG, JPG, GIF up to 3MB.</p>
+          </div>
+          <div>
+            <label class="field-label block mb-2" for="video">Video Embed URL</label>
+            <input id="video" name="video" type="text" placeholder="https://www.youtube.com/embed/..." />
+            <p class="muted text-xs mt-2">Paste an embeddable link (YouTube, Twitch, Vimeo).</p>
+          </div>
+        </div>
+        <div class="flex flex-col md:flex-row md:items-center gap-4">
+          <button type="submit" class="self-start">Publish Story</button>
+          <span id="status" class="muted text-sm"></span>
+        </div>
+      </form>
+    </section>
+
+    <section class="space-y-4">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-2xl font-semibold">Manual Feed</h2>
+        <button id="refreshBtn" class="bg-transparent border border-aurora/40 text-aurora hover:text-midnight hover:bg-aurora/80">Refresh</button>
+      </div>
+      <div id="newsList" class="grid gap-5"></div>
+    </section>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const listEl = document.getElementById('newsList');
+    const adminStatus = document.getElementById('adminStatus');
+    const backBtn = document.getElementById('btnBack');
+    const refreshBtn = document.getElementById('refreshBtn');
+    backBtn.addEventListener('click', () => { window.location.href = '/'; });
+
+    async function ensureAdmin() {
+      try {
+        const res = await fetch('/api/admin/me');
+        const data = await res.json();
+        if (!data.admin) {
+          window.location.href = '/';
+          return;
+        }
+        adminStatus.textContent = 'Authenticated as league administrator.';
+      } catch {
+        window.location.href = '/';
+      }
+    }
+
+    function fmtDate(value) {
+      try {
+        return new Date(value).toLocaleString();
+      } catch {
+        return '';
+      }
+    }
+
+    function escapeHtml(value) {
+      if (value === undefined || value === null) return '';
+      const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+      return String(value).replace(/[&<>"']/g, c => map[c]);
+    }
+
+    function escapeAttr(value) {
+      if (value === undefined || value === null) return '';
+      const map = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' };
+      return String(value).replace(/[&<>"']/g, c => map[c]);
+    }
+
+    function createMediaMarkup(item) {
+      const blocks = [];
+      if (item.imageUrl) {
+        blocks.push(`<div class="preview-media"><img src="${escapeAttr(item.imageUrl)}" alt="${escapeHtml(item.title || 'News image')}" /></div>`);
+      }
+      if (item.videoUrl) {
+        blocks.push(`<div class="preview-media"><iframe src="${escapeAttr(item.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`);
+      }
+      return blocks.join('');
+    }
+
+    function renderManualList(items) {
+      if (!items.length) {
+        listEl.innerHTML = '<div class="muted">No manual stories published yet.</div>';
+        return;
+      }
+      listEl.innerHTML = items.map(item => `
+        <article class="news-card space-y-3">
+          <div class="text-xs uppercase tracking-[0.3em] text-aurora/70">${escapeHtml(fmtDate(item.createdAt))}</div>
+          <h3 class="text-xl font-semibold">${escapeHtml(item.title)}</h3>
+          <div class="muted text-sm">${escapeHtml(item.author || 'UPCL Media')}</div>
+          <p class="leading-relaxed">${escapeHtml(item.body || '').replace(/\n/g,'<br>')}</p>
+          ${createMediaMarkup(item)}
+        </article>
+      `).join('');
+    }
+
+    async function loadManualNews() {
+      try {
+        const res = await fetch('/api/news');
+        const data = await res.json();
+        const manual = (data.items || []).filter(item => item.type === 'manual');
+        manual.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        renderManualList(manual);
+      } catch {
+        listEl.innerHTML = '<div class="muted">Unable to load news.</div>';
+      }
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('newsForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      statusEl.textContent = 'Publishing…';
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const title = formData.get('title');
+      const body = formData.get('body');
+      const author = formData.get('author');
+      const videoUrl = formData.get('video');
+      const imageFile = formData.get('image');
+      let imageData = null;
+      if (imageFile && imageFile.size) {
+        if (imageFile.size > (3 * 1024 * 1024)) {
+          statusEl.textContent = 'Image is larger than 3MB.';
+          return;
+        }
+        try {
+          imageData = await readFileAsDataURL(imageFile);
+        } catch (err) {
+          statusEl.textContent = err.message || 'Image upload failed.';
+          return;
+        }
+      }
+      try {
+        const res = await fetch('/api/news', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, body, author, videoUrl, imageData })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          statusEl.textContent = data.error || 'Publish failed.';
+          return;
+        }
+        statusEl.textContent = 'Story published successfully!';
+        form.reset();
+        await loadManualNews();
+      } catch (err) {
+        statusEl.textContent = err.message || 'Publish failed.';
+      }
+    });
+
+    refreshBtn.addEventListener('click', loadManualNews);
+
+    ensureAdmin().then(loadManualNews);
+  </script>
+</body>
+</html>
