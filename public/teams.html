@@ -865,6 +865,55 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   .team-card,.navbar button{transition:none}
 }
 
+/* Match ticker */
+.ticker-wrapper{
+  position:relative;
+  z-index:40;
+  width:100%;
+  overflow:hidden;
+  background:linear-gradient(90deg,#000000 0%,#130006 45%,#32000d 100%);
+  border-bottom:1px solid rgba(249,217,35,0.22);
+  box-shadow:0 14px 32px rgba(0,0,0,0.45);
+  --ticker-gap:2.75rem;
+}
+.ticker-inner{
+  display:flex;
+  align-items:center;
+  min-height:46px;
+  padding:0.6rem 1.5rem;
+}
+.ticker-track{
+  display:flex;
+  align-items:center;
+  gap:var(--ticker-gap);
+  min-width:100%;
+  animation:ticker-left-right 24s linear infinite;
+}
+.ticker-item{
+  display:inline-flex;
+  align-items:center;
+  color:#f9d923;
+  font-weight:600;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  white-space:nowrap;
+  text-shadow:0 0 6px rgba(249,217,35,0.55),0 0 18px rgba(249,217,35,0.35);
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,0.45));
+}
+@keyframes ticker-left-right{
+  0%{transform:translateX(-100%);}
+  100%{transform:translateX(100%);}
+}
+@media (max-width:900px){
+  .ticker-track{animation-duration:30s;}
+}
+@media (max-width:640px){
+  .ticker-wrapper{--ticker-gap:1.5rem;}
+  .ticker-inner{padding:0.5rem 1rem;}
+  .ticker-track{animation-duration:36s;}
+  .ticker-item{letter-spacing:0.08em;}
+}
+
 /* Intro splash */
 #intro{
   position:fixed;
@@ -884,6 +933,15 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 <div id="intro">
     <img src="/assets/logos/UPCL.png" alt="League logo">
   <audio id="introAudio" src="/intro.mp3"></audio>
+</div>
+<div class="ticker-wrapper" data-ticker>
+  <div class="ticker-inner">
+    <div class="ticker-track" data-ticker-track role="status" aria-live="polite">
+      <span class="ticker-item" data-ticker-item>Club Frijol 2 - 1 Bros B4 Hose</span>
+      <span class="ticker-item" data-ticker-item>Luchoportuanu 3 - 0 OM Friends</span>
+      <span class="ticker-item" data-ticker-item>Gaz de Ville 2 - 2 Cream 314</span>
+    </div>
+  </div>
 </div>
 <header class="flex flex-wrap items-center gap-4 md:gap-6">
   <div class="site-brand">
@@ -1676,6 +1734,85 @@ function deriveTopScorersFromPlayers(players){
 // Teams
 let teams = [];
 let staticTeams = [];
+
+function setupTicker(){
+  const wrapper = document.querySelector('[data-ticker]');
+  if(!wrapper) return;
+  const track = wrapper.querySelector('[data-ticker-track]');
+  if(!track) return;
+
+  const defaults = Array.from(track.querySelectorAll('[data-ticker-item]')).map(el => el.textContent.trim()).filter(Boolean);
+  let activeScores = defaults.slice();
+
+  const buildItem = (text)=>{
+    const span = document.createElement('span');
+    span.className = 'ticker-item';
+    span.setAttribute('data-ticker-item','');
+    span.textContent = text;
+    return span;
+  };
+
+  const ensureLoop = (baseNodes)=>{
+    if(!baseNodes.length) return;
+    const wrapperWidth = wrapper.getBoundingClientRect().width || window.innerWidth;
+    let guard = 0;
+    while(track.scrollWidth < wrapperWidth * 2 && guard < 12){
+      baseNodes.forEach(node => track.appendChild(node.cloneNode(true)));
+      guard++;
+    }
+  };
+
+  const populate = (scores)=>{
+    track.innerHTML = '';
+    const baseNodes = scores.map(buildItem);
+    baseNodes.forEach(node => track.appendChild(node));
+    ensureLoop(baseNodes);
+  };
+
+  const formatMatch = (match)=>{
+    if(!match) return null;
+    const homeName = match.homeName || match.home || match.home_team || match.homeTeam;
+    const awayName = match.awayName || match.away || match.away_team || match.awayTeam;
+    const homeScore = match.homeScore ?? match.home_score ?? match.home_goals ?? match.homeGoals;
+    const awayScore = match.awayScore ?? match.away_score ?? match.away_goals ?? match.awayGoals;
+    if(homeName && awayName && Number.isFinite(homeScore) && Number.isFinite(awayScore)){
+      return `${homeName} ${homeScore} - ${awayScore} ${awayName}`;
+    }
+    if(homeName && awayName){
+      return `${homeName} vs ${awayName}`;
+    }
+    return null;
+  };
+
+  const refreshTicker = async ()=>{
+    try{
+      const res = await fetch('/api/matches/latest', { headers:{ 'Accept':'application/json' }});
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = await res.json();
+      const matches = Array.isArray(payload) ? payload : (payload?.matches || []);
+      const formatted = matches.map(formatMatch).filter(Boolean);
+      if(formatted.length){
+        activeScores = formatted;
+        populate(activeScores);
+        return;
+      }
+    }catch(err){
+      console.warn('ticker refresh failed', err);
+    }
+    activeScores = defaults.slice();
+    populate(activeScores);
+  };
+
+  let resizeTimer;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>populate(activeScores), 160);
+  });
+
+  populate(activeScores);
+  refreshTicker();
+  setInterval(refreshTicker, 5 * 60 * 1000);
+}
 
 function buildStaticTeams(){
   staticTeams = Array.from(document.querySelectorAll('.team-card')).map(card => {
@@ -4367,6 +4504,7 @@ async function computeNewsFromFixtures(list){
 //   INIT
 // =======================
 setupRankings();
+setupTicker();
 async function init(){
 
   buildStaticTeams();
