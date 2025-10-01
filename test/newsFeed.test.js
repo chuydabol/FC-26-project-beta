@@ -77,3 +77,64 @@ test('auto standings card excludes clubs outside the league', async () => {
 
   stub.mock.restore();
 });
+
+test('admin can delete manual news', async () => {
+  const stub = mock.method(pool, 'query', async (sql, params) => {
+    if (/DELETE FROM public\.news/i.test(sql)) {
+      assert.deepStrictEqual(params, [42]);
+      return { rowCount: 1, rows: [{ id: 42 }] };
+    }
+    if (/FROM public\.news/i.test(sql)) {
+      return { rows: [] };
+    }
+    return { rows: [] };
+  });
+
+  try {
+    await withServer(async port => {
+      const login = await fetch(`http://localhost:${port}/api/admin/login`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: 'admin' })
+      });
+      assert.strictEqual(login.status, 200);
+      const cookie = login.headers.get('set-cookie');
+      assert(cookie, 'expected session cookie');
+      await login.json();
+
+      const res = await fetch(`http://localhost:${port}/api/news/42`, {
+        method: 'DELETE',
+        headers: { cookie }
+      });
+      assert.strictEqual(res.status, 200);
+      const body = await res.json();
+      assert.deepStrictEqual(body, { ok: true });
+    });
+  } finally {
+    stub.mock.restore();
+  }
+});
+
+test('deleting manual news requires admin session', async () => {
+  let deleteCalled = false;
+  const stub = mock.method(pool, 'query', async (sql, params) => {
+    if (/DELETE FROM public\.news/i.test(sql)) {
+      deleteCalled = true;
+      return { rowCount: 1, rows: [{ id: Number(params?.[0]) || 0 }] };
+    }
+    if (/FROM public\.news/i.test(sql)) {
+      return { rows: [] };
+    }
+    return { rows: [] };
+  });
+
+  try {
+    await withServer(async port => {
+      const res = await fetch(`http://localhost:${port}/api/news/42`, { method: 'DELETE' });
+      assert.strictEqual(res.status, 403);
+    });
+    assert.strictEqual(deleteCalled, false);
+  } finally {
+    stub.mock.restore();
+  }
+});

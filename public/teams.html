@@ -765,6 +765,11 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .news-media{border-radius:18px;overflow:hidden;box-shadow:0 26px 50px rgba(0,0,0,0.45)}
 .news-media img,.news-media iframe,.news-media video{display:block;width:100%}
 .news-manual .news-body{font-size:17px}
+.news-admin-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px}
+.news-admin-actions button{min-width:0;padding:8px 12px;font-size:11px;letter-spacing:0.16em;text-transform:uppercase}
+.news-admin-actions button.danger{color:#fca5a5;border-color:rgba(248,113,113,0.55)}
+.news-admin-actions button.danger:hover,
+.news-admin-actions button.danger:focus-visible{color:#fecaca;border-color:rgba(248,113,113,0.85);box-shadow:0 12px 24px rgba(248,113,113,0.25)}
 
 /* Champions Cup groups — compact standings only */
 .group-grid{display:grid;gap:16px}
@@ -2088,6 +2093,7 @@ function normalizeFixtures(list){
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPut(p, body){ const r = await fetch(API_BASE+p,{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
+async function apiDelete(p){ const r = await fetch(API_BASE+p,{method:'DELETE',credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); const text = await r.text(); return text ? JSON.parse(text) : {}; }
 
 // players cache
 let playersByClub = {};
@@ -3856,7 +3862,40 @@ function renderAdminManualNews(items){
     return;
   }
   const normalized = Array.isArray(items) ? items.map(item => ({ ...item, type: (item.type || 'manual') })) : [];
-  renderNewsCollection(adminNewsList, normalized, '<div class="muted">No manual stories published yet.</div>');
+  renderNewsCollection(
+    adminNewsList,
+    normalized,
+    '<div class="muted">No manual stories published yet.</div>',
+    {
+      showAdminActions: true,
+      renderAdminActions: item => {
+        if (!item || item.id === undefined || item.id === null) return '';
+        return `<button type="button" class="danger" data-delete-news="${escapeAttr(item.id)}">Delete</button>`;
+      }
+    }
+  );
+  adminNewsList.querySelectorAll('[data-delete-news]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!isAdmin) return;
+      const id = btn.getAttribute('data-delete-news');
+      if (!id) return;
+      if (!confirm('Delete this story?')) return;
+      btn.disabled = true;
+      btn.setAttribute('aria-busy','true');
+      try{
+        await apiDelete(`/api/news/${encodeURIComponent(id)}`);
+        if (adminNewsStatus){
+          adminNewsStatus.textContent = 'Story deleted.';
+        }
+        await loadNews();
+      }catch(err){
+        alert(`Failed to delete story: ${err?.message || err}`);
+      }finally{
+        btn.removeAttribute('aria-busy');
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 function readFileAsDataURL(file){
@@ -4031,7 +4070,7 @@ function normalizeNewsItem(n){
   return item;
 }
 
-function renderNewsCollection(target, items, emptyHtml){
+function renderNewsCollection(target, items, emptyHtml, options){
   if (!target) return;
   const list = (items || []).map(normalizeNewsItem).filter(Boolean);
   list.sort((a,b)=>{
@@ -4044,7 +4083,7 @@ function renderNewsCollection(target, items, emptyHtml){
     return;
   }
   const charts = [];
-  target.innerHTML = list.map(item => renderNewsItem(item, charts)).join('');
+  target.innerHTML = list.map(item => renderNewsItem(item, charts, options)).join('');
   if (charts.length){
     requestAnimationFrame(()=>hydrateNewsCharts(charts));
   }
@@ -4111,16 +4150,16 @@ async function loadNews(){
   }
 }
 
-function renderNewsItem(n, chartsCollector){
+function renderNewsItem(n, chartsCollector, options){
   if (!n) return '';
   const charts = chartsCollector || [];
   const type = (n.type || '').toLowerCase();
-  if (type === 'manual') return renderManualNewsItem(n);
+  if (type === 'manual') return renderManualNewsItem(n, options);
   if (type === 'auto') return renderAutoNewsItem(n, charts);
   return renderLegacyNewsItem(n);
 }
 
-function renderManualNewsItem(n){
+function renderManualNewsItem(n, options){
   const title = escapeHtml(n.title || '');
   const body = n.body ? escapeHtml(n.body).replace(/\n/g, '<br>') : '';
   const metaParts = [];
@@ -4135,12 +4174,22 @@ function renderManualNewsItem(n){
   if (n.videoUrl){
     media.push(`<div class="news-media news-video"><iframe src="${escapeAttr(n.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`);
   }
+  let adminActions = '';
+  if (options?.showAdminActions){
+    const actions = typeof options.renderAdminActions === 'function'
+      ? options.renderAdminActions(n)
+      : '';
+    if (actions){
+      adminActions = `<div class="news-admin-actions">${actions}</div>`;
+    }
+  }
   return `<article class="news-post news-manual glow-card glow-gold">
     <div class="news-badge">${escapeHtml(n.badge || 'Community Post')}</div>
     <div class="news-title">${title}</div>
     ${meta ? `<div class="news-meta">${meta}</div>` : ''}
     ${body ? `<div class="news-body">${body}</div>` : ''}
     ${media.join('')}
+    ${adminActions}
   </article>`;
 }
 
