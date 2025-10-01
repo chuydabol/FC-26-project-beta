@@ -12,18 +12,18 @@ const AUTO_BATCH_TARGET = 9;
 
 const SQL_STANDINGS = `
   SELECT club_id,
-         pts,
-         w,
-         d,
-         l,
-         gf,
-         ga,
-         gd,
-         updated_at,
-         ROW_NUMBER() OVER (ORDER BY pts DESC, gd DESC, gf DESC) AS rank
-    FROM public.upcl_standings
+         points AS pts,
+         wins AS w,
+         draws AS d,
+         losses AS l,
+         goals_for AS gf,
+         goals_against AS ga,
+         goal_diff AS gd,
+         CURRENT_TIMESTAMP AS updated_at,
+         ROW_NUMBER() OVER (ORDER BY points DESC, goal_diff DESC, goals_for DESC) AS rank
+    FROM public.mv_league_standings
    WHERE $1::bigint[] IS NULL OR club_id::bigint = ANY($1::bigint[])
-   ORDER BY pts DESC, gd DESC, gf DESC
+   ORDER BY points DESC, goal_diff DESC, goals_for DESC
 `;
 
 const SQL_CLUBS = `
