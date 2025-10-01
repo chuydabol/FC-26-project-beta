@@ -157,6 +157,7 @@ const SQL_TOP_STANDINGS = `
          gd,
          updated_at
     FROM public.upcl_standings
+   WHERE club_id::bigint = ANY($1::bigint[])
    ORDER BY pts DESC, gd DESC, gf DESC
    LIMIT 5
 `;
@@ -350,17 +351,30 @@ async function persistNewsImage(imageData) {
 async function buildAutoNewsItems() {
   const now = new Date();
   try {
+    const leagueClubIds = resolveClubIds();
+    const standingsPromise = leagueClubIds.length
+      ? q(SQL_TOP_STANDINGS, [leagueClubIds]).catch(() => ({ rows: [] }))
+      : Promise.resolve({ rows: [] });
+
     const [standingsRes, leadersRes, matchesRes] = await Promise.all([
-      q(SQL_TOP_STANDINGS).catch(() => ({ rows: [] })),
+      standingsPromise,
       q(SQL_TOP_LEADERS).catch(() => ({ rows: [] })),
       q(SQL_RECENT_MATCHES_NEWS).catch(() => ({ rows: [] }))
     ]);
 
     const auto = [];
 
-    if (standingsRes.rows.length) {
-      const createdAt = standingsRes.rows[0].updated_at instanceof Date
-        ? standingsRes.rows[0].updated_at.toISOString()
+    const allowedClubIds = new Set(leagueClubIds.map(id => String(id)));
+    const standingsRows = allowedClubIds.size
+      ? (standingsRes.rows || []).filter(row =>
+        allowedClubIds.has(String(row.club_id))
+      )
+      : [];
+
+    if (standingsRows.length) {
+      const firstRow = standingsRows[0];
+      const createdAt = firstRow.updated_at instanceof Date
+        ? firstRow.updated_at.toISOString()
         : new Date(now.getTime() - 2 * 60 * 1000).toISOString();
       auto.push({
         id: 'auto-standings',
@@ -370,7 +384,7 @@ async function buildAutoNewsItems() {
         body: 'Top clubs in the UPCL table after the latest matches.',
         createdAt,
         author: 'Auto Feed',
-        stats: standingsRes.rows.map((row, idx) => ({
+        stats: standingsRows.map((row, idx) => ({
           rank: idx + 1,
           clubId: String(row.club_id),
           points: Number(row.pts || 0),
