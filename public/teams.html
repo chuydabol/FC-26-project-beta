@@ -1168,8 +1168,56 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   <!-- NEWS -->
   <section id="news-view" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
     <h2>League News</h2>
-    <div id="newsFeed" class="news-wrap" style="margin-top:8px">
-      <div class="muted">Loading news…</div>
+    <div class="space-y-10">
+      <div class="space-y-3">
+        <div>
+          <h3 class="text-xl font-semibold">Main</h3>
+          <p class="muted text-sm">Automatic highlights, standings cards, and other league-generated updates.</p>
+        </div>
+        <div id="newsMainFeed" class="news-wrap" style="margin-top:8px">
+          <div class="muted">Loading main news…</div>
+        </div>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <h3 class="text-xl font-semibold">General</h3>
+          <p class="muted text-sm">Share your club stories, scrim results, and updates with the rest of the league.</p>
+        </div>
+        <form id="generalNewsForm" class="glow-card glow-gold space-y-4" style="padding:18px">
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="space-y-1">
+              <span class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200/80">Display name</span>
+              <input name="author" type="text" placeholder="Optional" class="w-full rounded-xl border border-amber-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100" maxlength="80">
+            </label>
+            <label class="space-y-1">
+              <span class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200/80">Headline *</span>
+              <input name="title" type="text" required class="w-full rounded-xl border border-amber-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100" maxlength="140" placeholder="Big win for the Falcons tonight!">
+            </label>
+          </div>
+          <label class="space-y-1">
+            <span class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200/80">Story *</span>
+            <textarea name="body" rows="4" required class="w-full rounded-xl border border-amber-300/30 bg-slate-950/60 px-3 py-2 text-sm leading-relaxed text-slate-100" maxlength="1200" placeholder="Give everyone the context: opponent, scoreline, standout players, upcoming plans…"></textarea>
+          </label>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="space-y-1">
+              <span class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200/80">Image URL</span>
+              <input name="imageUrl" type="url" placeholder="https://" class="w-full rounded-xl border border-amber-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100">
+            </label>
+            <label class="space-y-1">
+              <span class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200/80">Video URL</span>
+              <input name="videoUrl" type="url" placeholder="https://" class="w-full rounded-xl border border-amber-300/30 bg-slate-950/60 px-3 py-2 text-sm text-slate-100">
+            </label>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <small class="muted">Posts go live immediately. Keep it respectful—admins can moderate if needed.</small>
+            <button type="submit" class="rounded-full border border-amber-300/60 bg-amber-400/30 px-5 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-amber-100 shadow-[0_0_20px_rgba(251,191,36,0.35)] transition hover:border-amber-200/80 hover:bg-amber-400/40">Publish</button>
+          </div>
+          <div id="generalNewsStatus" class="text-xs uppercase tracking-[0.28em] text-amber-200/70"></div>
+        </form>
+        <div id="newsGeneralFeed" class="news-wrap" style="margin-top:8px">
+          <div class="muted">Loading community posts…</div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -3654,6 +3702,7 @@ function normalizeNewsItem(n){
     if (!Number.isNaN(d.getTime())) item.createdAt = d.toISOString();
   }
   if (item.type) item.type = String(item.type).toLowerCase();
+  if (item.category) item.category = String(item.category).toLowerCase();
   return item;
 }
 
@@ -3677,16 +3726,28 @@ function renderNewsCollection(target, items, emptyHtml){
 }
 
 async function loadNews(){
-  const wrap = document.getElementById('newsFeed');
-  if (!wrap) return;
+  const mainWrap = document.getElementById('newsMainFeed');
+  const generalWrap = document.getElementById('newsGeneralFeed');
+  if (mainWrap) mainWrap.innerHTML = '<div class="muted">Loading main news…</div>';
+  if (generalWrap) generalWrap.innerHTML = '<div class="muted">Loading community posts…</div>';
   try{
     const d = await apiGet('/api/news');
-    const items = (d.items || []).map(normalizeNewsItem).filter(Boolean);
-    if (items.length){
-      renderNewsCollection(wrap, items);
-      return;
+    const mainItems = Array.isArray(d.main) && d.main.length
+      ? d.main
+      : (d.items || []).filter(item => (item.type || '').toLowerCase() === 'auto');
+    const generalItems = Array.isArray(d.general) && d.general.length
+      ? d.general
+      : (d.items || []).filter(item => (item.type || '').toLowerCase() === 'manual');
+    if (mainWrap){
+      renderNewsCollection(mainWrap, mainItems, '<div class="muted">No main news yet.</div>');
     }
-  }catch{}
+    if (generalWrap){
+      renderNewsCollection(generalWrap, generalItems, '<div class="muted">No community posts yet.</div>');
+    }
+    return;
+  }catch(err){
+    console.warn('Failed to load news feed via API', err);
+  }
   try{
     await refreshFixturesPublic();
     const cc = await apiGet(`/api/cup/fixtures?cup=${encodeURIComponent(CC_ID)}`).catch(()=>({fixtures:[]}));
@@ -3696,9 +3757,16 @@ async function loadNews(){
       ...normalizeFixtures(cc.fixtures||[]),
       ...normalizeFixtures(fr.fixtures||[])
     ]);
-    renderNewsCollection(wrap, computed, '<div class="muted">No news yet.</div>');
+    if (mainWrap){
+      renderNewsCollection(mainWrap, computed, '<div class="muted">No main news yet.</div>');
+    }
   }catch{
-    wrap.innerHTML = '<div class="muted">Failed to load news.</div>';
+    if (mainWrap){
+      mainWrap.innerHTML = '<div class="muted">Failed to load news.</div>';
+    }
+  }
+  if (generalWrap){
+    generalWrap.innerHTML = '<div class="muted">No community posts yet.</div>';
   }
 }
 
@@ -3727,7 +3795,7 @@ function renderManualNewsItem(n){
     media.push(`<div class="news-media news-video"><iframe src="${escapeAttr(n.videoUrl)}" allowfullscreen loading="lazy"></iframe></div>`);
   }
   return `<article class="news-post news-manual glow-card glow-gold">
-    <div class="news-badge">Manual Bulletin</div>
+    <div class="news-badge">${escapeHtml(n.badge || 'Community Post')}</div>
     <div class="news-title">${title}</div>
     ${meta ? `<div class="news-meta">${meta}</div>` : ''}
     ${body ? `<div class="news-body">${body}</div>` : ''}
@@ -3812,8 +3880,75 @@ function renderLegacyNewsItem(n){
       const an = byId(n.away)?.name || n.away;
       title = `${hn} ${Number(n.score?.hs||0)}-${Number(n.score?.as||0)} ${an}`;
       body  = 'Full time score';
-    }
   }
+}
+
+const generalNewsForm = document.getElementById('generalNewsForm');
+const generalNewsStatus = document.getElementById('generalNewsStatus');
+
+function setupCommunityNewsForm(){
+  if (!generalNewsForm) return;
+  const submitBtn = generalNewsForm.querySelector('button[type="submit"]');
+  generalNewsForm.addEventListener('submit', async (event)=>{
+    event.preventDefault();
+    const formData = new FormData(generalNewsForm);
+    const title = String(formData.get('title') || '').trim();
+    const body = String(formData.get('body') || '').trim();
+    const author = String(formData.get('author') || '').trim();
+    const imageUrl = String(formData.get('imageUrl') || '').trim();
+    const videoUrl = String(formData.get('videoUrl') || '').trim();
+    if (generalNewsStatus){
+      generalNewsStatus.textContent = 'Posting…';
+    }
+    if (submitBtn){
+      submitBtn.disabled = true;
+      submitBtn.setAttribute('aria-busy','true');
+    }
+    if (!title || !body){
+      if (generalNewsStatus){
+        generalNewsStatus.textContent = 'Headline and story are required.';
+      }
+      if (submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+      }
+      return;
+    }
+    const payload = { title, body };
+    if (author) payload.author = author;
+    if (imageUrl) payload.imageUrl = imageUrl;
+    if (videoUrl) payload.videoUrl = videoUrl;
+    try{
+      const res = await fetch(`${API_BASE}/api/news`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      let data = null;
+      try{ data = await res.json(); }
+      catch{ data = null; }
+      if (!res.ok){
+        throw new Error(data?.error || `HTTP ${res.status}`);
+      }
+      if (generalNewsStatus){
+        generalNewsStatus.textContent = 'Thanks for sharing! Your post is live.';
+      }
+      generalNewsForm.reset();
+      await loadNews();
+    }catch(err){
+      if (generalNewsStatus){
+        generalNewsStatus.textContent = err?.message || 'Failed to publish your update.';
+      }
+    }finally{
+      if (submitBtn){
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute('aria-busy');
+      }
+    }
+  });
+}
+setupCommunityNewsForm();
   title = replaceClubIds(title);
   body  = replaceClubIds(body);
   const metaBits = [];
