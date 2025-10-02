@@ -244,9 +244,9 @@ const SQL_HIDDEN_GEM_CANDIDATES = `
     FROM public.player_match_stats pms
     JOIN public.players p
       ON p.player_id = pms.player_id
-     AND p.club_id = pms.club_id
+     AND p.club_id::text = pms.club_id::text
     LEFT JOIN public.clubs c
-      ON c.club_id = p.club_id
+      ON c.club_id::text = p.club_id::text
    WHERE COALESCE(p.overall_rating, 0) <= 75
    GROUP BY p.player_id, p.name, p.position, p.club_id, p.overall_rating, c.club_name
   HAVING COUNT(*) >= 5
