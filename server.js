@@ -20,6 +20,8 @@ try {
 }
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
+const sharp = require('sharp');
 const crypto = require('crypto');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
@@ -402,6 +404,7 @@ const DEFAULT_LEAGUE_ID = process.env.DEFAULT_LEAGUE_ID || 'UPCL_LEAGUE_2025';
 
 const fsp = fs.promises;
 const NEWS_UPLOAD_DIR = path.join(__dirname, 'public', 'uploads', 'news');
+const PLAYER_UPLOAD_DIR = path.join(__dirname, 'public', 'uploads', 'players');
 const MAX_NEWS_IMAGE_SIZE = 3 * 1024 * 1024; // 3MB
 const NEWS_IMAGE_EXTENSIONS = {
   'image/png': 'png',
@@ -410,6 +413,29 @@ const NEWS_IMAGE_EXTENSIONS = {
   'image/gif': 'gif',
   'image/webp': 'webp'
 };
+const PLAYER_IMAGE_MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const PLAYER_IMAGE_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp'
+]);
+
+fs.mkdirSync(PLAYER_UPLOAD_DIR, { recursive: true });
+
+const playerImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: PLAYER_IMAGE_MAX_SIZE },
+  fileFilter: (_req, file, cb) => {
+    if (!file?.mimetype) {
+      return cb(new Error('Invalid image upload.'));
+    }
+    if (PLAYER_IMAGE_MIME_TYPES.has(file.mimetype)) {
+      return cb(null, true);
+    }
+    cb(new Error('Only JPG, PNG, or WEBP images are allowed.'));
+  }
+});
 
 function parseHomeIndicator(value) {
   if (typeof value === 'boolean') {
@@ -1851,17 +1877,66 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     );
 
     const { rows: playerRows } = await q(
-      `SELECT player_id, overall_rating
+      `SELECT player_id, overall_rating, image_url
          FROM public.players
         WHERE club_id = $1`,
       [clubId]
     );
 
+    const { rows: formRows } = await q(
+      `WITH ranked_results AS (
+         SELECT
+           pms.player_id,
+           m.ts_ms,
+           ROW_NUMBER() OVER (PARTITION BY pms.player_id ORDER BY m.ts_ms DESC) AS rn,
+           CASE
+             WHEN COALESCE(scores.goals_for, 0) > COALESCE(scores.goals_against, 0) THEN 'W'
+             WHEN COALESCE(scores.goals_for, 0) = COALESCE(scores.goals_against, 0) THEN 'D'
+             WHEN COALESCE(scores.goals_for, 0) < COALESCE(scores.goals_against, 0) THEN 'L'
+             ELSE 'D'
+           END AS result
+         FROM public.player_match_stats pms
+         JOIN public.matches m ON m.match_id = pms.match_id
+         LEFT JOIN LATERAL (
+           SELECT
+             MAX(CASE WHEN mp.club_id = pms.club_id THEN mp.goals END) AS goals_for,
+             MAX(CASE WHEN mp.club_id <> pms.club_id THEN mp.goals END) AS goals_against
+           FROM public.match_participants mp
+           WHERE mp.match_id = pms.match_id
+         ) AS scores ON true
+         WHERE pms.club_id = $1
+       )
+       SELECT player_id, result
+         FROM ranked_results
+        WHERE rn <= 5
+        ORDER BY player_id, rn`,
+      [clubId]
+    );
+
     const cardMap = new Map(rows.map(r => [String(r.player_id), r]));
     const nameMap = new Map(rows.map(r => [r.name, r]));
-    const overallMap = new Map(
-      playerRows.map(r => [String(r.player_id), Number(r.overall_rating)])
+    const playerMetaMap = new Map(
+      playerRows.map(r => [
+        String(r.player_id),
+        {
+          overall: r.overall_rating !== null && r.overall_rating !== undefined
+            ? Number(r.overall_rating)
+            : null,
+          imageUrl: r.image_url || null,
+        }
+      ])
     );
+    const formMap = new Map();
+    for (const row of formRows) {
+      const id = String(row.player_id);
+      const result = typeof row.result === 'string'
+        ? row.result.trim().toUpperCase()[0] || null
+        : null;
+      if (!['W', 'D', 'L'].includes(result)) continue;
+      const existing = formMap.get(id);
+      if (existing) existing.push(result);
+      else formMap.set(id, [result]);
+    }
     const clubName = CLUB_NAMES[String(clubId)] || '';
 
     const membersDetailed = members.map(m => {
@@ -1871,13 +1946,14 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
 
       const vproattr = rec.vproattr || null;
       let stats = vproattr ? parseVpro(vproattr) : null;
+      const playerMeta = id ? playerMetaMap.get(id) : null;
       const overallCandidates = [
         m.overallRating,
         m.overallrating,
         m.ovr,
         m.proOverall,
         stats?.ovr,
-        overallMap.get(id || ''),
+        playerMeta?.overall,
       ];
       let overallRating = null;
       for (const candidate of overallCandidates) {
@@ -1904,6 +1980,8 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
         assists: Number(m.assists || 0) || 0,
         overallRating: overallRating ?? null,
         isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
+        imageUrl: playerMeta?.imageUrl || null,
+        form: formMap.get(id || '') || [],
         vproattr,
         stats,
       };
@@ -1949,6 +2027,57 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     logger.error({ err }, 'Failed to load player cards');
     res.status(500).json({ members: [] });
   }
+});
+
+app.post('/api/players/:playerId/uploadImage', (req, res) => {
+  if (!requireAdminSession(req, res)) return;
+
+  const { playerId } = req.params;
+  if (!/^\d+$/.test(String(playerId))) {
+    return res.status(400).json({ error: 'Invalid player id' });
+  }
+
+  playerImageUpload.single('image')(req, res, async uploadErr => {
+    if (uploadErr) {
+      const status = uploadErr.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+      logger.warn({ err: uploadErr, playerId }, 'Player image upload rejected');
+      return res.status(status).json({ error: uploadErr.message || 'Upload failed' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Image file is required' });
+    }
+
+    try {
+      const { rowCount } = await q(
+        'SELECT 1 FROM public.players WHERE player_id = $1',
+        [playerId]
+      );
+      if (rowCount === 0) {
+        return res.status(404).json({ error: 'Player not found' });
+      }
+
+      const processed = await sharp(req.file.buffer)
+        .resize(300, 300, { fit: sharp.fit.cover, position: 'center' })
+        .png({ quality: 90, compressionLevel: 9, adaptiveFiltering: true })
+        .toBuffer();
+
+      await fsp.mkdir(PLAYER_UPLOAD_DIR, { recursive: true });
+      const outputPath = path.join(PLAYER_UPLOAD_DIR, `${playerId}.png`);
+      await fsp.writeFile(outputPath, processed);
+
+      const publicPath = `/uploads/players/${playerId}.png`;
+      await q(
+        'UPDATE public.players SET image_url = $1 WHERE player_id = $2',
+        [publicPath, playerId]
+      );
+
+      res.json({ success: true, imageUrl: publicPath });
+    } catch (err) {
+      logger.error({ err, playerId }, 'Failed to process player image');
+      res.status(500).json({ error: 'Failed to process image' });
+    }
+  });
 });
 
 

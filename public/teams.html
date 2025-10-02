@@ -664,6 +664,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   position:relative;
   display:flex;
   flex-direction:column;
+  align-items:center;
   gap:16px;
   padding:20px;
   border-radius:20px;
@@ -674,6 +675,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   min-height:280px;
   overflow:hidden;
   transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+  text-align:center;
 }
 .player-card::before{
   content:"";
@@ -720,12 +722,35 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   filter:drop-shadow(0 4px 10px rgba(0,0,0,0.55));
   z-index:2;
 }
-.player-card-top{
+.player-card-top,
+.player-card-header{
   display:flex;
-  align-items:flex-start;
+  align-items:center;
   justify-content:space-between;
+  width:100%;
   gap:12px;
 }
+.player-card-header{padding-inline:4px;}
+.player-form-indicator{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-height:16px;
+}
+.player-form-indicator .player-form-dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:rgba(148,163,184,0.35);
+  box-shadow:0 0 12px rgba(15,23,42,0.65);
+  transition:transform .3s ease, box-shadow .3s ease, opacity .3s ease;
+}
+.player-form-indicator .player-form-dot.W{background:rgba(34,197,94,0.85);box-shadow:0 0 14px rgba(34,197,94,0.55);}
+.player-form-indicator .player-form-dot.D{background:rgba(148,163,184,0.85);box-shadow:0 0 12px rgba(148,163,184,0.55);}
+.player-form-indicator .player-form-dot.L{background:rgba(239,68,68,0.85);box-shadow:0 0 14px rgba(239,68,68,0.55);}
+.player-form-indicator .player-form-dot.empty{opacity:0.35;}
+.player-card:hover .player-form-indicator .player-form-dot,
+.player-card:focus-visible .player-form-indicator .player-form-dot{transform:translateY(-1px);}
 .player-card-info{
   text-align:center;
   display:flex;
@@ -779,13 +804,13 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   position:relative;
   width:84px;
   height:84px;
-  margin:0;
+  margin:0 auto;
   border-radius:999px;
   display:flex;
   align-items:center;
   justify-content:center;
   background:linear-gradient(135deg,var(--avatar-primary),var(--avatar-secondary));
-  border:3px solid rgba(255,255,255,0.12);
+  border:3px solid var(--avatar-ring, rgba(255,255,255,0.12));
   box-shadow:0 16px 36px rgba(2,6,23,0.55);
   transition:transform .3s ease, box-shadow .3s ease;
   overflow:hidden;
@@ -804,6 +829,17 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   mix-blend-mode:screen;
   pointer-events:none;
 }
+.player-avatar-img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:none;
+}
+.player-avatar.has-image{
+  background:#020617;
+}
+.player-avatar.has-image::after{opacity:0;}
+.player-avatar.has-image .player-avatar-img{display:block;}
 .player-avatar-initial{
   font-size:28px;
   font-weight:800;
@@ -865,6 +901,43 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   color:#f8fafc;
 }
 .player-stat.top-scorer .stat-value{color:var(--gold);}
+.player-card-actions{
+  width:100%;
+  display:none;
+  justify-content:center;
+  margin-top:4px;
+}
+.is-admin .player-card-actions{display:flex;}
+.upload-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:6px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(15,23,42,0.55);
+  font-size:11px;
+  letter-spacing:0.26em;
+  text-transform:uppercase;
+  color:rgba(226,232,240,0.85);
+  cursor:pointer;
+  transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease, background .25s ease;
+}
+.upload-btn:hover,
+.upload-btn:focus-visible{
+  outline:none;
+  transform:translateY(-1px);
+  border-color:var(--card-glow);
+  box-shadow:0 16px 30px rgba(2,6,23,0.45),0 0 20px var(--card-glow-shadow, rgba(56,189,248,0.25));
+  background:rgba(15,23,42,0.75);
+}
+.upload-btn.is-uploading{
+  pointer-events:none;
+  opacity:0.65;
+}
+.upload-btn:focus-visible{box-shadow:0 0 0 2px rgba(255,255,255,0.28),0 0 20px var(--card-glow-shadow, rgba(56,189,248,0.28));}
+.player-upload-input{display:none;}
 
 /* Generic card wrappers */
 .m-card{padding:0;}
@@ -2699,6 +2772,7 @@ async function checkAdmin(){
   }
   updateAdminNewsPanel();
   updateCompetitionsAdminPanel();
+  updatePlayerUploadState();
 }
 async function checkMe(){
   try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
@@ -2837,15 +2911,19 @@ function applyCardTheme(card, customKit){
     const avatarSecondary = mixColors(accent, '#0f172a', 0.25) || accent;
     avatar.style.setProperty('--avatar-primary', avatarPrimary);
     avatar.style.setProperty('--avatar-secondary', avatarSecondary);
-    avatar.style.background = `linear-gradient(135deg, ${avatarPrimary}, ${avatarSecondary})`;
-    avatar.style.backgroundSize = 'cover';
-    avatar.style.backgroundPosition = 'center';
-    avatar.classList.remove('has-image');
+    avatar.style.setProperty('--avatar-ring', accent);
+    if(!avatar.classList.contains('has-image')){
+      avatar.style.background = `linear-gradient(135deg, ${avatarPrimary}, ${avatarSecondary})`;
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+    }
   }
 }
 
 const clubInfoCache = new Map();
 const kitUrlCache = new Map();
+const PLAYER_IMAGE_ALLOWED_TYPES = new Set(['image/png','image/jpeg','image/webp','image/jpg']);
+const PLAYER_IMAGE_MAX_SIZE = 5 * 1024 * 1024;
 
 function getPlayerInitials(name){
   if(!name) return '?';
@@ -2910,6 +2988,54 @@ function formatOverallValue(num){
   return Math.round(num);
 }
 
+function normalizeFormArray(value){
+  if(value === null || value === undefined) return [];
+  const source = Array.isArray(value) ? value : String(value).split('');
+  const normalized = [];
+  for(const entry of source){
+    if(entry === null || entry === undefined) continue;
+    const char = String(entry).trim().toUpperCase();
+    if(!char) continue;
+    const code = char[0];
+    if(code === 'W' || code === 'D' || code === 'L'){
+      normalized.push(code);
+      if(normalized.length >= 5) break;
+    }
+  }
+  return normalized;
+}
+
+function renderPlayerFormDots(formCodes){
+  const dots = Array.isArray(formCodes) ? formCodes.slice(0,5) : [];
+  while(dots.length < 5) dots.push(null);
+  return dots.map(code => {
+    if(code === 'W'){
+      return '<span class="player-form-dot W" aria-label="Win" title="Win"></span>';
+    }
+    if(code === 'D'){
+      return '<span class="player-form-dot D" aria-label="Draw" title="Draw"></span>';
+    }
+    if(code === 'L'){
+      return '<span class="player-form-dot L" aria-label="Loss" title="Loss"></span>';
+    }
+    return '<span class="player-form-dot empty" aria-hidden="true"></span>';
+  }).join('');
+}
+
+function formatFormAria(formCodes){
+  if(!Array.isArray(formCodes) || formCodes.length === 0){
+    return 'Recent form: no data available';
+  }
+  const words = formCodes.map(code => {
+    if(code === 'W') return 'Win';
+    if(code === 'D') return 'Draw';
+    if(code === 'L') return 'Loss';
+    return null;
+  }).filter(Boolean);
+  if(!words.length) return 'Recent form: no data available';
+  return `Recent form: ${words.join(', ')}`;
+}
+
 function composePlayerMeta(player, stats, overrides = {}){
   const base = player || {};
   const matches = readNumeric(overrides, ['matches','gamesPlayed','appearances']) ?? readNumeric(base, ['matches','gamesPlayed','appearances']);
@@ -2939,6 +3065,9 @@ function composePlayerMeta(player, stats, overrides = {}){
   const flag = overrides.countryFlag ?? overrides.flag ?? base.countryFlag ?? base.flag ?? base.flagUrl ?? null;
   const isCaptain = Boolean(overrides.isCaptain ?? base.isCaptain);
   const isTopScorer = Boolean(overrides.isTopScorer);
+  const hasOverrideForm = Object.prototype.hasOwnProperty.call(overrides, 'form');
+  const form = hasOverrideForm ? normalizeFormArray(overrides.form) : normalizeFormArray(base.form);
+  const imageUrl = overrides.imageUrl ?? overrides.imageurl ?? base.imageUrl ?? base.imageurl ?? null;
   return {
     matches,
     goals,
@@ -2953,6 +3082,8 @@ function composePlayerMeta(player, stats, overrides = {}){
     flag,
     isCaptain,
     isTopScorer,
+    form,
+    imageUrl,
   };
 }
 
@@ -2960,6 +3091,64 @@ function renderPlayerStat(key, label, value, highlight){
   const classes = ['player-stat'];
   if(highlight) classes.push('top-scorer');
   return `<div class="${classes.join(' ')}" data-stat="${key}"><span class="stat-label">${label}</span><span class="stat-value">${escapeHtml(formatStatValue(value))}</span></div>`;
+}
+
+function applyPlayerImage(card, imageUrl, playerName){
+  if(!card) return;
+  const avatar = card.querySelector('.player-avatar');
+  if(!avatar) return;
+  const img = avatar.querySelector('.player-avatar-img');
+  const initialsEl = avatar.querySelector('.player-avatar-initial');
+  if(initialsEl) initialsEl.textContent = getPlayerInitials(playerName);
+  const trimmed = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+  const normalizedUrl = trimmed || '';
+  card.dataset.imageUrl = normalizedUrl;
+  if(!img){
+    if(!normalizedUrl){
+      avatar.classList.remove('has-image');
+      avatar.dataset.hasPhoto = 'false';
+    }
+    return;
+  }
+  if(normalizedUrl){
+    const version = card.dataset.imageVersion;
+    const finalUrl = version ? `${normalizedUrl}${normalizedUrl.includes('?') ? '&' : '?'}v=${version}` : normalizedUrl;
+    if(img.src !== finalUrl) img.src = finalUrl;
+    img.alt = playerName ? `${playerName} portrait` : 'Player portrait';
+    avatar.classList.add('has-image');
+    avatar.dataset.hasPhoto = 'true';
+  }else{
+    img.removeAttribute('src');
+    img.alt = '';
+    avatar.classList.remove('has-image');
+    avatar.dataset.hasPhoto = 'false';
+  }
+}
+
+function applyPlayerForm(card, formCodes){
+  if(!card) return;
+  const indicator = card.querySelector('.player-form-indicator');
+  if(!indicator) return;
+  const normalized = normalizeFormArray(formCodes);
+  indicator.innerHTML = renderPlayerFormDots(normalized);
+  const ariaText = formatFormAria(normalized);
+  indicator.setAttribute('aria-label', ariaText);
+  indicator.setAttribute('title', ariaText.replace('Recent form: ', '') || 'Recent form: N/A');
+  indicator.dataset.hasData = normalized.length ? 'true' : 'false';
+  card.dataset.form = normalized.join('');
+}
+
+function applyAdminStateToPlayerCard(card){
+  if(!card) return;
+  const input = card.querySelector('.player-upload-input');
+  if(input){
+    input.disabled = !isAdmin;
+  }
+}
+
+function updatePlayerUploadState(){
+  document.body.classList.toggle('is-admin', isAdmin);
+  document.querySelectorAll('.player-card').forEach(applyAdminStateToPlayerCard);
 }
 
 async function renderClubKits(clubId, container){
@@ -3014,16 +3203,31 @@ function buildPlayerCard(p, stats, tier, overrides){
     : '';
   card.dataset.isCaptain = meta.isCaptain ? 'true' : 'false';
   card.dataset.topScorer = meta.isTopScorer ? 'true' : 'false';
+  card.dataset.imageVersion = card.dataset.imageVersion || '';
   const badgeTitle = 'Team Captain';
   const flagHtml = meta.flag ? `<img src="${escapeHtml(meta.flag)}" class="player-flag" alt="">` : '';
   const overallText = formatOverallValue(meta.overallRating);
+  const formAria = escapeHtml(formatFormAria(meta.form));
+  const formDots = renderPlayerFormDots(meta.form);
+  const uploadControls = playerId
+    ? `
+      <div class="player-card-actions">
+        <label class="upload-btn" for="upload-${playerId}">Upload Image</label>
+        <input type="file" class="player-upload-input" id="upload-${playerId}" data-player-id="${playerId}" accept="image/png,image/jpeg,image/webp" hidden>
+      </div>
+    `
+    : '';
   card.innerHTML = `
     <div class="player-card-badge" title="${badgeTitle}" aria-label="${badgeTitle}">🏅</div>
-    <div class="player-card-top">
-      <div class="player-avatar" data-has-photo="false">
-        <span class="player-avatar-initial">${escapeHtml(getPlayerInitials(meta.name))}</span>
+    <div class="player-card-header player-card-top">
+      <div class="player-form-indicator" aria-label="${formAria}" title="${formAria}">
+        ${formDots}
       </div>
       <div class="player-position-chip">${escapeHtml(meta.position || 'UNK')}</div>
+    </div>
+    <div class="player-avatar" data-has-photo="false">
+      <img class="player-avatar-img" alt="" loading="lazy">
+      <span class="player-avatar-initial">${escapeHtml(getPlayerInitials(meta.name))}</span>
     </div>
     <div class="player-card-info">
       <div class="player-name-row">
@@ -3042,6 +3246,7 @@ function buildPlayerCard(p, stats, tier, overrides){
       ${renderPlayerStat('assists','Assists',meta.assists,false)}
       ${renderPlayerStat('rating','Rating',meta.rating,false)}
     </div>
+    ${uploadControls}
   `;
   const badge = card.querySelector('.player-card-badge');
   if(badge){
@@ -3055,6 +3260,9 @@ function buildPlayerCard(p, stats, tier, overrides){
       badge.removeAttribute('aria-label');
     }
   }
+  applyPlayerImage(card, meta.imageUrl, meta.name);
+  applyPlayerForm(card, meta.form);
+  applyAdminStateToPlayerCard(card);
   return card;
 }
 
@@ -3082,6 +3290,7 @@ function updatePlayerCard(card, stats, overrides={}){
     : '';
   card.dataset.isCaptain = meta.isCaptain ? 'true' : 'false';
   card.dataset.topScorer = meta.isTopScorer ? 'true' : 'false';
+  card.dataset.imageVersion = card.dataset.imageVersion || '';
   const badge = card.querySelector('.player-card-badge');
   if(badge){
     badge.hidden = !meta.isCaptain;
@@ -3103,6 +3312,8 @@ function updatePlayerCard(card, stats, overrides={}){
   if(clubEl) clubEl.textContent = meta.clubName || '';
   const ovrEl = card.querySelector('.player-ovr-pill .ovr-value');
   if(ovrEl) ovrEl.textContent = formatOverallValue(meta.overallRating);
+  applyPlayerImage(card, meta.imageUrl, meta.name);
+  applyPlayerForm(card, meta.form);
   const nameRow = card.querySelector('.player-name-row');
   let flagEl = card.querySelector('.player-flag');
   if(meta.flag){
@@ -3133,6 +3344,7 @@ function updatePlayerCard(card, stats, overrides={}){
     if(meta.isTopScorer) goalsStat.classList.add('top-scorer');
     else goalsStat.classList.remove('top-scorer');
   }
+  applyAdminStateToPlayerCard(card);
 }
 
 async function upgradeClubPlayers(clubId, container){
@@ -3168,6 +3380,8 @@ async function upgradeClubPlayers(clubId, container){
           clubId: clubId,
           clubName: clubMeta?.name || '',
           overallRating: overall ?? stats?.ovr ?? null,
+          imageUrl: m.imageUrl,
+          form: m.form,
         };
         updatePlayerCard(card, stats, overrides);
       }
@@ -3177,6 +3391,74 @@ async function upgradeClubPlayers(clubId, container){
     console.error('upgrade failed', e);
   }
 }
+
+async function uploadPlayerImage(playerId, input){
+  if(!playerId || !input) return;
+  if(!isAdmin){
+    alert('Admin access required.');
+    input.value = '';
+    return;
+  }
+  const file = input.files && input.files[0];
+  if(!file){
+    return;
+  }
+  if(!PLAYER_IMAGE_ALLOWED_TYPES.has(file.type)){
+    alert('Please select a JPG, PNG, or WEBP image.');
+    input.value = '';
+    return;
+  }
+  if(file.size > PLAYER_IMAGE_MAX_SIZE){
+    alert('Image is too large. Maximum size is 5MB.');
+    input.value = '';
+    return;
+  }
+  const card = document.querySelector(`.player-card[data-player-id="${playerId}"]`);
+  const label = card ? card.querySelector(`label[for="${input.id}"]`) : null;
+  if(label){
+    label.dataset.originalText = label.dataset.originalText || label.textContent;
+    label.textContent = 'Uploading…';
+    label.classList.add('is-uploading');
+  }
+  const formData = new FormData();
+  formData.append('image', file);
+  try{
+    const res = await fetch(`/api/players/${encodeURIComponent(playerId)}/uploadImage`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+    const payload = await res.json().catch(()=>({}));
+    if(!res.ok || !payload?.success){
+      throw new Error(payload?.error || 'Upload failed');
+    }
+    if(card){
+      card.dataset.imageVersion = String(Date.now());
+      applyPlayerImage(card, payload.imageUrl || '', card.dataset.playerName || '');
+    }
+  }catch(err){
+    console.error('upload failed', err);
+    alert(err?.message || 'Failed to upload image');
+  }finally{
+    if(label){
+      label.textContent = label.dataset.originalText || 'Upload Image';
+      label.classList.remove('is-uploading');
+    }
+    input.value = '';
+  }
+}
+
+document.addEventListener('change', event => {
+  const target = event.target;
+  if(!target || !(target instanceof HTMLInputElement)) return;
+  if(!target.classList.contains('player-upload-input')) return;
+  const playerId = target.dataset.playerId;
+  if(!playerId){
+    target.value = '';
+    return;
+  }
+  uploadPlayerImage(playerId, target);
+});
 async function openTeamView(clubId){
   teamsGrid.style.display = 'none';
   const teamView = document.getElementById('teamView');
