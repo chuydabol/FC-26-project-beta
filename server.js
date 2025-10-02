@@ -1858,10 +1858,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     return res.status(400).json({ members: [] });
   }
 
-  const clubIdNum = Number(clubId);
-  if (!Number.isFinite(clubIdNum)) {
-    return res.status(400).json({ members: [] });
-  }
+  const clubIdText = String(clubId);
 
   try {
     const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
@@ -1877,15 +1874,15 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     const { rows } = await q(
       `SELECT player_id, club_id, name, position, vproattr
        FROM public.playercards
-       WHERE club_id::bigint = $1::bigint`,
-      [clubIdNum]
+       WHERE club_id = $1`,
+      [clubIdText]
     );
 
     const { rows: playerRows } = await q(
       `SELECT player_id, overall_rating, image_url
          FROM public.players
-        WHERE club_id::bigint = $1::bigint`,
-      [clubIdNum]
+        WHERE club_id = $1`,
+      [clubIdText]
     );
 
     const { rows: formRows } = await q(
@@ -1895,27 +1892,27 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
            m.ts_ms,
            ROW_NUMBER() OVER (PARTITION BY pms.player_id ORDER BY m.ts_ms DESC) AS rn,
            CASE
-             WHEN COALESCE(scores.goals_for, 0) > COALESCE(scores.goals_against, 0) THEN 'W'
-             WHEN COALESCE(scores.goals_for, 0) = COALESCE(scores.goals_against, 0) THEN 'D'
-             WHEN COALESCE(scores.goals_for, 0) < COALESCE(scores.goals_against, 0) THEN 'L'
-             ELSE 'D'
+            WHEN COALESCE(scores.goals_for, 0) > COALESCE(scores.goals_against, 0) THEN 'W'
+            WHEN COALESCE(scores.goals_for, 0) = COALESCE(scores.goals_against, 0) THEN 'D'
+            WHEN COALESCE(scores.goals_for, 0) < COALESCE(scores.goals_against, 0) THEN 'L'
+            ELSE 'D'
            END AS result
          FROM public.player_match_stats pms
          JOIN public.matches m ON m.match_id = pms.match_id
          LEFT JOIN LATERAL (
            SELECT
-             MAX(CASE WHEN mp.club_id::bigint = pms.club_id::bigint THEN mp.goals END) AS goals_for,
-             MAX(CASE WHEN mp.club_id::bigint <> pms.club_id::bigint THEN mp.goals END) AS goals_against
+            MAX(CASE WHEN mp.club_id = pms.club_id THEN mp.goals END) AS goals_for,
+            MAX(CASE WHEN mp.club_id <> pms.club_id THEN mp.goals END) AS goals_against
            FROM public.match_participants mp
            WHERE mp.match_id = pms.match_id
          ) AS scores ON true
-        WHERE pms.club_id::bigint = $1::bigint
+        WHERE pms.club_id = $1
        )
        SELECT player_id, result
          FROM ranked_results
         WHERE rn <= 5
         ORDER BY player_id, rn`,
-      [clubIdNum]
+      [clubIdText]
     );
 
     const cardMap = new Map(rows.map(r => [String(r.player_id), r]));
@@ -1997,7 +1994,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       try {
         await q(SQL_UPSERT_PLAYER_INFO, [
           member.playerId,
-          clubIdNum,
+          clubIdText,
           member.name,
           member.position || 'UNK',
           member.vproattr || null,
