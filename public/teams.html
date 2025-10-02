@@ -636,7 +636,7 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   .leaderboard-table tbody tr td{font-size:12px;gap:10px;}
   .leaderboard-table tbody tr td::before{font-size:10px;letter-spacing:0.16em;}
   .player-card{padding:16px;min-height:240px;}
-  .player-avatar{width:80px;height:80px;}
+  .player-avatar{width:72px;height:72px;}
   .player-stat-grid{grid-template-columns:1fr;}
 }
 .players-grid {
@@ -720,13 +720,66 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   filter:drop-shadow(0 4px 10px rgba(0,0,0,0.55));
   z-index:2;
 }
+.player-card-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+.player-card-info{
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.player-club{
+  font-size:12px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:rgba(226,232,240,0.6);
+}
+.player-position-chip{
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:0.28em;
+  text-transform:uppercase;
+  padding:6px 14px;
+  border-radius:999px;
+  background:rgba(15,23,42,0.75);
+  border:1px solid rgba(255,255,255,0.12);
+  color:rgba(226,232,240,0.9);
+  box-shadow:0 8px 20px rgba(2,6,23,0.4);
+}
+.player-ovr-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  align-self:center;
+  padding:8px 20px;
+  border-radius:999px;
+  background:rgba(15,23,42,0.72);
+  border:1px solid rgba(255,255,255,0.12);
+  box-shadow:0 12px 28px rgba(2,6,23,0.45);
+}
+.player-ovr-pill .ovr-label{
+  font-size:11px;
+  letter-spacing:0.34em;
+  text-transform:uppercase;
+  color:rgba(226,232,240,0.6);
+}
+.player-ovr-pill .ovr-value{
+  font-size:24px;
+  font-weight:800;
+  color:#f8fafc;
+}
 .player-avatar{
   --avatar-primary:rgba(15,23,42,0.92);
   --avatar-secondary:rgba(30,64,175,0.68);
   position:relative;
-  width:92px;
-  height:92px;
-  margin:12px auto 0;
+  width:84px;
+  height:84px;
+  margin:0;
   border-radius:999px;
   display:flex;
   align-items:center;
@@ -931,6 +984,52 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .news-admin-actions button.danger{color:#fca5a5;border-color:rgba(248,113,113,0.55)}
 .news-admin-actions button.danger:hover,
 .news-admin-actions button.danger:focus-visible{color:#fecaca;border-color:rgba(248,113,113,0.85);box-shadow:0 12px 24px rgba(248,113,113,0.25)}
+.news-hidden-gem{gap:16px;background:linear-gradient(160deg, rgba(40,30,5,0.92), rgba(15,15,20,0.94));border:1px solid rgba(250,204,21,0.35)}
+.news-hidden-gem .news-badge{color:rgba(250,204,21,0.85)}
+.hidden-gem-header{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:18px}
+.hidden-gem-player{display:flex;flex-direction:column;gap:4px}
+.hidden-gem-name{font-size:24px;font-weight:800;letter-spacing:0.04em}
+.hidden-gem-meta{font-size:13px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(250,240,197,0.75)}
+.hidden-gem-overall{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:999px;background:rgba(0,0,0,0.35);border:1px solid rgba(250,204,21,0.45);box-shadow:0 12px 32px rgba(250,204,21,0.18)}
+.hidden-gem-overall .label{font-size:12px;letter-spacing:0.28em;text-transform:uppercase;color:rgba(250,240,197,0.8)}
+.hidden-gem-overall .value{font-size:26px;font-weight:800;color:#fdf6b2}
+.hidden-gem-overall .potential{font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(252,211,77,0.8)}
+.hidden-gem-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.hidden-gem-stat{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:16px;background:rgba(12,8,0,0.6);border:1px solid rgba(250,204,21,0.25)}
+.hidden-gem-stat .stat-label{font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(250,240,197,0.7)}
+.hidden-gem-stat .stat-value{font-size:20px;font-weight:800;color:#fdf6b2}
+.hidden-gem-traits{display:flex;flex-wrap:wrap;gap:10px;padding:6px 0}
+.hidden-gem-traits span{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(250,204,21,0.16);border:1px solid rgba(250,204,21,0.32);font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(250,240,197,0.85)}
+
+.competitions-admin-controls{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.competitions-admin-intro{color:var(--muted);font-size:13px;letter-spacing:0.08em;text-transform:uppercase}
+.competition-defaults{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:10px}
+.competition-defaults label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:rgba(226,232,240,0.7)}
+.competition-defaults input{background:rgba(15,23,42,0.75);border:1px solid rgba(148,163,184,0.3);border-radius:12px;padding:10px 12px;color:#f8fafc;font-size:14px}
+.competition-defaults input:focus{outline:none;border-color:rgba(94,234,212,0.45);box-shadow:0 0 0 2px rgba(94,234,212,0.2)}
+.competition-defaults small{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(148,163,184,0.8)}
+.pending-matches-list{display:grid;gap:18px;margin-top:16px}
+.pending-match-card{position:relative;display:flex;flex-direction:column;gap:14px;padding:22px;border-radius:20px;background:linear-gradient(150deg, rgba(9,13,20,0.9), rgba(3,6,12,0.92));border:1px solid rgba(94,234,212,0.25)}
+.pending-match-card .pending-match-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.pending-match-card .pending-match-score{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#f8fafc}
+.pending-match-card .pending-match-score span{display:flex;align-items:center;gap:8px}
+.pending-match-card .pending-match-score .score{font-size:26px;color:var(--gold);text-shadow:0 0 16px rgba(250,204,21,0.28)}
+.pending-match-card .pending-match-meta{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(148,163,184,0.7)}
+.pending-player-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.pending-player{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(15,23,42,0.65);border:1px solid rgba(148,163,184,0.25)}
+.pending-player .info{display:flex;flex-direction:column;gap:2px;font-size:13px}
+.pending-player .info .club{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(148,163,184,0.75)}
+.pending-player .stat{display:flex;align-items:center;gap:10px;font-weight:700;color:#f8fafc}
+.pending-match-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.pending-match-form label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:rgba(226,232,240,0.75)}
+.pending-match-form input{background:rgba(15,23,42,0.78);border:1px solid rgba(148,163,184,0.28);border-radius:12px;padding:10px 12px;color:#f8fafc;font-size:14px}
+.pending-match-form input:focus{outline:none;border-color:rgba(94,234,212,0.45);box-shadow:0 0 0 2px rgba(94,234,212,0.2)}
+.pending-match-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+.pending-match-actions button{min-width:0;padding:10px 16px;font-size:11px;letter-spacing:0.16em;text-transform:uppercase}
+.pending-match-actions button.approve{background:linear-gradient(135deg, rgba(45,212,191,0.25), rgba(15,23,42,0.95));border:1px solid rgba(45,212,191,0.5)}
+.pending-match-actions button.reject{color:#fecaca;border-color:rgba(248,113,113,0.55);background:linear-gradient(135deg, rgba(46,12,12,0.65), rgba(15,23,42,0.92))}
+.pending-match-actions button.reject:hover,
+.pending-match-actions button.reject:focus-visible{border-color:rgba(248,113,113,0.85);box-shadow:0 12px 24px rgba(248,113,113,0.25);color:#fee2e2}
 
 /* Champions Cup groups — compact standings only */
 .group-grid{display:grid;gap:16px}
@@ -1190,6 +1289,19 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
             </svg>
           </span>
           <span>Admin Sign In</span>
+        </button>
+        <button type="button" id="navAdminCompetitions" aria-pressed="false" style="display:none">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16l-1 12-7 4-7-4-1-12z" />
+              <path d="M9 13h6" />
+              <path d="M9 9h6" />
+              <path d="M10 5v4" />
+              <path d="M14 5v4" />
+              <path d="M8 17h8" />
+            </svg>
+          </span>
+          <span>Competition Queue</span>
         </button>
         <button type="button" id="btnAdminLogout" style="display:none">
           <span class="nav-icon" aria-hidden="true">
@@ -1642,6 +1754,40 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
       <div style="margin-top:8px">
         <button id="frGenBtn">Generate fixtures</button>
       </div>
+    </div>
+  </section>
+
+  <section id="competitions-admin-view" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
+    <div class="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+      <h2>Competition Approval</h2>
+      <button type="button" id="competitionsAdminRefresh" class="chip" style="border-color:rgba(45,212,191,0.45);background:linear-gradient(135deg, rgba(45,212,191,0.18), rgba(14,23,32,0.88));display:none">Refresh queue</button>
+    </div>
+    <div class="glow-card glow-silver" style="padding:20px">
+      <div class="competitions-admin-controls">
+        <div>
+          <p class="text-lg font-semibold">Pending friendly results</p>
+          <p class="competitions-admin-intro">Approve friendly matches to apply them to official competitions.</p>
+        </div>
+      </div>
+      <form id="competitionDefaultsForm" class="competition-defaults" autocomplete="off">
+        <label>
+          Competition ID
+          <input id="competitionDefaultId" name="competitionId" type="text" placeholder="UPCL_CC_2025_08" maxlength="80">
+          <small>Used when approving, can be overridden per match.</small>
+        </label>
+        <label>
+          Group (optional)
+          <input id="competitionDefaultGroup" name="groupName" type="text" placeholder="Group A" maxlength="40">
+        </label>
+        <label>
+          Round / Stage
+          <input id="competitionDefaultRound" name="roundName" type="text" placeholder="Group MD1" maxlength="60">
+        </label>
+      </form>
+      <div id="competitionsAdminStatus" class="muted" style="margin-top:12px"></div>
+    </div>
+    <div id="competitionsPendingList" class="pending-matches-list">
+      <div class="muted">Sign in as an admin to review pending competition matches.</div>
     </div>
   </section>
 
@@ -2240,6 +2386,15 @@ let friendliesFxCache  = [];
 let friendliesTeams    = [];
 const leaderboardState = { loaded:false, loading:false, players:[], lastUpdated:null };
 let leaderboardEls = {};
+const competitionsAdminState = {
+  loaded:false,
+  loading:false,
+  items:[],
+  defaults:{ competitionId:'', groupName:'', roundName:'' },
+  formValues:{},
+  errorMessage:''
+};
+let competitionDefaultsSetup = false;
 
 function normalizeFixtures(list){
   return (Array.isArray(list)?list:[]).map(f=>({
@@ -2276,15 +2431,16 @@ async function resolvePlayerName(id){
 }
 
 // nav elements
-const navHome       = document.getElementById('navHome');
-const navTeams      = document.getElementById('navTeams');
-const navRankings   = document.getElementById('navRankings');
-const navNews       = document.getElementById('navNews');
-const navFxPublic   = document.getElementById('navFixturesPublic');
-const navFxSched    = document.getElementById('navFixturesSched');
-const navChampions  = document.getElementById('navChampions');
-const navLeague     = document.getElementById('navLeague');
-const navFriendlies = document.getElementById('navFriendlies');
+const navHome              = document.getElementById('navHome');
+const navTeams             = document.getElementById('navTeams');
+const navRankings          = document.getElementById('navRankings');
+const navNews              = document.getElementById('navNews');
+const navFxPublic          = document.getElementById('navFixturesPublic');
+const navFxSched           = document.getElementById('navFixturesSched');
+const navChampions         = document.getElementById('navChampions');
+const navLeague            = document.getElementById('navLeague');
+const navFriendlies        = document.getElementById('navFriendlies');
+const navAdminCompetitions = document.getElementById('navAdminCompetitions');
 const navToggle     = document.getElementById('navToggle');
 const primaryNav    = document.getElementById('primaryNav');
 
@@ -2332,6 +2488,14 @@ const fxSched     = document.getElementById('fixtures-sched');
 const cupView     = document.getElementById('champions-view');
 const leagueView  = document.getElementById('leagueView');
 const friendliesView = document.getElementById('friendlies-view');
+const competitionsAdminView = document.getElementById('competitions-admin-view');
+const competitionsAdminRefresh = document.getElementById('competitionsAdminRefresh');
+const competitionsPendingList = document.getElementById('competitionsPendingList');
+const competitionsAdminStatus = document.getElementById('competitionsAdminStatus');
+const competitionDefaultsForm = document.getElementById('competitionDefaultsForm');
+const competitionDefaultId = document.getElementById('competitionDefaultId');
+const competitionDefaultGroup = document.getElementById('competitionDefaultGroup');
+const competitionDefaultRound = document.getElementById('competitionDefaultRound');
 
 function normalizeInitialView(raw){
   if (!raw) return null;
@@ -2364,7 +2528,9 @@ function resolveInitialNav(){
   const queryView = normalizeInitialView(search.get('view'));
   const hashView = normalizeInitialView(window.location.hash ? window.location.hash.replace(/^#/, '') : '');
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
-  const pathView = path === '/admin/news' ? 'news' : null;
+  const pathView = path === '/admin/news'
+    ? 'news'
+    : (path === '/admin/competitions' ? 'competitionsAdmin' : null);
   return queryView || hashView || pathView || 'teams';
 }
 
@@ -2442,7 +2608,8 @@ function setNav(active){
     fixturesSched:[fxSched, navFxSched],
     champions:[cupView, navChampions],
     league:[leagueView, navLeague],
-    friendlies:[friendliesView, navFriendlies]
+    friendlies:[friendliesView, navFriendlies],
+    competitionsAdmin:[competitionsAdminView, navAdminCompetitions]
   };
   if(rankingsSection){
     s.rankings = [rankingsSection, navRankings];
@@ -2465,6 +2632,16 @@ navFxSched.onclick     = ()=> setNav('fixturesSched');
 navChampions.onclick   = async ()=> { setNav('champions'); await loadChampions(); };
 navLeague.onclick      = ()=> { setNav('league'); loadLeague(); };
 navFriendlies.onclick  = async ()=> { setNav('friendlies'); await loadFriendlies(); };
+if(navAdminCompetitions){
+  navAdminCompetitions.onclick = async ()=>{
+    setNav('competitionsAdmin');
+    if(isAdmin){
+      await loadCompetitionsAdmin();
+    }else{
+      updateCompetitionsAdminPanel();
+    }
+  };
+}
 if(navRankings){
   navRankings.onclick = ()=>{
     setNav('rankings');
@@ -2511,7 +2688,17 @@ async function checkAdmin(){
   try{ const d = await apiGet('/api/admin/me'); isAdmin = !!d.admin; }catch{ isAdmin=false; }
   btnAdminLogout.style.display = isAdmin ? 'inline-block' : 'none';
   navFxSched.style.display = isAdmin ? 'inline-block' : 'none';
+  if(navAdminCompetitions){
+    navAdminCompetitions.style.display = isAdmin ? 'inline-flex' : 'none';
+    if(!isAdmin && navAdminCompetitions.getAttribute('aria-pressed') === 'true'){
+      setNav('teams');
+    }
+  }
+  if(competitionsAdminRefresh){
+    competitionsAdminRefresh.style.display = isAdmin ? 'inline-flex' : 'none';
+  }
   updateAdminNewsPanel();
+  updateCompetitionsAdminPanel();
 }
 async function checkMe(){
   try { meUser = (await apiGet('/api/auth/me')).user || null; } catch { meUser = null; }
@@ -2718,6 +2905,11 @@ function formatStatValue(value){
   return str ? str : '–';
 }
 
+function formatOverallValue(num){
+  if(num === null || num === undefined || Number.isNaN(num)) return 'N/A';
+  return Math.round(num);
+}
+
 function composePlayerMeta(player, stats, overrides = {}){
   const base = player || {};
   const matches = readNumeric(overrides, ['matches','gamesPlayed','appearances']) ?? readNumeric(base, ['matches','gamesPlayed','appearances']);
@@ -2728,10 +2920,40 @@ function composePlayerMeta(player, stats, overrides = {}){
   const name = overrides.name ?? base.name ?? 'Unknown';
   const position = overrides.position ?? base.position ?? '';
   const clubId = overrides.clubId ?? base.clubId ?? null;
+  const overallCandidates = [
+    overrides.overallRating,
+    overrides.ovr,
+    base.overallRating,
+    base.ovr,
+    stats?.ovr,
+  ];
+  let overallRating = null;
+  for(const value of overallCandidates){
+    if(value === null || value === undefined || value === '') continue;
+    const num = Number(value);
+    if(Number.isFinite(num) && num > 0){ overallRating = num; break; }
+  }
+  const clubName = overrides.clubName
+    ?? base.clubName
+    ?? (clubId ? (byId(clubId)?.name || '') : '');
   const flag = overrides.countryFlag ?? overrides.flag ?? base.countryFlag ?? base.flag ?? base.flagUrl ?? null;
   const isCaptain = Boolean(overrides.isCaptain ?? base.isCaptain);
   const isTopScorer = Boolean(overrides.isTopScorer);
-  return { matches, goals, assists, rating, ratingNum, name, position, clubId, flag, isCaptain, isTopScorer };
+  return {
+    matches,
+    goals,
+    assists,
+    rating,
+    ratingNum,
+    name,
+    position,
+    clubId,
+    clubName,
+    overallRating,
+    flag,
+    isCaptain,
+    isTopScorer,
+  };
 }
 
 function renderPlayerStat(key, label, value, highlight){
@@ -2786,19 +3008,33 @@ function buildPlayerCard(p, stats, tier, overrides){
   if(meta.clubId) card.dataset.clubId = String(meta.clubId);
   if(meta.name) card.dataset.playerName = meta.name;
   if(meta.position !== undefined) card.dataset.playerPosition = meta.position;
+  if(meta.clubName) card.dataset.clubName = meta.clubName;
+  card.dataset.overallRating = meta.overallRating !== null && meta.overallRating !== undefined
+    ? String(meta.overallRating)
+    : '';
   card.dataset.isCaptain = meta.isCaptain ? 'true' : 'false';
   card.dataset.topScorer = meta.isTopScorer ? 'true' : 'false';
   const badgeTitle = 'Team Captain';
   const flagHtml = meta.flag ? `<img src="${escapeHtml(meta.flag)}" class="player-flag" alt="">` : '';
+  const overallText = formatOverallValue(meta.overallRating);
   card.innerHTML = `
     <div class="player-card-badge" title="${badgeTitle}" aria-label="${badgeTitle}">🏅</div>
-    <div class="player-avatar"><span class="player-avatar-initial">${escapeHtml(getPlayerInitials(meta.name))}</span></div>
-    <div class="player-meta">
+    <div class="player-card-top">
+      <div class="player-avatar" data-has-photo="false">
+        <span class="player-avatar-initial">${escapeHtml(getPlayerInitials(meta.name))}</span>
+      </div>
+      <div class="player-position-chip">${escapeHtml(meta.position || 'UNK')}</div>
+    </div>
+    <div class="player-card-info">
       <div class="player-name-row">
         <span class="player-name">${escapeHtml(meta.name)}</span>
         ${flagHtml}
       </div>
-      <div class="player-position">${escapeHtml(meta.position || '')}</div>
+      <div class="player-club">${escapeHtml(meta.clubName || '')}</div>
+    </div>
+    <div class="player-ovr-pill">
+      <span class="ovr-label">OVR</span>
+      <span class="ovr-value">${escapeHtml(String(overallText))}</span>
     </div>
     <div class="player-stat-grid">
       ${renderPlayerStat('matches','Matches',meta.matches,false)}
@@ -2832,12 +3068,18 @@ function updatePlayerCard(card, stats, overrides={}){
     name: card.dataset.playerName,
     position: card.dataset.playerPosition,
     clubId: card.dataset.clubId,
+    clubName: card.dataset.clubName,
+    overallRating: card.dataset.overallRating ? Number(card.dataset.overallRating) : null,
     isCaptain: card.dataset.isCaptain === 'true'
   };
   const meta = composePlayerMeta(existing, stats, overrides);
   card.dataset.playerName = meta.name;
   card.dataset.playerPosition = meta.position || '';
   if(meta.clubId !== null && meta.clubId !== undefined) card.dataset.clubId = String(meta.clubId);
+  if(meta.clubName !== undefined && meta.clubName !== null) card.dataset.clubName = String(meta.clubName);
+  card.dataset.overallRating = meta.overallRating !== null && meta.overallRating !== undefined
+    ? String(meta.overallRating)
+    : '';
   card.dataset.isCaptain = meta.isCaptain ? 'true' : 'false';
   card.dataset.topScorer = meta.isTopScorer ? 'true' : 'false';
   const badge = card.querySelector('.player-card-badge');
@@ -2855,8 +3097,12 @@ function updatePlayerCard(card, stats, overrides={}){
   if(nameEl) nameEl.textContent = meta.name;
   const initialsEl = card.querySelector('.player-avatar-initial');
   if(initialsEl) initialsEl.textContent = getPlayerInitials(meta.name);
-  const positionEl = card.querySelector('.player-position');
-  if(positionEl) positionEl.textContent = meta.position || '';
+  const positionEl = card.querySelector('.player-position-chip');
+  if(positionEl) positionEl.textContent = meta.position || 'UNK';
+  const clubEl = card.querySelector('.player-club');
+  if(clubEl) clubEl.textContent = meta.clubName || '';
+  const ovrEl = card.querySelector('.player-ovr-pill .ovr-value');
+  if(ovrEl) ovrEl.textContent = formatOverallValue(meta.overallRating);
   const nameRow = card.querySelector('.player-name-row');
   let flagEl = card.querySelector('.player-flag');
   if(meta.flag){
@@ -2908,6 +3154,8 @@ async function upgradeClubPlayers(clubId, container){
       const stats = m.stats || (m.vproattr ? parseVpro(m.vproattr) : null);
       if(card && stats){
         const goals = readNumeric(m, ['goals','totalGoals']);
+        const overall = readNumeric(m, ['overallRating','ovr','proOverall']);
+        const clubMeta = byId(clubId);
         const overrides = {
           matches: readNumeric(m, ['matches','gamesPlayed','appearances']),
           goals,
@@ -2917,7 +3165,9 @@ async function upgradeClubPlayers(clubId, container){
           isTopScorer: topGoals > 0 && goals === topGoals,
           name: m.name,
           position: typeof resolvePlayerPosition === 'function' ? resolvePlayerPosition(m) : (m.position || ''),
-          clubId: clubId
+          clubId: clubId,
+          clubName: clubMeta?.name || '',
+          overallRating: overall ?? stats?.ovr ?? null,
         };
         updatePlayerCard(card, stats, overrides);
       }
@@ -2956,6 +3206,8 @@ async function openTeamView(clubId){
     const tier = tierFromOvr(stats.ovr);
     const position = typeof resolvePlayerPosition === 'function' ? resolvePlayerPosition(m) : (m.position || '');
     const goals = readNumeric(m, ['goals','totalGoals']);
+    const overall = readNumeric(m, ['overallRating','ovr','proOverall']);
+    const clubMeta = byId(clubId);
     const overrides = {
       matches: readNumeric(m, ['matches','gamesPlayed','appearances']),
       goals,
@@ -2964,7 +3216,9 @@ async function openTeamView(clubId){
       isCaptain: m.isCaptain,
       isTopScorer: topGoals > 0 && goals === topGoals,
       position,
-      clubId
+      clubId,
+      clubName: clubMeta?.name || '',
+      overallRating: overall ?? stats?.ovr ?? null,
     };
     const card = buildPlayerCard({ ...m, clubId, position }, stats, tier, overrides);
     grid.appendChild(card);
@@ -4220,6 +4474,317 @@ function renderStats(players){
 
 
 // =======================
+//   COMPETITIONS ADMIN
+// =======================
+function setupCompetitionDefaultsForm(){
+  if (competitionDefaultsSetup) return;
+  if (!competitionDefaultsForm) return;
+  competitionDefaultsSetup = true;
+  const syncDefaults = ()=>{
+    competitionsAdminState.defaults = {
+      competitionId: competitionDefaultId ? competitionDefaultId.value.trim() : '',
+      groupName: competitionDefaultGroup ? competitionDefaultGroup.value.trim() : '',
+      roundName: competitionDefaultRound ? competitionDefaultRound.value.trim() : ''
+    };
+    renderCompetitionsPending();
+  };
+  competitionDefaultsForm.addEventListener('input', syncDefaults);
+  syncDefaults();
+}
+
+function updateCompetitionsStatusMessage(){
+  if (!competitionsAdminStatus) return;
+  if (!isAdmin){
+    competitionsAdminStatus.textContent = '';
+    return;
+  }
+  if (competitionsAdminState.loading){
+    competitionsAdminStatus.textContent = 'Loading pending matches…';
+    return;
+  }
+  if (competitionsAdminState.errorMessage){
+    competitionsAdminStatus.textContent = competitionsAdminState.errorMessage;
+    return;
+  }
+  if (!competitionsAdminState.loaded){
+    competitionsAdminStatus.textContent = 'Load the queue to review pending matches.';
+    return;
+  }
+  const count = (competitionsAdminState.items || []).length;
+  competitionsAdminStatus.textContent = count
+    ? `${count} pending match${count === 1 ? '' : 'es'} awaiting review.`
+    : 'No pending matches at this time.';
+}
+
+function renderCompetitionPlayerRow(player){
+  const club = player?.clubId ? byId(player.clubId) : null;
+  const clubName = club?.name || player?.clubId || '';
+  const goals = Number(player?.goals || 0);
+  const assists = Number(player?.assists || 0);
+  const rating = Number(player?.rating || 0);
+  const stats = [];
+  if (goals > 0) stats.push(`${goals} G`);
+  if (assists > 0) stats.push(`${assists} A`);
+  if (rating > 0) stats.push(`${rating.toFixed(1)} RTG`);
+  const pos = player?.position ? String(player.position).toUpperCase() : '';
+  const statLine = stats.length ? stats.join(' • ') : '—';
+  const detail = pos ? `${pos} • ${statLine}` : statLine;
+  return `
+    <div class="pending-player">
+      <div class="info">
+        <div>${escapeHtml(player?.name || 'Unknown')}</div>
+        <div class="club">${escapeHtml(clubName)}</div>
+      </div>
+      <div class="stat">${escapeHtml(detail)}</div>
+    </div>
+  `.trim();
+}
+
+function renderPendingMatchCard(item){
+  const homeClub = item?.home?.clubId ? byId(item.home.clubId) : null;
+  const awayClub = item?.away?.clubId ? byId(item.away.clubId) : null;
+  const homeName = escapeHtml(homeClub?.name || item?.home?.name || item?.home?.clubId || 'Home');
+  const awayName = escapeHtml(awayClub?.name || item?.away?.name || item?.away?.clubId || 'Away');
+  const homeGoals = Number.isFinite(Number(item?.home?.goals)) ? Number(item.home.goals) : '—';
+  const awayGoals = Number.isFinite(Number(item?.away?.goals)) ? Number(item.away.goals) : '—';
+  const metaBits = [];
+  if (item?.playedAt) metaBits.push(`Played ${fmtDate(item.playedAt)}`);
+  if (item?.createdAt) metaBits.push(`Queued ${fmtDate(item.createdAt)}`);
+  const meta = metaBits.length ? `<div class="pending-match-meta">${escapeHtml(metaBits.join(' • '))}</div>` : '';
+  const players = Array.isArray(item?.players) ? item.players.slice(0, 10) : [];
+  const playersHtml = players.length
+    ? players.map(renderCompetitionPlayerRow).join('')
+    : '<div class="muted">No player stats captured for this match.</div>';
+  const overrides = competitionsAdminState.formValues[item.matchId] || {};
+  const defaults = competitionsAdminState.defaults || {};
+  const compValue = overrides.competitionId ?? defaults.competitionId ?? '';
+  const groupValue = overrides.groupName ?? defaults.groupName ?? '';
+  const roundValue = overrides.roundName ?? defaults.roundName ?? '';
+  const matchId = escapeHtml(String(item.matchId || ''));
+  return `
+    <article class="pending-match-card" data-match-id="${matchId}">
+      <div class="pending-match-header">
+        <div class="pending-match-score"><span>${homeName}</span><span class="score">${escapeHtml(String(homeGoals))} – ${escapeHtml(String(awayGoals))}</span><span>${awayName}</span></div>
+        <div class="muted text-xs uppercase tracking-[0.3em]">Match ID ${matchId}</div>
+      </div>
+      ${meta}
+      <div class="pending-player-grid">${playersHtml}</div>
+      <div class="pending-match-form">
+        <label>Competition<input type="text" data-field="competitionId" value="${escapeHtml(String(compValue))}" placeholder="Competition ID" maxlength="80"></label>
+        <label>Group<input type="text" data-field="groupName" value="${escapeHtml(String(groupValue))}" placeholder="Group" maxlength="40"></label>
+        <label>Round<input type="text" data-field="roundName" value="${escapeHtml(String(roundValue))}" placeholder="Round" maxlength="60"></label>
+      </div>
+      <div class="pending-match-actions">
+        <button type="button" class="approve" data-action="approve" data-match-id="${matchId}">Approve</button>
+        <button type="button" class="reject" data-action="reject" data-match-id="${matchId}">Reject</button>
+      </div>
+    </article>
+  `.trim();
+}
+
+function attachCompetitionCardHandlers(){
+  if (!competitionsPendingList) return;
+  competitionsPendingList.querySelectorAll('.pending-match-card').forEach(card => {
+    const matchId = card.getAttribute('data-match-id');
+    card.querySelectorAll('input[data-field]').forEach(input => {
+      input.addEventListener('input', ()=>{
+        const field = input.getAttribute('data-field');
+        if (!field || !matchId) return;
+        const entry = competitionsAdminState.formValues[matchId] || {};
+        entry[field] = input.value;
+        competitionsAdminState.formValues[matchId] = entry;
+      });
+    });
+    const approveBtn = card.querySelector('[data-action="approve"]');
+    const rejectBtn  = card.querySelector('[data-action="reject"]');
+    if (approveBtn){
+      approveBtn.addEventListener('click', async ()=>{
+        if (!isAdmin) return alert('Admin access required.');
+        const competitionInput = card.querySelector('input[data-field="competitionId"]');
+        const groupInput = card.querySelector('input[data-field="groupName"]');
+        const roundInput = card.querySelector('input[data-field="roundName"]');
+        const competitionId = (competitionInput?.value || competitionsAdminState.defaults.competitionId || '').trim();
+        if (!competitionId){
+          alert('Enter a competition ID before approving.');
+          competitionInput?.focus();
+          return;
+        }
+        const payload = {
+          competitionId,
+          groupName: (groupInput?.value || competitionsAdminState.defaults.groupName || '').trim(),
+          roundName: (roundInput?.value || competitionsAdminState.defaults.roundName || '').trim()
+        };
+        approveBtn.disabled = true;
+        approveBtn.setAttribute('aria-busy','true');
+        if (rejectBtn) rejectBtn.disabled = true;
+        try{
+          await apiPost(`/api/admin/competitions/pending/${encodeURIComponent(matchId)}/approve`, payload);
+          delete competitionsAdminState.formValues[matchId];
+          competitionsAdminState.items = competitionsAdminState.items.filter(item => String(item.matchId) !== String(matchId));
+          competitionsAdminState.loaded = true;
+          updateCompetitionsStatusMessage();
+          renderCompetitionsPending();
+          if (competitionsAdminStatus){
+            competitionsAdminStatus.textContent = 'Match approved and recorded.';
+          }
+        }catch(err){
+          const message = err?.message || 'Failed to approve match.';
+          alert(message);
+          if (competitionsAdminStatus){
+            competitionsAdminStatus.textContent = `Approve failed: ${message}`;
+          }
+        }finally{
+          approveBtn.disabled = false;
+          approveBtn.removeAttribute('aria-busy');
+          if (rejectBtn) rejectBtn.disabled = false;
+        }
+      });
+    }
+    if (rejectBtn){
+      rejectBtn.addEventListener('click', async ()=>{
+        if (!isAdmin) return alert('Admin access required.');
+        if (!confirm('Reject this friendly result?')) return;
+        rejectBtn.disabled = true;
+        rejectBtn.setAttribute('aria-busy','true');
+        if (approveBtn) approveBtn.disabled = true;
+        try{
+          await apiPost(`/api/admin/competitions/pending/${encodeURIComponent(matchId)}/reject`, {});
+          delete competitionsAdminState.formValues[matchId];
+          competitionsAdminState.items = competitionsAdminState.items.filter(item => String(item.matchId) !== String(matchId));
+          competitionsAdminState.loaded = true;
+          updateCompetitionsStatusMessage();
+          renderCompetitionsPending();
+          if (competitionsAdminStatus){
+            competitionsAdminStatus.textContent = 'Match rejected.';
+          }
+        }catch(err){
+          const message = err?.message || 'Failed to reject match.';
+          alert(message);
+          if (competitionsAdminStatus){
+            competitionsAdminStatus.textContent = `Reject failed: ${message}`;
+          }
+        }finally{
+          rejectBtn.disabled = false;
+          rejectBtn.removeAttribute('aria-busy');
+          if (approveBtn) approveBtn.disabled = false;
+        }
+      });
+    }
+  });
+}
+
+function renderCompetitionsPending(){
+  if (!competitionsPendingList) return;
+  if (!isAdmin){
+    competitionsPendingList.innerHTML = '<div class="muted">Sign in as an admin to review pending competition matches.</div>';
+    updateCompetitionsStatusMessage();
+    return;
+  }
+  if (!competitionsAdminState.loaded){
+    competitionsPendingList.innerHTML = '<div class="muted">Open the competition queue to load pending matches.</div>';
+    updateCompetitionsStatusMessage();
+    return;
+  }
+  const items = Array.isArray(competitionsAdminState.items) ? competitionsAdminState.items : [];
+  if (!items.length){
+    competitionsPendingList.innerHTML = '<div class="muted">No pending matches right now.</div>';
+    updateCompetitionsStatusMessage();
+    return;
+  }
+  competitionsPendingList.innerHTML = items.map(renderPendingMatchCard).join('');
+  attachCompetitionCardHandlers();
+  updateCompetitionsStatusMessage();
+}
+
+function setupCompetitionsAdminControls(){
+  if (competitionsAdminRefresh && !competitionsAdminRefresh.dataset.bound){
+    competitionsAdminRefresh.dataset.bound = 'true';
+    competitionsAdminRefresh.addEventListener('click', async ()=>{
+      if (!isAdmin) return alert('Admin access required.');
+      competitionsAdminRefresh.disabled = true;
+      competitionsAdminRefresh.setAttribute('aria-busy','true');
+      try{ await loadCompetitionsAdmin(true); }
+      finally{
+        competitionsAdminRefresh.disabled = false;
+        competitionsAdminRefresh.removeAttribute('aria-busy');
+      }
+    });
+  }
+}
+
+async function loadCompetitionsAdmin(force = false){
+  if (!isAdmin){
+    competitionsAdminState.loaded = false;
+    competitionsAdminState.items = [];
+    renderCompetitionsPending();
+    return;
+  }
+  setupCompetitionDefaultsForm();
+  setupCompetitionsAdminControls();
+  competitionsAdminState.errorMessage = '';
+  if (competitionsAdminState.loading) return;
+  if (competitionsAdminState.loaded && !force){
+    renderCompetitionsPending();
+    return;
+  }
+  competitionsAdminState.loading = true;
+  updateCompetitionsStatusMessage();
+  if (competitionsPendingList){
+    competitionsPendingList.innerHTML = '<div class="muted">Loading pending matches…</div>';
+  }
+  try{
+    const res = await apiGet('/api/admin/competitions/pending');
+    competitionsAdminState.formValues = {};
+    competitionsAdminState.items = Array.isArray(res.pending) ? res.pending : [];
+    competitionsAdminState.items.sort((a, b) => {
+      const aTime = new Date(a?.playedAt || a?.createdAt || 0).getTime();
+      const bTime = new Date(b?.playedAt || b?.createdAt || 0).getTime();
+      return bTime - aTime;
+    });
+    competitionsAdminState.loaded = true;
+    renderCompetitionsPending();
+    if (!competitionsAdminState.items.length && competitionsAdminStatus){
+      competitionsAdminStatus.textContent = 'No pending matches at this time.';
+    }
+  }catch(err){
+    const message = err?.message || 'Unable to load pending matches.';
+    competitionsAdminState.errorMessage = message;
+    if (competitionsAdminStatus){
+      competitionsAdminStatus.textContent = message;
+    }
+    if (competitionsPendingList){
+      competitionsPendingList.innerHTML = '<div class="muted">Unable to load pending matches.</div>';
+    }
+  }finally{
+    competitionsAdminState.loading = false;
+    updateCompetitionsStatusMessage();
+  }
+}
+
+function updateCompetitionsAdminPanel(){
+  if (!competitionsAdminView) return;
+  if (isAdmin){
+    setupCompetitionDefaultsForm();
+    setupCompetitionsAdminControls();
+    if (navAdminCompetitions && navAdminCompetitions.getAttribute('aria-pressed') === 'true'){
+      loadCompetitionsAdmin();
+    }else if (competitionsAdminState.loaded){
+      renderCompetitionsPending();
+    }else if (competitionsPendingList){
+      competitionsPendingList.innerHTML = '<div class="muted">Open the competition queue to load pending matches.</div>';
+      updateCompetitionsStatusMessage();
+    }
+  }else{
+    competitionsAdminState.items = [];
+    competitionsAdminState.loaded = false;
+    competitionsAdminState.formValues = {};
+    competitionsAdminState.errorMessage = '';
+    renderCompetitionsPending();
+  }
+}
+
+
+// =======================
 //   FRIENDLIES
 // =======================
 async function loadFriendlies(){
@@ -4536,12 +5101,16 @@ async function loadNews(){
   }
   try{
     const d = await apiGet('/api/news');
+    const fallbackItems = Array.isArray(d.items) ? d.items.map(item => ({
+      ...item,
+      type: (item.type || '').toLowerCase()
+    })) : [];
     const mainItems = Array.isArray(d.main) && d.main.length
       ? d.main
-      : (d.items || []).filter(item => (item.type || '').toLowerCase() === 'auto');
+      : fallbackItems.filter(item => item.type !== 'manual_post' && item.type !== 'manual');
     const generalItems = Array.isArray(d.general) && d.general.length
       ? d.general
-      : (d.items || []).filter(item => (item.type || '').toLowerCase() === 'manual');
+      : fallbackItems.filter(item => item.type === 'manual_post' || item.type === 'manual');
     if (mainWrap){
       renderNewsCollection(mainWrap, mainItems, '<div class="muted">No main news yet.</div>');
     }
@@ -4591,8 +5160,9 @@ function renderNewsItem(n, chartsCollector, options){
   if (!n) return '';
   const charts = chartsCollector || [];
   const type = (n.type || '').toLowerCase();
-  if (type === 'manual') return renderManualNewsItem(n, options);
-  if (type === 'auto') return renderAutoNewsItem(n, charts);
+  if (type === 'manual' || type === 'manual_post') return renderManualNewsItem(n, options);
+  if (type === 'hidden_gem') return renderHiddenGemNewsItem(n);
+  if (type === 'standings_snapshot' || type === 'auto') return renderAutoNewsItem(n, charts);
   return renderLegacyNewsItem(n);
 }
 
@@ -4649,6 +5219,66 @@ function renderAutoNewsItem(n, charts){
     <div class="news-title">${title}</div>
     ${summary}
     ${detail}
+    ${meta ? `<div class="news-meta">${escapeHtml(meta)}</div>` : ''}
+  </article>`;
+}
+
+function renderHiddenGemNewsItem(n){
+  const details = n.details || {};
+  const title = n.title || 'Hidden Gem Spotlight 🌟';
+  const playerName = escapeHtml(details.playerName || title);
+  const position = escapeHtml(details.position || '');
+  const clubName = escapeHtml(details.clubName || '');
+  const overallText = escapeHtml(String(formatOverallValue(details.overallRating)));
+  const potentialText = escapeHtml(String(formatOverallValue(details.potentialRating)));
+  const matches = formatStatValue(details.matches);
+  const goals = formatStatValue(details.goals);
+  const assists = formatStatValue(details.assists);
+  const saves = details.saves !== undefined ? formatStatValue(details.saves) : null;
+  const tackles = details.tackles !== undefined ? formatStatValue(details.tackles) : null;
+  const isKeeper = (details.position || '').toUpperCase() === 'GK';
+  const highlightValue = isKeeper ? saves : tackles;
+  const highlightLabel = isKeeper ? 'Saves' : 'Tackles';
+  const summary = details.summary || n.body || '';
+  const perMatch = details.perMatch || {};
+  const perChips = [];
+  const goalsPer = Number(perMatch.goals);
+  if (Number.isFinite(goalsPer)) perChips.push(`<span>G/Match <strong>${goalsPer.toFixed(2)}</strong></span>`);
+  const assistsPer = Number(perMatch.assists);
+  if (Number.isFinite(assistsPer)) perChips.push(`<span>A/Match <strong>${assistsPer.toFixed(2)}</strong></span>`);
+  const tacklesPer = Number(perMatch.tackles);
+  if (Number.isFinite(tacklesPer) && !isKeeper) perChips.push(`<span>Tackles/Match <strong>${tacklesPer.toFixed(2)}</strong></span>`);
+  const savesPer = Number(perMatch.saves);
+  if (Number.isFinite(savesPer)) perChips.push(`<span>Saves/Match <strong>${savesPer.toFixed(2)}</strong></span>`);
+  const savePct = Number(perMatch.savePct);
+  if (Number.isFinite(savePct) && isKeeper) perChips.push(`<span>Save% <strong>${savePct.toFixed(1)}%</strong></span>`);
+  const stats = [
+    { label: 'Matches', value: matches },
+    { label: 'Goals', value: goals },
+    { label: 'Assists', value: assists }
+  ];
+  if (highlightValue !== null && highlightValue !== undefined){
+    stats.push({ label: highlightLabel, value: highlightValue });
+  }
+  const meta = fmtDate(n.createdAt || n.ts || Date.now());
+  return `<article class="news-post news-hidden-gem glow-card glow-gold">
+    <div class="news-badge">${escapeHtml(n.badge || 'Hidden Gem')}</div>
+    <div class="hidden-gem-header">
+      <div class="hidden-gem-player">
+        <div class="hidden-gem-name">${playerName}</div>
+        <div class="hidden-gem-meta">${position ? `${position} • ` : ''}${clubName}</div>
+      </div>
+      <div class="hidden-gem-overall">
+        <span class="label">OVR</span>
+        <span class="value">${overallText}</span>
+        <span class="potential">Potential ${potentialText}</span>
+      </div>
+    </div>
+    <div class="hidden-gem-stats">
+      ${stats.map(stat => `<div class="hidden-gem-stat"><span class="stat-label">${escapeHtml(stat.label)}</span><span class="stat-value">${escapeHtml(String(stat.value))}</span></div>`).join('')}
+    </div>
+    ${perChips.length ? `<div class="hidden-gem-traits">${perChips.join('')}</div>` : ''}
+    ${summary ? `<div class="news-body">${escapeHtml(summary).replace(/\n/g, '<br>')}</div>` : ''}
     ${meta ? `<div class="news-meta">${escapeHtml(meta)}</div>` : ''}
   </article>`;
 }
@@ -4870,13 +5500,16 @@ async function init(){
     await loadChampions();
   }else if (initialNav === 'league'){
     loadLeague();
+  }else if (initialNav === 'competitionsAdmin'){
+    await loadCompetitionsAdmin();
   }
-  if (window.location.pathname.replace(/\/+$/, '') === '/admin/news'){
+  const normalizedPath = window.location.pathname.replace(/\/+$/, '');
+  if (normalizedPath === '/admin/news' || normalizedPath === '/admin/competitions'){
     try{
       const nextUrl = new URL(window.location.href);
       nextUrl.pathname = '/';
       if (!nextUrl.searchParams.get('view')){
-        nextUrl.searchParams.set('view','news');
+        nextUrl.searchParams.set('view', normalizedPath === '/admin/competitions' ? 'competitionsAdmin' : 'news');
       }
       history.replaceState(null, '', nextUrl);
     }catch{}

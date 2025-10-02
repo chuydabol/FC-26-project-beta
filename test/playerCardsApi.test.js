@@ -61,6 +61,12 @@ test('serves player cards with stats and name fallback', async () => {
         ]
       };
     }
+    if (/FROM public\.players/i.test(sql)) {
+      return { rows: [] };
+    }
+    if (/INSERT INTO public\.players/i.test(sql)) {
+      return { rowCount: 1 };
+    }
     return { rows: [] };
   });
 
@@ -73,8 +79,10 @@ test('serves player cards with stats and name fallback', async () => {
     const bob = body.members.find(p => p.name === 'Bob');
     assert.strictEqual(alice.clubId, '10');
     assert(alice.stats && alice.stats.ovr > 0);
+    assert.strictEqual(typeof alice.overallRating, 'number');
     assert.strictEqual(bob.playerId, null);
     assert(bob.stats && bob.stats.ovr > 0);
+    assert.strictEqual(typeof bob.overallRating, 'number');
   });
 
   fetchStub.mock.restore();
