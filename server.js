@@ -50,27 +50,38 @@ const SQL_UPSERT_PARTICIPANT = `
 `;
 
 const SQL_UPSERT_PLAYER_INFO = `
-  INSERT INTO public.players (player_id, club_id, name, position, vproattr, goals, assists, last_seen)
-  VALUES ($1, $2, $3, $4, $5, 0, 0, NOW())
+  INSERT INTO public.players (
+    player_id,
+    club_id,
+    name,
+    position,
+    vproattr,
+    overall_rating,
+    goals,
+    assists,
+    last_seen
+  )
+  VALUES ($1, $2, $3, $4, $5, $6, 0, 0, NOW())
   ON CONFLICT (player_id, club_id) DO UPDATE SET
     name = EXCLUDED.name,
     position = EXCLUDED.position,
     vproattr = EXCLUDED.vproattr,
+    overall_rating = COALESCE(EXCLUDED.overall_rating, public.players.overall_rating),
     last_seen = NOW()
 `;
 
 const SQL_INSERT_PLAYER_MATCH_STATS = `
   INSERT INTO public.player_match_stats (
-    match_id, player_id, club_id,
+    match_id, player_id, club_id, competition_id,
     goals, assists, realtimegame, shots, passesmade, passattempts,
     tacklesmade, tackleattempts, cleansheetsany, saves, goalsconceded,
     rating, mom
   )
   VALUES (
-    $1, $2, $3,
-    $4, $5, $6, $7, $8, $9,
-    $10, $11, $12, $13, $14,
-    $15, $16
+    $1, $2, $3, $4,
+    $5, $6, $7, $8, $9, $10,
+    $11, $12, $13, $14, $15,
+    $16, $17
   )
   ON CONFLICT (match_id, player_id, club_id) DO NOTHING
 `;
@@ -126,7 +137,7 @@ const SQL_UPSERT_PLAYERCARD = `
 
 const SQL_INSERT_MANUAL_NEWS = `
   INSERT INTO public.news (type, title, body, image_url, video_url, author)
-  VALUES ('manual', $1, $2, $3, $4, $5)
+  VALUES ('manual_post', $1, $2, $3, $4, $5)
   RETURNING id, type, title, body,
             image_url AS "imageUrl",
             video_url AS "videoUrl",
@@ -134,21 +145,43 @@ const SQL_INSERT_MANUAL_NEWS = `
             author
 `;
 
-const SQL_SELECT_MANUAL_NEWS = `
-  SELECT id, type, title, body,
+const SQL_SELECT_ACTIVE_NEWS = `
+  SELECT id,
+         type,
+         title,
+         body,
          image_url AS "imageUrl",
          video_url AS "videoUrl",
          created_at AS "createdAt",
-         author
+         author,
+         expires_at AS "expiresAt"
     FROM public.news
-   WHERE type = 'manual'
+   WHERE expires_at IS NULL OR expires_at > NOW()
    ORDER BY created_at DESC
-   LIMIT 50
+   LIMIT 100
 `;
 
 const SQL_DELETE_MANUAL_NEWS = `
   DELETE FROM public.news
-   WHERE id = $1 AND type = 'manual'
+   WHERE id = $1 AND type = 'manual_post'
+  RETURNING id
+`;
+
+const SQL_DELETE_EXPIRED_NEWS = `
+  DELETE FROM public.news
+   WHERE expires_at IS NOT NULL AND expires_at <= NOW()
+`;
+
+const SQL_SELECT_ACTIVE_HIDDEN_GEMS = `
+  SELECT id, body, created_at AS "createdAt"
+    FROM public.news
+   WHERE type = 'hidden_gem'
+     AND (expires_at IS NULL OR expires_at > NOW())
+`;
+
+const SQL_INSERT_HIDDEN_GEM_NEWS = `
+  INSERT INTO public.news (type, title, body, author, expires_at)
+  VALUES ('hidden_gem', $1, $2, $3, NOW() + INTERVAL '24 hours')
   RETURNING id
 `;
 
@@ -191,6 +224,114 @@ const SQL_RECENT_MATCHES_NEWS = `
       ON away.match_id = m.match_id AND away.is_home = false
    ORDER BY m.ts_ms DESC
    LIMIT 3
+`;
+
+const SQL_HIDDEN_GEM_CANDIDATES = `
+  SELECT p.player_id,
+         p.name,
+         p.position,
+         p.club_id,
+         p.overall_rating,
+         c.club_name,
+         COUNT(*) AS matches,
+         SUM(pms.goals) AS goals,
+         SUM(pms.assists) AS assists,
+         SUM(pms.saves) AS saves,
+         SUM(pms.tacklesmade) AS tackles,
+         SUM(pms.goalsconceded) AS goals_conceded
+    FROM public.player_match_stats pms
+    JOIN public.players p
+      ON p.player_id = pms.player_id
+     AND p.club_id = pms.club_id
+    LEFT JOIN public.clubs c
+      ON c.club_id = p.club_id
+   WHERE COALESCE(p.overall_rating, 0) <= 75
+   GROUP BY p.player_id, p.name, p.position, p.club_id, p.overall_rating, c.club_name
+  HAVING COUNT(*) >= 5
+`;
+
+const SQL_INSERT_PENDING_MATCH = `
+  INSERT INTO public.pending_matches (
+    match_id,
+    source_club_id,
+    opponent_club_id,
+    match_timestamp,
+    raw
+  )
+  VALUES ($1, $2, $3, to_timestamp($4 / 1000.0), $5::jsonb)
+  ON CONFLICT (match_id) DO NOTHING
+`;
+
+const SQL_SELECT_PENDING_MATCHES = `
+  SELECT match_id,
+         source_club_id,
+         opponent_club_id,
+         match_timestamp,
+         raw,
+         created_at
+    FROM public.pending_matches
+   ORDER BY match_timestamp DESC NULLS LAST, created_at DESC
+`;
+
+const SQL_SELECT_PENDING_MATCH = `
+  SELECT match_id,
+         source_club_id,
+         opponent_club_id,
+         match_timestamp,
+         raw
+    FROM public.pending_matches
+   WHERE match_id = $1
+`;
+
+const SQL_DELETE_PENDING_MATCH = `
+  DELETE FROM public.pending_matches
+   WHERE match_id = $1
+`;
+
+const SQL_INSERT_COMPETITION_MATCH = `
+  INSERT INTO public.competition_matches (
+    competition_id,
+    group_name,
+    round_name,
+    match_id,
+    home_club_id,
+    away_club_id,
+    home_score,
+    away_score,
+    played_at,
+    raw
+  )
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, to_timestamp($9 / 1000.0), $10::jsonb)
+  ON CONFLICT (competition_id, match_id) DO NOTHING
+  RETURNING id
+`;
+
+const SQL_UPSERT_COMP_STANDING = `
+  INSERT INTO public.competition_standings (
+    competition_id,
+    group_name,
+    club_id,
+    played,
+    wins,
+    draws,
+    losses,
+    goals_for,
+    goals_against,
+    points,
+    goal_diff,
+    updated_at
+  )
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+  ON CONFLICT (competition_id, group_name, club_id) DO UPDATE SET
+    played = public.competition_standings.played + EXCLUDED.played,
+    wins = public.competition_standings.wins + EXCLUDED.wins,
+    draws = public.competition_standings.draws + EXCLUDED.draws,
+    losses = public.competition_standings.losses + EXCLUDED.losses,
+    goals_for = public.competition_standings.goals_for + EXCLUDED.goals_for,
+    goals_against = public.competition_standings.goals_against + EXCLUDED.goals_against,
+    points = public.competition_standings.points + EXCLUDED.points,
+    goal_diff = public.competition_standings.goal_diff + EXCLUDED.goal_diff,
+    updated_at = NOW()
 `;
 
 // Help node:test mocks that intercept global.fetch in environments without real modules
@@ -293,23 +434,51 @@ function mapNewsRow(row = {}) {
   const createdAt = row.createdAt instanceof Date
     ? row.createdAt.toISOString()
     : row.createdAt;
-  const type = row.type || 'manual';
-  const normalizedAuthor = row.author || (type === 'manual' ? 'Community Reporter' : 'UPCL Admin');
-  const badge = row.badge
-    || (type === 'manual'
-      ? (/admin/i.test(normalizedAuthor) ? 'League Bulletin' : 'Community Post')
-      : 'Auto Update');
+  const expiresAt = row.expiresAt instanceof Date
+    ? row.expiresAt.toISOString()
+    : row.expiresAt;
+  let normalizedType = row.type ? String(row.type).toLowerCase() : 'manual_post';
+  if (normalizedType === 'manual') normalizedType = 'manual_post';
+  let defaultAuthor = 'UPCL Update Bot';
+  if (normalizedType === 'manual_post') defaultAuthor = 'Community Reporter';
+  if (normalizedType === 'hidden_gem') defaultAuthor = 'UPCL Auto Analyst';
+  const author = row.author || defaultAuthor;
+  let badge = row.badge;
+  if (!badge) {
+    if (normalizedType === 'manual_post') {
+      badge = /admin/i.test(author) ? 'League Bulletin' : 'Community Post';
+    } else if (normalizedType === 'hidden_gem') {
+      badge = 'Hidden Gem';
+    } else {
+      badge = 'Auto Update';
+    }
+  }
+  const category = row.category
+    || (normalizedType === 'manual_post' ? 'general' : 'main');
+
+  let body = row.body || '';
+  let details = null;
+  if (normalizedType === 'hidden_gem') {
+    const parsed = safeJsonParse(row.body);
+    if (parsed && typeof parsed === 'object') {
+      details = parsed;
+      body = parsed.summary || body;
+    }
+  }
+
   return {
     id: row.id,
-    type,
+    type: normalizedType,
     title: row.title || '',
-    body: row.body || '',
+    body,
     imageUrl: row.imageUrl || null,
     videoUrl: row.videoUrl || null,
     createdAt: createdAt || new Date().toISOString(),
-    author: normalizedAuthor,
+    expiresAt: expiresAt || null,
+    author,
     badge,
-    category: row.category || (type === 'manual' ? 'general' : 'main')
+    category,
+    details,
   };
 }
 
@@ -392,7 +561,7 @@ async function buildAutoNewsItems() {
         : new Date(now.getTime() - 2 * 60 * 1000).toISOString();
       auto.push({
         id: 'auto-standings',
-        type: 'auto',
+        type: 'standings_snapshot',
         badge: 'Standings',
         title: 'Standings Snapshot',
         body: 'Top clubs in the UPCL table after the latest matches.',
@@ -412,7 +581,7 @@ async function buildAutoNewsItems() {
     if (scorers.length) {
       auto.push({
         id: 'auto-scorers',
-        type: 'auto',
+        type: 'standings_snapshot',
         badge: 'Goal Leaders',
         title: 'Golden Boot Race',
         body: 'Who leads the league in goals?',
@@ -434,7 +603,7 @@ async function buildAutoNewsItems() {
     if (assists.length) {
       auto.push({
         id: 'auto-assists',
-        type: 'auto',
+        type: 'standings_snapshot',
         badge: 'Assist Leaders',
         title: 'Playmakers on Fire',
         body: 'Top assist leaders in the league.',
@@ -457,7 +626,7 @@ async function buildAutoNewsItems() {
       const tsMs = Number(latestMatch.ts_ms);
       auto.push({
         id: `auto-match-${latestMatch.match_id}`,
-        type: 'auto',
+        type: 'standings_snapshot',
         badge: 'Match Recap',
         title: 'Latest Final Score',
         body: `${clubDisplayName(latestMatch.home_id)} vs ${clubDisplayName(latestMatch.away_id)}`,
@@ -490,6 +659,118 @@ async function buildAutoNewsItems() {
 function parseDateMs(value, fallback) {
   const ms = value ? Number(value) || Date.parse(value) : NaN;
   return Number.isFinite(ms) ? ms : fallback;
+}
+
+function normalizeTimestampMs(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num <= 0) return null;
+  if (num > 1_000_000_000_000) {
+    return Math.trunc(num);
+  }
+  return Math.trunc(num * 1000);
+}
+
+function safeJsonParse(value) {
+  if (!value) return null;
+  if (typeof value === 'object') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function deriveMatchSides(match = {}) {
+  const clubs = match.clubs || {};
+  const entries = Object.entries(clubs).map(([cid, c]) => {
+    const details = c?.details || {};
+    const name = typeof details.name === 'string' ? details.name.trim() : '';
+    const rawIsHome = details.isHome;
+    const isHome = rawIsHome !== undefined ? parseHomeIndicator(rawIsHome) : null;
+    return {
+      clubId: String(cid),
+      goals: Number(c?.goals || 0),
+      name: name || `Club ${cid}`,
+      isHome,
+      hasHomeFlag: rawIsHome !== undefined && rawIsHome !== null,
+    };
+  });
+
+  let home = entries.find(entry => entry.isHome === true) || null;
+  let away = entries.find(entry => entry.isHome === false) || null;
+
+  if (!home && entries.length) {
+    home = entries[0];
+  }
+  if ((!away || (home && away.clubId === home.clubId)) && entries.length > 1) {
+    away = entries.find(entry => !home || entry.clubId !== home.clubId) || away;
+  }
+
+  if (!away && entries.length === 1) {
+    away = null;
+  }
+
+  return { home, away, entries };
+}
+
+function extractMatchPlayers(match = {}) {
+  const players = [];
+  const map = match.players || {};
+  for (const [cid, roster] of Object.entries(map)) {
+    if (!roster || typeof roster !== 'object') continue;
+    const clubId = String(cid);
+    for (const [pid, pdata] of Object.entries(roster)) {
+      const playerIdRaw = pdata?.playerId || pdata?.playerid || pid;
+      const playerId = playerIdRaw ? String(playerIdRaw) : null;
+      const name =
+        pdata?.name ||
+        pdata?.playername ||
+        pdata?.proName ||
+        pdata?.personaName ||
+        (playerId ? `Player_${playerId}` : 'Unknown');
+      const position = pdata?.position || pdata?.pos || pdata?.proPos || '';
+      players.push({
+        clubId,
+        playerId,
+        name,
+        position,
+        goals: Number(pdata?.goals || 0),
+        assists: Number(pdata?.assists || 0),
+        rating: Number(
+          pdata?.rating ||
+            pdata?.matchRating ||
+            pdata?.averageMatchRating ||
+            pdata?.averageRating ||
+            0
+        ),
+        saves: Number(pdata?.saves || 0),
+        tackles: Number(pdata?.tacklesmade || pdata?.tacklesMade || 0),
+        data: pdata || {},
+      });
+    }
+  }
+  return players;
+}
+
+function computeStandingDelta(homeGoals, awayGoals) {
+  const hg = Number(homeGoals || 0);
+  const ag = Number(awayGoals || 0);
+  if (hg > ag) {
+    return {
+      home: { played: 1, wins: 1, draws: 0, losses: 0, points: 3 },
+      away: { played: 1, wins: 0, draws: 0, losses: 1, points: 0 },
+    };
+  }
+  if (hg < ag) {
+    return {
+      home: { played: 1, wins: 0, draws: 0, losses: 1, points: 0 },
+      away: { played: 1, wins: 1, draws: 0, losses: 0, points: 3 },
+    };
+  }
+  return {
+    home: { played: 1, wins: 0, draws: 1, losses: 0, points: 1 },
+    away: { played: 1, wins: 0, draws: 1, losses: 0, points: 1 },
+  };
 }
 
 const LEAGUE_START_MS = parseDateMs(
@@ -715,11 +996,12 @@ async function saveEaMatch(match) {
         const goalsconceded = Number(pdata.goalsconceded || 0);
         const rating = Number(pdata.rating || 0);
         const mom = Number(pdata.mom || 0);
-        await q(SQL_UPSERT_PLAYER_INFO, [pid, cid, name, pos, vproattr]);
+        await q(SQL_UPSERT_PLAYER_INFO, [pid, cid, name, pos, vproattr, null]);
         const { rowCount: statInserted } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
           matchId,
           pid,
           cid,
+          null,
           goals,
           assists,
           realtimegame,
@@ -768,6 +1050,403 @@ async function refreshAllMatches(clubIds) {
   }
 }
 
+async function queueFriendlyMatch(match, sourceClubId) {
+  if (!match || !sourceClubId) return;
+  const matchIdRaw = match.matchId || match.matchid || match.id;
+  const matchId = matchIdRaw ? String(matchIdRaw) : null;
+  if (!matchId) return;
+  const tsMs =
+    normalizeTimestampMs(match.timestamp || match.ts || match.matchTimestamp) || Date.now();
+  const { home, away } = deriveMatchSides(match);
+  const sourceId = String(sourceClubId);
+  let opponentId = null;
+  if (home && sourceId === String(home.clubId)) {
+    opponentId = away ? String(away.clubId) : null;
+  } else if (away && sourceId === String(away.clubId)) {
+    opponentId = home ? String(home.clubId) : null;
+  } else if (home) {
+    opponentId = String(home.clubId);
+  }
+  if (!opponentId) return;
+  try {
+    await q(SQL_INSERT_PENDING_MATCH, [
+      matchId,
+      sourceId,
+      opponentId,
+      tsMs,
+      JSON.stringify(match),
+    ]);
+  } catch (err) {
+    logger.error({ err, matchId }, 'Failed to queue friendly match');
+  }
+}
+
+async function refreshClubFriendlies(clubId) {
+  let friendlies = [];
+  try {
+    friendlies = await limit(() => eaApi.fetchClubFriendliesWithRetry(clubId));
+  } catch (err) {
+    logger.error({ err, clubId }, 'Failed fetching friendlies');
+    return;
+  }
+  for (const match of Array.isArray(friendlies) ? friendlies : []) {
+    await queueFriendlyMatch(match, clubId);
+  }
+}
+
+async function refreshFriendlyMatches(clubIds) {
+  const ids = clubIds && clubIds.length ? clubIds : resolveClubIds();
+  for (const clubId of ids) {
+    await refreshClubFriendlies(clubId);
+  }
+}
+
+async function approvePendingMatch(matchId, options = {}) {
+  const competitionId = String(options.competitionId || '').trim();
+  if (!competitionId) {
+    throw new Error('competitionId is required');
+  }
+  const groupName = String(options.groupName || 'Group A').trim() || 'Group A';
+  const roundName = options.roundName ? String(options.roundName).trim() : null;
+
+  const pending = await q(SQL_SELECT_PENDING_MATCH, [String(matchId)]);
+  if (!pending.rowCount) {
+    throw new Error('Pending match not found');
+  }
+
+  const row = pending.rows[0];
+  const match = safeJsonParse(row.raw) || {};
+  const tsMs =
+    normalizeTimestampMs(match.timestamp || match.ts || row.match_timestamp) || Date.now();
+  const { home, away } = deriveMatchSides(match);
+  if (!home || !away) {
+    throw new Error('Match is missing club data');
+  }
+
+  await q(SQL_UPSERT_CLUB, [home.clubId, home.name]);
+  await q(SQL_UPSERT_CLUB, [away.clubId, away.name]);
+
+  const insertRes = await q(SQL_INSERT_COMPETITION_MATCH, [
+    competitionId,
+    groupName,
+    roundName,
+    String(matchId),
+    home.clubId,
+    away.clubId,
+    Number(home.goals || 0),
+    Number(away.goals || 0),
+    tsMs,
+    JSON.stringify(match),
+  ]);
+  if (!insertRes.rowCount) {
+    throw new Error('Match already approved');
+  }
+
+  const players = extractMatchPlayers(match);
+  for (const player of players) {
+    const pid = player.playerId;
+    if (!pid) continue;
+    const pdata = player.data || {};
+    const name = player.name || `Player_${pid}`;
+    const position = player.position || 'UNK';
+    const vproattr = pdata.vproattr || null;
+    const overallRaw =
+      pdata.overallRating || pdata.ovr || pdata.proOverall || pdata.prooverall;
+    const overallRating = Number(overallRaw);
+    const goals = Number(pdata.goals || 0);
+    const assists = Number(pdata.assists || 0);
+    const realtimegame = Number(pdata.realtimegame || 0);
+    const shots = Number(pdata.shots || 0);
+    const passesmade = Number(pdata.passesmade || pdata.passesMade || 0);
+    const passattempts = Number(pdata.passattempts || pdata.passAttempts || 0);
+    const tacklesmade = Number(pdata.tacklesmade || pdata.tacklesMade || 0);
+    const tackleattempts = Number(pdata.tackleattempts || pdata.tacklesAttempted || 0);
+    const cleansheetsany = Number(pdata.cleansheetsany || pdata.cleanSheetsAny || 0);
+    const saves = Number(pdata.saves || 0);
+    const goalsconceded = Number(pdata.goalsconceded || pdata.goalsConceded || 0);
+    const rating = Number(
+      pdata.rating ||
+        pdata.matchRating ||
+        pdata.averageMatchRating ||
+        pdata.averageRating ||
+        player.rating ||
+        0
+    );
+    const mom = Number(pdata.mom || pdata.manOfTheMatch || 0);
+
+    await q(SQL_UPSERT_PLAYER_INFO, [
+      pid,
+      player.clubId,
+      name,
+      position,
+      vproattr,
+      Number.isFinite(overallRating) ? overallRating : null,
+    ]);
+
+    const { rowCount } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
+      String(matchId),
+      pid,
+      player.clubId,
+      competitionId,
+      goals,
+      assists,
+      realtimegame,
+      shots,
+      passesmade,
+      passattempts,
+      tacklesmade,
+      tackleattempts,
+      cleansheetsany,
+      saves,
+      goalsconceded,
+      rating,
+      mom,
+    ]);
+    if (rowCount) {
+      await q(SQL_REFRESH_PLAYER_TOTALS, [pid, player.clubId]);
+    }
+    if (vproattr) {
+      const stats = parseVpro(vproattr);
+      await q(SQL_UPSERT_PLAYERCARD, [
+        pid,
+        player.clubId,
+        name,
+        position,
+        vproattr,
+        stats.ovr,
+      ]);
+    }
+  }
+
+  const delta = computeStandingDelta(home.goals, away.goals);
+  await q(SQL_UPSERT_COMP_STANDING, [
+    competitionId,
+    groupName,
+    home.clubId,
+    delta.home.played,
+    delta.home.wins,
+    delta.home.draws,
+    delta.home.losses,
+    Number(home.goals || 0),
+    Number(away.goals || 0),
+    delta.home.points,
+    Number(home.goals || 0) - Number(away.goals || 0),
+  ]);
+  await q(SQL_UPSERT_COMP_STANDING, [
+    competitionId,
+    groupName,
+    away.clubId,
+    delta.away.played,
+    delta.away.wins,
+    delta.away.draws,
+    delta.away.losses,
+    Number(away.goals || 0),
+    Number(home.goals || 0),
+    delta.away.points,
+    Number(away.goals || 0) - Number(home.goals || 0),
+  ]);
+
+  await q(SQL_DELETE_PENDING_MATCH, [String(matchId)]);
+
+  return {
+    competitionId,
+    matchId: String(matchId),
+    home,
+    away,
+    groupName,
+    roundName,
+  };
+}
+
+async function rejectPendingMatch(matchId) {
+  await q(SQL_DELETE_PENDING_MATCH, [String(matchId)]);
+}
+
+function mapPendingMatch(row) {
+  const match = safeJsonParse(row.raw) || {};
+  const { home, away } = deriveMatchSides(match);
+  const players = extractMatchPlayers(match).map(player => ({
+    clubId: player.clubId,
+    playerId: player.playerId,
+    name: player.name,
+    goals: player.goals,
+    assists: player.assists,
+    rating: Number(player.rating || 0),
+    position: player.position || '',
+  }));
+  const playedAt = row.match_timestamp instanceof Date
+    ? row.match_timestamp.toISOString()
+    : (normalizeTimestampMs(row.match_timestamp) && new Date(normalizeTimestampMs(row.match_timestamp)).toISOString());
+  const createdAt = row.created_at instanceof Date
+    ? row.created_at.toISOString()
+    : null;
+  return {
+    matchId: String(row.match_id),
+    sourceClubId: String(row.source_club_id),
+    opponentClubId: String(row.opponent_club_id),
+    playedAt,
+    createdAt,
+    home: home
+      ? { clubId: home.clubId, name: home.name, goals: Number(home.goals || 0) }
+      : null,
+    away: away
+      ? { clubId: away.clubId, name: away.name, goals: Number(away.goals || 0) }
+      : null,
+    players,
+  };
+}
+
+async function cleanupExpiredNews() {
+  try {
+    await q(SQL_DELETE_EXPIRED_NEWS);
+  } catch (err) {
+    logger.error({ err }, 'Failed to cleanup expired news');
+  }
+}
+
+const POSITION_GROUPS = {
+  striker: new Set(['ST', 'CF', 'LF', 'RF', 'LS', 'RS', 'LW', 'RW']),
+  midfielder: new Set(['CM', 'CDM', 'CAM', 'LM', 'RM', 'LCM', 'RCM', 'LAM', 'RAM']),
+  defender: new Set(['CB', 'LCB', 'RCB', 'LB', 'RB', 'LWB', 'RWB', 'SW']),
+  goalkeeper: new Set(['GK']),
+};
+
+function categorizePosition(position) {
+  const normalized = String(position || '').toUpperCase();
+  if (POSITION_GROUPS.goalkeeper.has(normalized)) return 'goalkeeper';
+  if (POSITION_GROUPS.defender.has(normalized)) return 'defender';
+  if (POSITION_GROUPS.midfielder.has(normalized)) return 'midfielder';
+  if (POSITION_GROUPS.striker.has(normalized)) return 'striker';
+  return null;
+}
+
+function evaluateHiddenGemCandidate(row) {
+  const matches = Number(row.matches || 0);
+  if (!Number.isFinite(matches) || matches < 5) return null;
+  const overall = Number(row.overall_rating);
+  if (!Number.isFinite(overall)) return null;
+  const group = categorizePosition(row.position);
+  if (!group) return null;
+
+  const goals = Number(row.goals || 0);
+  const assists = Number(row.assists || 0);
+  const saves = Number(row.saves || 0);
+  const tackles = Number(row.tackles || 0);
+  const goalsConceded = Number(row.goals_conceded || 0);
+
+  const perGoals = matches ? goals / matches : 0;
+  const perAssists = matches ? assists / matches : 0;
+  const perSaves = matches ? saves / matches : 0;
+  const perTackles = matches ? tackles / matches : 0;
+  const totalShots = saves + goalsConceded;
+  const savePct = totalShots > 0 ? (saves / totalShots) * 100 : 0;
+
+  let qualifies = false;
+  let score = 0;
+
+  switch (group) {
+    case 'striker':
+      qualifies = perGoals >= 0.6;
+      score = perGoals - 0.6;
+      break;
+    case 'midfielder':
+      qualifies = perAssists >= 0.5;
+      score = perAssists - 0.5;
+      break;
+    case 'defender':
+      qualifies = perTackles >= 2.5;
+      score = perTackles - 2.5;
+      break;
+    case 'goalkeeper':
+      qualifies = perSaves >= 3 && savePct > 70;
+      score = (perSaves - 3) + Math.max(0, (savePct - 70) / 100);
+      break;
+    default:
+      qualifies = false;
+  }
+
+  if (!qualifies) return null;
+
+  const potentialRating = Math.min(99, Math.round(overall + 5));
+  const summaryParts = [
+    `Matches ${matches}`,
+    `Goals ${goals}`,
+    `Assists ${assists}`,
+  ];
+  if (saves > 0) summaryParts.push(`Saves ${saves}`);
+  if (tackles > 0) summaryParts.push(`Tackles ${tackles}`);
+
+  return {
+    playerId: row.player_id,
+    name: row.name,
+    position: row.position,
+    clubId: row.club_id ? String(row.club_id) : null,
+    clubName: row.club_name || '',
+    overallRating: overall,
+    matches,
+    goals,
+    assists,
+    saves,
+    tackles,
+    goalsConceded,
+    perMatch: {
+      goals: Number(perGoals.toFixed(2)),
+      assists: Number(perAssists.toFixed(2)),
+      tackles: Number(perTackles.toFixed(2)),
+      saves: Number(perSaves.toFixed(2)),
+      savePct: Number(savePct.toFixed(1)),
+    },
+    potentialRating,
+    summary: summaryParts.join(' • '),
+    score,
+  };
+}
+
+async function ensureHiddenGemNews() {
+  try {
+    const active = await q(SQL_SELECT_ACTIVE_HIDDEN_GEMS);
+    if (active.rowCount) {
+      return;
+    }
+    const candidatesRes = await q(SQL_HIDDEN_GEM_CANDIDATES);
+    const evaluated = (candidatesRes.rows || [])
+      .map(evaluateHiddenGemCandidate)
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score);
+    const picks = evaluated.slice(0, 3);
+    for (const candidate of picks) {
+      const payload = {
+        playerId: candidate.playerId,
+        playerName: candidate.name,
+        position: candidate.position,
+        clubId: candidate.clubId,
+        clubName: candidate.clubName,
+        overallRating: candidate.overallRating,
+        matches: candidate.matches,
+        goals: candidate.goals,
+        assists: candidate.assists,
+        saves: candidate.saves,
+        tackles: candidate.tackles,
+        goalsConceded: candidate.goalsConceded,
+        perMatch: candidate.perMatch,
+        potentialRating: candidate.potentialRating,
+        summary: candidate.summary,
+      };
+      try {
+        await q(SQL_INSERT_HIDDEN_GEM_NEWS, [
+          'Hidden Gem Spotlight 🌟',
+          JSON.stringify(payload),
+          'UPCL Auto Analyst',
+        ]);
+      } catch (err) {
+        logger.error({ err, playerId: candidate.playerId }, 'Failed to insert hidden gem news');
+      }
+    }
+  } catch (err) {
+    logger.error({ err }, 'Failed to generate hidden gem news');
+  }
+}
+
 async function ensureLeagueClubs(clubIds) {
   for (const cid of new Set(clubIds)) {
     const name = CLUB_NAMES[cid] || `Club ${cid}`;
@@ -795,7 +1474,22 @@ app.get('/', (_req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'teams.html'))
 );
 
+function requireAdminSession(req, res) {
+  if (!req.session?.isAdmin) {
+    res.status(403).json({ error: 'Admin access required' });
+    return false;
+  }
+  return true;
+}
+
 app.get('/admin/news', (req, res) => {
+  if (!req.session?.isAdmin) {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'teams.html'));
+});
+
+app.get('/admin/competitions', (req, res) => {
   if (!req.session?.isAdmin) {
     return res.redirect('/');
   }
@@ -824,18 +1518,63 @@ app.get('/api/admin/me', (req, res) => {
   res.json({ admin: !!req.session?.isAdmin });
 });
 
+app.get('/api/admin/competitions/pending', async (req, res) => {
+  if (!requireAdminSession(req, res)) return;
+  try {
+    const { rows } = await q(SQL_SELECT_PENDING_MATCHES);
+    res.json({ pending: rows.map(mapPendingMatch) });
+  } catch (err) {
+    logger.error({ err }, 'Failed to load pending competition matches');
+    res.status(500).json({ pending: [] });
+  }
+});
+
+app.post('/api/admin/competitions/pending/:matchId/approve', async (req, res) => {
+  if (!requireAdminSession(req, res)) return;
+  const { competitionId, groupName, roundName } = req.body || {};
+  if (!competitionId || !String(competitionId).trim()) {
+    return res.status(400).json({ error: 'competitionId is required' });
+  }
+  try {
+    const result = await approvePendingMatch(req.params.matchId, {
+      competitionId,
+      groupName,
+      roundName,
+    });
+    res.json({ ok: true, match: result });
+  } catch (err) {
+    logger.error({ err, matchId: req.params.matchId }, 'Failed to approve pending match');
+    res.status(400).json({ error: err.message || 'Failed to approve match' });
+  }
+});
+
+app.post('/api/admin/competitions/pending/:matchId/reject', async (req, res) => {
+  if (!requireAdminSession(req, res)) return;
+  try {
+    await rejectPendingMatch(req.params.matchId);
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error({ err, matchId: req.params.matchId }, 'Failed to reject pending match');
+    res.status(500).json({ error: 'Failed to reject match' });
+  }
+});
+
 app.get('/api/news', async (_req, res) => {
   try {
-    const [manualRes, autoItems] = await Promise.all([
-      q(SQL_SELECT_MANUAL_NEWS),
+    await cleanupExpiredNews();
+    await ensureHiddenGemNews();
+    const [newsRes, autoItems] = await Promise.all([
+      q(SQL_SELECT_ACTIVE_NEWS),
       buildAutoNewsItems()
     ]);
-    const manual = (manualRes.rows || []).map(mapNewsRow);
+    const mapped = (newsRes.rows || []).map(mapNewsRow);
+    const manual = mapped.filter(item => item.type === 'manual_post');
+    const curated = mapped.filter(item => item.type !== 'manual_post');
     const autos = Array.isArray(autoItems) ? autoItems.map(item => ({
       ...item,
       category: item.category || 'main'
     })) : [];
-    const main = [...autos].sort((a, b) => {
+    const main = [...curated, ...autos].sort((a, b) => {
       const aTs = new Date(a.createdAt || a.ts || 0).getTime();
       const bTs = new Date(b.createdAt || b.ts || 0).getTime();
       return bTs - aTs;
@@ -1111,8 +1850,19 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       [clubId]
     );
 
+    const { rows: playerRows } = await q(
+      `SELECT player_id, overall_rating
+         FROM public.players
+        WHERE club_id = $1`,
+      [clubId]
+    );
+
     const cardMap = new Map(rows.map(r => [String(r.player_id), r]));
     const nameMap = new Map(rows.map(r => [r.name, r]));
+    const overallMap = new Map(
+      playerRows.map(r => [String(r.player_id), Number(r.overall_rating)])
+    );
+    const clubName = CLUB_NAMES[String(clubId)] || '';
 
     const membersDetailed = members.map(m => {
       const id = String(m.playerId || m.playerid || '') || null;
@@ -1120,21 +1870,60 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       if (!rec) rec = nameMap.get(m.name) || {};
 
       const vproattr = rec.vproattr || null;
-      const stats = vproattr ? parseVpro(vproattr) : null;
+      let stats = vproattr ? parseVpro(vproattr) : null;
+      const overallCandidates = [
+        m.overallRating,
+        m.overallrating,
+        m.ovr,
+        m.proOverall,
+        stats?.ovr,
+        overallMap.get(id || ''),
+      ];
+      let overallRating = null;
+      for (const candidate of overallCandidates) {
+        const num = Number(candidate);
+        if (Number.isFinite(num) && num > 0) {
+          overallRating = num;
+          break;
+        }
+      }
+      if (stats) {
+        stats.ovr = overallRating ?? stats.ovr;
+      } else if (overallRating) {
+        stats = { ovr: overallRating };
+      }
 
       return {
         playerId: id,
         clubId,
-        name: m.name || rec.name || `Player_${id}`,
+        clubName,
+        name: m.name || rec.name || (id ? `Player_${id}` : 'Unknown'),
         position: rec.position || m.position || '',
-        matches: Number(m.gamesPlayed) || 0,
-        goals: Number(m.goals) || 0,
-        assists: Number(m.assists) || 0,
+        matches: Number(m.gamesPlayed || m.matches || 0) || 0,
+        goals: Number(m.goals || 0) || 0,
+        assists: Number(m.assists || 0) || 0,
+        overallRating: overallRating ?? null,
         isCaptain: m.isCaptain == 1 || m.captain == 1 || m.role === 'captain',
         vproattr,
-        stats
+        stats,
       };
     });
+
+    for (const member of membersDetailed) {
+      if (!member.playerId) continue;
+      try {
+        await q(SQL_UPSERT_PLAYER_INFO, [
+          member.playerId,
+          clubId,
+          member.name,
+          member.position || 'UNK',
+          member.vproattr || null,
+          member.overallRating,
+        ]);
+      } catch (err) {
+        logger.error({ err, playerId: member.playerId }, 'Failed to sync player info');
+      }
+    }
 
     const withStats = membersDetailed.filter(p => p.stats && p.stats.ovr);
     const sorted = withStats.slice().sort((a, b) => b.stats.ovr - a.stats.ovr);
@@ -1154,7 +1943,8 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       p.className = t.className;
     }
 
-    res.json({ members: membersDetailed });
+    const responseMembers = membersDetailed.map(({ vproattr, ...rest }) => rest);
+    res.json({ members: responseMembers });
   } catch (err) {
     logger.error({ err }, 'Failed to load player cards');
     res.status(500).json({ members: [] });
@@ -1337,6 +2127,7 @@ if (process.env.NODE_ENV !== 'test' && CRON_ENABLED) {
     console.log(`[${new Date().toISOString()}] Auto update starting...`);
     try {
       await refreshAllMatches(resolveClubIds());
+      await refreshFriendlyMatches(resolveClubIds());
       console.log(`[${new Date().toISOString()}] ✅ Auto update complete.`);
     } catch (err) {
       logger.error({ err }, `[${new Date().toISOString()}] ❌ Auto update failed`);
@@ -1362,6 +2153,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV !== 'test') {
     try {
       await refreshAllMatches(resolveClubIds());
+      await refreshFriendlyMatches(resolveClubIds());
       console.log(`[${new Date().toISOString()}] ✅ Initial sync complete.`);
     } catch (err) {
       logger.error({ err }, `[${new Date().toISOString()}] ❌ Initial sync error`);

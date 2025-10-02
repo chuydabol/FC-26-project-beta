@@ -95,6 +95,7 @@ async function eaFetch(url, options = {}) {
 }
 
 const clubCache = new Map();
+const friendlyCache = new Map();
 const leaderboardCache = new Map();
 const LEADERBOARD_CACHE_TTL_MS = 5 * 60_000;
 
@@ -144,6 +145,40 @@ async function fetchRecentLeagueMatches(clubId) {
   return data?.[clubId] || [];
 }
 
+async function fetchClubFriendlies(clubId) {
+  if (!clubId) throw new Error('clubId required');
+  const cacheEntry = friendlyCache.get(clubId);
+  if (cacheEntry && Date.now() < cacheEntry.nextFetch) {
+    return cacheEntry.data;
+  }
+  const url =
+    `https://proclubs.ea.com/api/fc/clubs/matches?platform=common-gen5&clubIds=${encodeURIComponent(
+      clubId
+    )}&matchType=friendlyMatch`;
+  let data = [];
+  try {
+    const res = await eaFetch(url);
+    const body = await res.json();
+    if (Array.isArray(body)) {
+      data = body;
+    } else if (body && Array.isArray(body[clubId])) {
+      data = body[clubId];
+    } else {
+      data = Array.isArray(body?.matches) ? body.matches : [];
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.warn(`[EA] Friendly timeout for club ${clubId}`);
+    } else {
+      console.warn(`[EA] Friendly error ${err.status || err.message || 'unknown'} for club ${clubId}`);
+    }
+    data = [];
+  }
+  const ttl = MIN_CACHE_MS + Math.random() * (MAX_CACHE_MS - MIN_CACHE_MS);
+  friendlyCache.set(clubId, { data, nextFetch: Date.now() + ttl });
+  return Array.isArray(data) ? data : [];
+}
+
 async function fetchClubMembers(clubId) {
   if (!clubId) throw new Error('clubId required');
   const url =
@@ -181,6 +216,19 @@ async function fetchClubMembersWithRetry(clubId, retries = 2) {
 }
 
 const fetchPlayersForClubWithRetry = fetchClubMembersWithRetry;
+
+async function fetchClubFriendliesWithRetry(clubId, retries = 2) {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fetchClubFriendlies(clubId);
+    } catch (err) {
+      attempt++;
+      if (attempt > retries) throw err;
+      await new Promise(r => setTimeout(r, 200 * attempt));
+    }
+  }
+}
 
 function normalizeString(value) {
   if (typeof value !== 'string') {
@@ -342,6 +390,8 @@ async function fetchClubInfoWithRetry(clubId, retries = 2) {
 module.exports = {
   fetchClubLeagueMatches,
   fetchRecentLeagueMatches,
+  fetchClubFriendlies,
+  fetchClubFriendliesWithRetry,
   fetchClubMembers,
   fetchPlayersForClub,
   fetchClubMembersWithRetry,
