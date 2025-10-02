@@ -3149,7 +3149,7 @@ function renderFixturesPublic(){
     const hn = H?.name || f.home;
     const an = A?.name || f.away;
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const isFinal = f.status==='final';
+    const isFinal = String(f.status||'').toLowerCase()==='final';
     const scoreTxt = isFinal ? `${f.score.hs}–${f.score.as}` : 'vs';
     const scoreClass = isFinal ? 'score-final' : 'score-upcoming';
     const ccBadge = (f.cup===CC_ID) ? ' • <span class="chip">Champions Cup</span>' : '';
@@ -3177,7 +3177,7 @@ function nextFor(teamId){
 }
 function finalsFor(teamId, n=5){
   return fixturesPublicCache
-    .filter(f => f.status==='final' && (f.home===teamId||f.away===teamId))
+    .filter(f => String(f.status||'').toLowerCase()==='final' && (f.home===teamId||f.away===teamId))
     .sort((a,b)=>(b.when||b.createdAt)-(a.when||a.createdAt))
     .slice(0,n);
 }
@@ -3248,7 +3248,7 @@ function renderFixturesSched(){
   if (key==='upcoming'){
     list = list.filter(f => f.status!=='final' && (!f.when || f.when>=now));
   } else if (key==='final'){
-    list = list.filter(f => f.status==='final');
+    list = list.filter(f => String(f.status||'').toLowerCase()==='final');
   } else if (key==='mine' && meUser){
     list = list.filter(f => f.home===meUser.teamId || f.away===meUser.teamId);
   }
@@ -3555,7 +3555,7 @@ function computeGroupTablesClient(groups, fixtures){
   const merged = []
     .concat(Array.isArray(fixtures) ? fixtures : [])
     .concat(fixturesPublicCache || [])
-    .filter(f=>f.cup===CC_ID && f.status==='final');
+    .filter(f=>f.cup===CC_ID && String(f.status||'').toLowerCase()==='final');
 
   merged.forEach(f=>{
     const g = f.group || null; if(!g || !table[g]) return;
@@ -3646,7 +3646,7 @@ function renderCcFixtures(list){
     const hn = H?.name || f.home;
     const an = A?.name || f.away;
     const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const isFinal = f.status==='final';
+    const isFinal = String(f.status||'').toLowerCase()==='final';
     const scoreTxt = isFinal ? `${f.score.hs}–${f.score.as}` : 'vs';
     const scoreClass = isFinal ? 'score-final' : 'score-upcoming';
     const banner = getFixtureBanner();
@@ -4247,7 +4247,7 @@ function renderFriendliesFixtures(list){
     const H=byId(f.home), A=byId(f.away);
     const hn=H?.name||f.home; const an=A?.name||f.away;
     const whenTxt=f.when?fmtDate(f.when):'TBD';
-    const isFinal=(f.status==='final');
+    const isFinal=(String(f.status||'').toLowerCase()==='final');
     const scoreTxt=isFinal?`${f.score.hs}–${f.score.as}`:'vs';
     const scoreClass=isFinal?'score-final':'score-upcoming';
     const banner=getFixtureBanner();
@@ -4783,7 +4783,7 @@ async function computeNewsFromFixtures(list){
   });
   await Promise.all(Array.from(ids).map(id=>resolvePlayerName(id)));
 
-  const finals = list.filter(f=>f.status==='final').sort((a,b)=> (a.when||0)-(b.when||0));
+  const finals = list.filter(f=>String(f.status||'').toLowerCase()==='final').sort((a,b)=> (a.when||0)-(b.when||0));
   finals.forEach(f=>{
     const total = Number(f.score?.hs||0)+Number(f.score?.as||0);
     const diff = Math.abs(Number(f.score?.hs||0)-Number(f.score?.as||0));
