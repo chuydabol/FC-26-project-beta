@@ -1858,6 +1858,11 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     return res.status(400).json({ members: [] });
   }
 
+  const clubIdNum = Number(clubId);
+  if (!Number.isFinite(clubIdNum)) {
+    return res.status(400).json({ members: [] });
+  }
+
   try {
     const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
     let members = [];
@@ -1873,14 +1878,14 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       `SELECT player_id, club_id, name, position, vproattr
        FROM public.playercards
        WHERE club_id = $1`,
-      [clubId]
+      [clubIdNum]
     );
 
     const { rows: playerRows } = await q(
       `SELECT player_id, overall_rating, image_url
          FROM public.players
         WHERE club_id = $1`,
-      [clubId]
+      [clubIdNum]
     );
 
     const { rows: formRows } = await q(
@@ -1904,13 +1909,13 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
            FROM public.match_participants mp
            WHERE mp.match_id = pms.match_id
          ) AS scores ON true
-         WHERE pms.club_id = $1
+        WHERE pms.club_id = $1
        )
        SELECT player_id, result
          FROM ranked_results
         WHERE rn <= 5
         ORDER BY player_id, rn`,
-      [clubId]
+      [clubIdNum]
     );
 
     const cardMap = new Map(rows.map(r => [String(r.player_id), r]));
@@ -1992,7 +1997,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       try {
         await q(SQL_UPSERT_PLAYER_INFO, [
           member.playerId,
-          clubId,
+          clubIdNum,
           member.name,
           member.position || 'UNK',
           member.vproattr || null,
