@@ -1877,14 +1877,14 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     const { rows } = await q(
       `SELECT player_id, club_id, name, position, vproattr
        FROM public.playercards
-       WHERE club_id = $1`,
+       WHERE club_id::bigint = $1::bigint`,
       [clubIdNum]
     );
 
     const { rows: playerRows } = await q(
       `SELECT player_id, overall_rating, image_url
          FROM public.players
-        WHERE club_id = $1`,
+        WHERE club_id::bigint = $1::bigint`,
       [clubIdNum]
     );
 
@@ -1904,12 +1904,12 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
          JOIN public.matches m ON m.match_id = pms.match_id
          LEFT JOIN LATERAL (
            SELECT
-             MAX(CASE WHEN mp.club_id = pms.club_id THEN mp.goals END) AS goals_for,
-             MAX(CASE WHEN mp.club_id <> pms.club_id THEN mp.goals END) AS goals_against
+             MAX(CASE WHEN mp.club_id::bigint = pms.club_id::bigint THEN mp.goals END) AS goals_for,
+             MAX(CASE WHEN mp.club_id::bigint <> pms.club_id::bigint THEN mp.goals END) AS goals_against
            FROM public.match_participants mp
            WHERE mp.match_id = pms.match_id
          ) AS scores ON true
-        WHERE pms.club_id = $1
+        WHERE pms.club_id::bigint = $1::bigint
        )
        SELECT player_id, result
          FROM ranked_results
