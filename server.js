@@ -25,7 +25,7 @@ const sharp = require('sharp');
 const crypto = require('crypto');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
-const { q } = require('./services/pgwrap');
+const { q, toBigIntParam, toBigIntArray } = require('./services/pgwrap');
 const { runMigrations } = require('./services/migrate');
 const { parseVpro, tierFromStats } = require('./services/playerCards');
 const { rebuildUpclStandings } = require('./scripts/rebuildUpclStandings');
@@ -120,10 +120,10 @@ const SQL_REFRESH_PLAYER_TOTALS = `
            AVG(rating) AS rating,
            SUM(mom) AS mom
       FROM public.player_match_stats
-     WHERE player_id = $1 AND club_id = $2
+     WHERE player_id::bigint = $1::bigint AND club_id::bigint = $2::bigint
      GROUP BY player_id, club_id
   ) s
- WHERE p.player_id = $1 AND p.club_id = $2
+ WHERE p.player_id::bigint = $1::bigint AND p.club_id::bigint = $2::bigint
 `;
 
 const SQL_UPSERT_PLAYERCARD = `
@@ -900,7 +900,9 @@ async function fetchClubMatches(clubId) {
 }
 
 async function saveEaMatch(match) {
-  const matchId = String(match.matchId);
+  const matchIdParam = toBigIntParam(match?.matchId ?? match?.matchid ?? match?.id);
+  if (matchIdParam === null) return;
+  const matchId = String(matchIdParam);
   const tsMs = Number(match.timestamp) * 1000;
   if (tsMs < LEAGUE_START_MS) return;
   const clubs = match.clubs || {};
@@ -975,7 +977,7 @@ async function saveEaMatch(match) {
   }
 
   const { rowCount } = await q(SQL_INSERT_MATCH, [
-    matchId,
+    matchIdParam,
     tsMs,
     match,
     homeDivision,
@@ -984,25 +986,33 @@ async function saveEaMatch(match) {
   if (rowCount === 0) return;
 
   for (const cid of Object.keys(clubs)) {
+    const clubIdParam = toBigIntParam(cid);
+    if (clubIdParam === null) continue;
     const c = clubs[cid];
     const name = c?.details?.name || `Club ${cid}`;
     const goals = Number(c?.goals || 0);
-    const isHome = normalizedHomeFlags.has(cid)
-      ? normalizedHomeFlags.get(cid)
+    const key = String(cid);
+    const isHome = normalizedHomeFlags.has(key)
+      ? normalizedHomeFlags.get(key)
       : parseHomeIndicator(c?.details?.isHome);
-    await q(SQL_UPSERT_CLUB, [cid, name]);
-    await q(SQL_UPSERT_PARTICIPANT, [matchId, cid, isHome, goals]);
+    await q(SQL_UPSERT_CLUB, [clubIdParam, name]);
+    await q(SQL_UPSERT_PARTICIPANT, [matchIdParam, clubIdParam, isHome, goals]);
   }
 
   if (match.players) {
     for (const [cid, playerMap] of Object.entries(match.players)) {
+      const clubIdParam = toBigIntParam(cid);
+      if (clubIdParam === null) continue;
       for (const [pid, pdata] of Object.entries(playerMap)) {
+        const playerIdRaw = pdata.playerId || pdata.playerid || pid;
+        const playerIdParam = toBigIntParam(playerIdRaw);
+        if (playerIdParam === null) continue;
         const name =
           pdata.name ||
           pdata.playername ||
           pdata.proName ||
           pdata.personaName ||
-          'Player_' + (pdata.playerId || pdata.playerid || pid);
+          'Player_' + (playerIdRaw || pid);
         const pos =
           pdata.position ||
           pdata.pos ||
@@ -1022,11 +1032,18 @@ async function saveEaMatch(match) {
         const goalsconceded = Number(pdata.goalsconceded || 0);
         const rating = Number(pdata.rating || 0);
         const mom = Number(pdata.mom || 0);
-        await q(SQL_UPSERT_PLAYER_INFO, [pid, cid, name, pos, vproattr, null]);
+        await q(SQL_UPSERT_PLAYER_INFO, [
+          playerIdParam,
+          clubIdParam,
+          name,
+          pos,
+          vproattr,
+          null,
+        ]);
         const { rowCount: statInserted } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
-          matchId,
-          pid,
-          cid,
+          matchIdParam,
+          playerIdParam,
+          clubIdParam,
           null,
           goals,
           assists,
@@ -1043,11 +1060,18 @@ async function saveEaMatch(match) {
           mom,
         ]);
         if (statInserted) {
-          await q(SQL_REFRESH_PLAYER_TOTALS, [pid, cid]);
+          await q(SQL_REFRESH_PLAYER_TOTALS, [playerIdParam, clubIdParam]);
         }
         if (vproattr) {
           const stats = parseVpro(vproattr);
-          await q(SQL_UPSERT_PLAYERCARD, [pid, cid, name, pos, vproattr, stats.ovr]);
+          await q(SQL_UPSERT_PLAYERCARD, [
+            playerIdParam,
+            clubIdParam,
+            name,
+            pos,
+            vproattr,
+            stats.ovr,
+          ]);
         }
       }
     }
@@ -1070,7 +1094,8 @@ async function refreshClubMatches(clubId) {
 }
 
 async function refreshAllMatches(clubIds) {
-  const ids = clubIds && clubIds.length ? clubIds : resolveClubIds();
+  const rawIds = clubIds && clubIds.length ? clubIds : resolveClubIds();
+  const ids = toBigIntArray(rawIds);
   for (const clubId of ids) {
     await refreshClubMatches(clubId);
   }
@@ -1079,12 +1104,19 @@ async function refreshAllMatches(clubIds) {
 async function queueFriendlyMatch(match, sourceClubId) {
   if (!match || !sourceClubId) return;
   const matchIdRaw = match.matchId || match.matchid || match.id;
-  const matchId = matchIdRaw ? String(matchIdRaw) : null;
+  const matchIdParam = toBigIntParam(matchIdRaw);
+  const matchId = matchIdParam !== null
+    ? String(matchIdParam)
+    : matchIdRaw
+      ? String(matchIdRaw)
+      : null;
   if (!matchId) return;
   const tsMs =
     normalizeTimestampMs(match.timestamp || match.ts || match.matchTimestamp) || Date.now();
   const { home, away } = deriveMatchSides(match);
-  const sourceId = String(sourceClubId);
+  const sourceIdParam = toBigIntParam(sourceClubId);
+  if (sourceIdParam === null) return;
+  const sourceId = String(sourceIdParam);
   let opponentId = null;
   if (home && sourceId === String(home.clubId)) {
     opponentId = away ? String(away.clubId) : null;
@@ -1094,11 +1126,13 @@ async function queueFriendlyMatch(match, sourceClubId) {
     opponentId = String(home.clubId);
   }
   if (!opponentId) return;
+  const opponentIdParam = toBigIntParam(opponentId);
+  if (opponentIdParam === null) return;
   try {
     await q(SQL_INSERT_PENDING_MATCH, [
       matchId,
-      sourceId,
-      opponentId,
+      sourceIdParam,
+      opponentIdParam,
       tsMs,
       JSON.stringify(match),
     ]);
@@ -1121,7 +1155,8 @@ async function refreshClubFriendlies(clubId) {
 }
 
 async function refreshFriendlyMatches(clubIds) {
-  const ids = clubIds && clubIds.length ? clubIds : resolveClubIds();
+  const rawIds = clubIds && clubIds.length ? clubIds : resolveClubIds();
+  const ids = toBigIntArray(rawIds);
   for (const clubId of ids) {
     await refreshClubFriendlies(clubId);
   }
@@ -1134,8 +1169,12 @@ async function approvePendingMatch(matchId, options = {}) {
   }
   const groupName = String(options.groupName || 'Group A').trim() || 'Group A';
   const roundName = options.roundName ? String(options.roundName).trim() : null;
+  const matchIdParam = toBigIntParam(matchId);
+  if (matchIdParam === null) {
+    throw new Error('Invalid match id');
+  }
 
-  const pending = await q(SQL_SELECT_PENDING_MATCH, [String(matchId)]);
+  const pending = await q(SQL_SELECT_PENDING_MATCH, [String(matchIdParam)]);
   if (!pending.rowCount) {
     throw new Error('Pending match not found');
   }
@@ -1149,16 +1188,22 @@ async function approvePendingMatch(matchId, options = {}) {
     throw new Error('Match is missing club data');
   }
 
-  await q(SQL_UPSERT_CLUB, [home.clubId, home.name]);
-  await q(SQL_UPSERT_CLUB, [away.clubId, away.name]);
+  const homeClubIdParam = toBigIntParam(home.clubId);
+  const awayClubIdParam = toBigIntParam(away.clubId);
+  if (homeClubIdParam === null || awayClubIdParam === null) {
+    throw new Error('Invalid club id for pending match');
+  }
+
+  await q(SQL_UPSERT_CLUB, [homeClubIdParam, home.name]);
+  await q(SQL_UPSERT_CLUB, [awayClubIdParam, away.name]);
 
   const insertRes = await q(SQL_INSERT_COMPETITION_MATCH, [
     competitionId,
     groupName,
     roundName,
-    String(matchId),
-    home.clubId,
-    away.clubId,
+    String(matchIdParam),
+    homeClubIdParam,
+    awayClubIdParam,
     Number(home.goals || 0),
     Number(away.goals || 0),
     tsMs,
@@ -1172,6 +1217,11 @@ async function approvePendingMatch(matchId, options = {}) {
   for (const player of players) {
     const pid = player.playerId;
     if (!pid) continue;
+    const playerIdParam = toBigIntParam(pid);
+    const playerClubIdParam = toBigIntParam(player.clubId);
+    if (playerIdParam === null || playerClubIdParam === null) {
+      continue;
+    }
     const pdata = player.data || {};
     const name = player.name || `Player_${pid}`;
     const position = player.position || 'UNK';
@@ -1201,8 +1251,8 @@ async function approvePendingMatch(matchId, options = {}) {
     const mom = Number(pdata.mom || pdata.manOfTheMatch || 0);
 
     await q(SQL_UPSERT_PLAYER_INFO, [
-      pid,
-      player.clubId,
+      playerIdParam,
+      playerClubIdParam,
       name,
       position,
       vproattr,
@@ -1210,9 +1260,9 @@ async function approvePendingMatch(matchId, options = {}) {
     ]);
 
     const { rowCount } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
-      String(matchId),
-      pid,
-      player.clubId,
+      matchIdParam,
+      playerIdParam,
+      playerClubIdParam,
       competitionId,
       goals,
       assists,
@@ -1229,13 +1279,13 @@ async function approvePendingMatch(matchId, options = {}) {
       mom,
     ]);
     if (rowCount) {
-      await q(SQL_REFRESH_PLAYER_TOTALS, [pid, player.clubId]);
+      await q(SQL_REFRESH_PLAYER_TOTALS, [playerIdParam, playerClubIdParam]);
     }
     if (vproattr) {
       const stats = parseVpro(vproattr);
       await q(SQL_UPSERT_PLAYERCARD, [
-        pid,
-        player.clubId,
+        playerIdParam,
+        playerClubIdParam,
         name,
         position,
         vproattr,
@@ -1248,7 +1298,7 @@ async function approvePendingMatch(matchId, options = {}) {
   await q(SQL_UPSERT_COMP_STANDING, [
     competitionId,
     groupName,
-    home.clubId,
+    homeClubIdParam,
     delta.home.played,
     delta.home.wins,
     delta.home.draws,
@@ -1261,7 +1311,7 @@ async function approvePendingMatch(matchId, options = {}) {
   await q(SQL_UPSERT_COMP_STANDING, [
     competitionId,
     groupName,
-    away.clubId,
+    awayClubIdParam,
     delta.away.played,
     delta.away.wins,
     delta.away.draws,
@@ -1272,11 +1322,11 @@ async function approvePendingMatch(matchId, options = {}) {
     Number(away.goals || 0) - Number(home.goals || 0),
   ]);
 
-  await q(SQL_DELETE_PENDING_MATCH, [String(matchId)]);
+  await q(SQL_DELETE_PENDING_MATCH, [String(matchIdParam)]);
 
   return {
     competitionId,
-    matchId: String(matchId),
+    matchId: String(matchIdParam),
     home,
     away,
     groupName,
@@ -1285,7 +1335,8 @@ async function approvePendingMatch(matchId, options = {}) {
 }
 
 async function rejectPendingMatch(matchId) {
-  await q(SQL_DELETE_PENDING_MATCH, [String(matchId)]);
+  const normalized = toBigIntParam(matchId);
+  await q(SQL_DELETE_PENDING_MATCH, [normalized !== null ? String(normalized) : String(matchId)]);
 }
 
 function mapPendingMatch(row) {
@@ -1474,8 +1525,9 @@ async function ensureHiddenGemNews() {
 }
 
 async function ensureLeagueClubs(clubIds) {
-  for (const cid of new Set(clubIds)) {
-    const name = CLUB_NAMES[cid] || `Club ${cid}`;
+  const ids = toBigIntArray(clubIds);
+  for (const cid of new Set(ids)) {
+    const name = CLUB_NAMES[String(cid)] || `Club ${cid}`;
     await q(SQL_UPSERT_CLUB, [cid, name]);
   }
 }
@@ -1854,14 +1906,15 @@ app.get('/api/teams/:clubId/players', async (req, res) => {
 // Player cards for a specific club
 app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
   const { clubId } = req.params;
-  if (!/^\d+$/.test(String(clubId))) {
+  const clubIdParam = toBigIntParam(clubId);
+  if (clubIdParam === null) {
     return res.status(400).json({ members: [] });
   }
 
-  const clubIdText = String(clubId);
+  const clubIdText = String(clubIdParam);
 
   try {
-    const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubId));
+    const raw = await limit(() => eaApi.fetchClubMembersWithRetry(clubIdText));
     let members = [];
     if (Array.isArray(raw?.members)) {
       members = raw.members;
@@ -1874,15 +1927,15 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
     const { rows } = await q(
       `SELECT player_id, club_id, name, position, vproattr
        FROM public.playercards
-       WHERE club_id = $1`,
-      [clubIdText]
+       WHERE club_id::bigint = $1::bigint`,
+      [clubIdParam]
     );
 
     const { rows: playerRows } = await q(
       `SELECT player_id, overall_rating, image_url
          FROM public.players
-        WHERE club_id = $1`,
-      [clubIdText]
+        WHERE club_id::bigint = $1::bigint`,
+      [clubIdParam]
     );
 
     const { rows: formRows } = await q(
@@ -1906,13 +1959,13 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
            FROM public.match_participants mp
            WHERE mp.match_id = pms.match_id
          ) AS scores ON true
-        WHERE pms.club_id = $1
+        WHERE pms.club_id = $1::bigint
        )
        SELECT player_id, result
          FROM ranked_results
         WHERE rn <= 5
         ORDER BY player_id, rn`,
-      [clubIdText]
+      [clubIdParam]
     );
 
     const cardMap = new Map(rows.map(r => [String(r.player_id), r]));
@@ -1939,7 +1992,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
       if (existing) existing.push(result);
       else formMap.set(id, [result]);
     }
-    const clubName = CLUB_NAMES[String(clubId)] || '';
+    const clubName = CLUB_NAMES[clubIdText] || '';
 
     const membersDetailed = members.map(m => {
       const id = String(m.playerId || m.playerid || '') || null;
@@ -1973,7 +2026,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
 
       return {
         playerId: id,
-        clubId,
+        clubId: clubIdText,
         clubName,
         name: m.name || rec.name || (id ? `Player_${id}` : 'Unknown'),
         position: rec.position || m.position || '',
@@ -1991,10 +2044,12 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
 
     for (const member of membersDetailed) {
       if (!member.playerId) continue;
+      const playerIdParam = toBigIntParam(member.playerId);
+      if (playerIdParam === null) continue;
       try {
         await q(SQL_UPSERT_PLAYER_INFO, [
-          member.playerId,
-          clubIdText,
+          playerIdParam,
+          clubIdParam,
           member.name,
           member.position || 'UNK',
           member.vproattr || null,
@@ -2035,9 +2090,11 @@ app.post('/api/players/:playerId/uploadImage', (req, res) => {
   if (!requireAdminSession(req, res)) return;
 
   const { playerId } = req.params;
-  if (!/^\d+$/.test(String(playerId))) {
+  const playerIdParam = toBigIntParam(playerId);
+  if (playerIdParam === null) {
     return res.status(400).json({ error: 'Invalid player id' });
   }
+  const playerIdText = String(playerIdParam);
 
   playerImageUpload.single('image')(req, res, async uploadErr => {
     if (uploadErr) {
@@ -2052,8 +2109,8 @@ app.post('/api/players/:playerId/uploadImage', (req, res) => {
 
     try {
       const { rowCount } = await q(
-        'SELECT 1 FROM public.players WHERE player_id = $1',
-        [playerId]
+        'SELECT 1 FROM public.players WHERE player_id::bigint = $1::bigint',
+        [playerIdParam]
       );
       if (rowCount === 0) {
         return res.status(404).json({ error: 'Player not found' });
@@ -2065,13 +2122,13 @@ app.post('/api/players/:playerId/uploadImage', (req, res) => {
         .toBuffer();
 
       await fsp.mkdir(PLAYER_UPLOAD_DIR, { recursive: true });
-      const outputPath = path.join(PLAYER_UPLOAD_DIR, `${playerId}.png`);
+      const outputPath = path.join(PLAYER_UPLOAD_DIR, `${playerIdText}.png`);
       await fsp.writeFile(outputPath, processed);
 
-      const publicPath = `/uploads/players/${playerId}.png`;
+      const publicPath = `/uploads/players/${playerIdText}.png`;
       await q(
-        'UPDATE public.players SET image_url = $1 WHERE player_id = $2',
-        [publicPath, playerId]
+        'UPDATE public.players SET image_url = $1 WHERE player_id::bigint = $2::bigint',
+        [publicPath, playerIdParam]
       );
 
       res.json({ success: true, imageUrl: publicPath });
@@ -2135,11 +2192,12 @@ const SQL_LEAGUE_TEAMS = `
    WHERE club_id = ANY($1::bigint[])`;
 
 async function getUpclLeaders(clubIds) {
+  const ids = toBigIntArray(clubIds);
   const sql = `SELECT type, club_id AS "clubId", name, count
                  FROM public.upcl_leaders
                 WHERE club_id = ANY($1::bigint[])
                 ORDER BY type, count DESC, name`;
-  const { rows } = await q(sql, [clubIds]);
+  const { rows } = await q(sql, [ids]);
   return {
     scorers: rows
       .filter(r => r.type === 'scorer')
@@ -2151,7 +2209,7 @@ async function getUpclLeaders(clubIds) {
 }
 
 app.get('/api/league', async (_req, res) => {
-  const clubIds = resolveClubIds();
+  const clubIds = toBigIntArray(resolveClubIds());
   try {
     const { rows } = await q(SQL_LEAGUE_STANDINGS, [clubIds]);
     res.json({ standings: rows });
@@ -2162,7 +2220,7 @@ app.get('/api/league', async (_req, res) => {
 });
 
 app.get('/api/league/leaders', async (_req, res) => {
-  const clubIds = resolveClubIds();
+  const clubIds = toBigIntArray(resolveClubIds());
   const scorerSql = `
     SELECT pms.club_id, p.name, SUM(pms.goals) AS count
       FROM public.player_match_stats pms
@@ -2197,7 +2255,7 @@ app.get('/api/league/leaders', async (_req, res) => {
 });
 
 app.get('/api/leagues/:leagueId', async (req, res) => {
-  const clubIds = clubsForLeague(req.params.leagueId);
+  const clubIds = toBigIntArray(clubsForLeague(req.params.leagueId));
   if (!clubIds.length) {
     return res.status(404).json({ error: 'Unknown league' });
   }
@@ -2217,7 +2275,7 @@ app.get('/api/leagues/:leagueId', async (req, res) => {
 });
 
 app.get('/api/leagues/:leagueId/leaders', async (req, res) => {
-  const clubIds = clubsForLeague(req.params.leagueId);
+  const clubIds = toBigIntArray(clubsForLeague(req.params.leagueId));
   if (!clubIds.length) {
     return res.status(404).json({ error: 'Unknown league' });
   }
