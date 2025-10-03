@@ -50,9 +50,9 @@ const SQL_RECENT_MATCHES = `
          away.goals    AS away_goals
     FROM public.matches m
     JOIN public.match_participants home
-      ON home.match_id = m.match_id AND home.is_home = true
+      ON home.match_id::bigint = m.match_id::bigint AND home.is_home = true
     JOIN public.match_participants away
-      ON away.match_id = m.match_id AND away.is_home = false
+      ON away.match_id::bigint = m.match_id::bigint AND away.is_home = false
    WHERE m.ts_ms >= $1
    ORDER BY m.ts_ms DESC
    LIMIT 400
@@ -72,8 +72,8 @@ const SQL_RECENT_PLAYER_STATS = `
          p.name,
          p.position
     FROM public.player_match_stats pms
-    JOIN public.matches m ON m.match_id = pms.match_id
-    JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
+    JOIN public.matches m ON m.match_id::bigint = pms.match_id::bigint
+    JOIN public.players p ON p.player_id::bigint = pms.player_id::bigint AND p.club_id::bigint = pms.club_id::bigint
    WHERE m.ts_ms >= $1
 `;
 

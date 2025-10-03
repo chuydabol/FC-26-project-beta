@@ -1841,8 +1841,8 @@ app.get('/api/matches', async (_req, res) => {
           )
         ) AS clubs_obj
        FROM public.matches m
-       JOIN public.match_participants mp ON mp.match_id = m.match_id
-       JOIN public.clubs c ON c.club_id = mp.club_id
+       JOIN public.match_participants mp ON mp.match_id::bigint = m.match_id::bigint
+       JOIN public.clubs c ON c.club_id = mp.club_id::bigint
        GROUP BY m.match_id, m.ts_ms
        ORDER BY m.ts_ms DESC
        LIMIT 100`;
@@ -1951,15 +1951,15 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
             ELSE 'D'
            END AS result
          FROM public.player_match_stats pms
-         JOIN public.matches m ON m.match_id = pms.match_id
+         JOIN public.matches m ON m.match_id::bigint = pms.match_id::bigint
          LEFT JOIN LATERAL (
            SELECT
-            MAX(CASE WHEN mp.club_id = pms.club_id THEN mp.goals END) AS goals_for,
-            MAX(CASE WHEN mp.club_id <> pms.club_id THEN mp.goals END) AS goals_against
+            MAX(CASE WHEN mp.club_id::bigint = pms.club_id::bigint THEN mp.goals END) AS goals_for,
+            MAX(CASE WHEN mp.club_id::bigint <> pms.club_id::bigint THEN mp.goals END) AS goals_against
            FROM public.match_participants mp
-           WHERE mp.match_id = pms.match_id
+           WHERE mp.match_id::bigint = pms.match_id::bigint
          ) AS scores ON true
-        WHERE pms.club_id = $1::bigint
+        WHERE pms.club_id::bigint = $1::bigint
        )
        SELECT player_id, result
          FROM ranked_results
@@ -2222,21 +2222,21 @@ app.get('/api/league', async (_req, res) => {
 app.get('/api/league/leaders', async (_req, res) => {
   const clubIds = toBigIntArray(resolveClubIds());
   const scorerSql = `
-    SELECT pms.club_id, p.name, SUM(pms.goals) AS count
+    SELECT pms.club_id::bigint AS club_id, p.name, SUM(pms.goals) AS count
       FROM public.player_match_stats pms
-      JOIN public.matches m ON m.match_id = pms.match_id
-      JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1::bigint[])
-     GROUP BY pms.club_id, p.name
+      JOIN public.matches m ON m.match_id::bigint = pms.match_id::bigint
+      JOIN public.players p ON p.player_id::bigint = pms.player_id::bigint AND p.club_id::bigint = pms.club_id::bigint
+     WHERE pms.club_id::bigint = ANY($1::bigint[])
+     GROUP BY club_id, p.name
      ORDER BY count DESC, p.name
      LIMIT 10`;
   const assisterSql = `
-    SELECT pms.club_id, p.name, SUM(pms.assists) AS count
+    SELECT pms.club_id::bigint AS club_id, p.name, SUM(pms.assists) AS count
       FROM public.player_match_stats pms
-      JOIN public.matches m ON m.match_id = pms.match_id
-      JOIN public.players p ON p.player_id = pms.player_id AND p.club_id = pms.club_id
-     WHERE pms.club_id = ANY($1::bigint[])
-     GROUP BY pms.club_id, p.name
+      JOIN public.matches m ON m.match_id::bigint = pms.match_id::bigint
+      JOIN public.players p ON p.player_id::bigint = pms.player_id::bigint AND p.club_id::bigint = pms.club_id::bigint
+     WHERE pms.club_id::bigint = ANY($1::bigint[])
+     GROUP BY club_id, p.name
      ORDER BY count DESC, p.name
      LIMIT 10`;
   try {

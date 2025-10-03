@@ -2,15 +2,15 @@ const { q } = require('../services/pgwrap');
 
 const SQL_LEADERS = `
   WITH league_players AS (
-    SELECT pms.club_id,
+    SELECT pms.club_id::bigint AS club_id,
            p.name,
            SUM(pms.goals)   AS goals,
            SUM(pms.assists) AS assists
       FROM public.player_match_stats pms
-      JOIN public.matches m ON m.match_id = pms.match_id
-      JOIN public.players p ON p.player_id = pms.player_id
-      JOIN public.upcl_standings s ON s.club_id = pms.club_id
-     GROUP BY pms.club_id, pms.player_id, p.name
+      JOIN public.matches m ON m.match_id::bigint = pms.match_id::bigint
+      JOIN public.players p ON p.player_id::bigint = pms.player_id::bigint
+      JOIN public.upcl_standings s ON s.club_id::bigint = pms.club_id::bigint
+      GROUP BY pms.club_id::bigint, pms.player_id::bigint, p.name
   ),
   scorers AS (
     SELECT 'scorer'::text AS type,
