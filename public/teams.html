@@ -2617,6 +2617,38 @@ function normalizeFixtures(list){
   });
 }
 
+function convertMatchRecordToFixture(match){
+  if (!match) return null;
+  const clubs = match.clubs || match.clubs_obj;
+  const entries = Object.entries(clubs || {});
+  if (entries.length < 2) return null;
+  const [homeIdRaw, homeData] = entries[0];
+  const [awayIdRaw, awayData] = entries[1];
+  const homeId = String(homeIdRaw);
+  const awayId = String(awayIdRaw);
+  const when = match.timestamp !== undefined && match.timestamp !== null
+    ? Number(match.timestamp)
+    : match.timestamp;
+  return {
+    matchId: match.matchId !== undefined && match.matchId !== null ? String(match.matchId) : null,
+    when,
+    createdAt: when,
+    home: homeId,
+    away: awayId,
+    status: 'final',
+    score: {
+      hs: Number(homeData?.goals ?? homeData?.score?.hs ?? 0),
+      as: Number(awayData?.goals ?? awayData?.score?.as ?? 0)
+    }
+  };
+}
+
+function convertMatchesToFixtures(list){
+  return (Array.isArray(list)?list:[])
+    .map(convertMatchRecordToFixture)
+    .filter(Boolean);
+}
+
 // api
 async function apiGet(p){ const r = await fetch(API_BASE+p,{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
 async function apiPost(p, body){ const r = await fetch(API_BASE+p,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(body||{})}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); }
@@ -3840,10 +3872,34 @@ async function loadSquad(clubId){
 const fixturesPublicList = document.getElementById('fixturesPublicList');
 
 async function refreshFixturesPublic(){
-  try {
-    const d = await apiGet('/api/cup/fixtures?cup=UPCL');
-    fixturesPublicCache = normalizeFixtures(d.fixtures);
-  } catch { fixturesPublicCache = []; }
+  const [cupResult, matchesResult] = await Promise.allSettled([
+    apiGet('/api/cup/fixtures?cup=UPCL'),
+    apiGet('/api/matches')
+  ]);
+
+  const cupFixtures = cupResult.status === 'fulfilled'
+    ? normalizeFixtures(cupResult.value?.fixtures)
+    : [];
+  const matchFixtures = matchesResult.status === 'fulfilled'
+    ? convertMatchesToFixtures(matchesResult.value?.matches)
+    : [];
+
+  const seenMatchIds = new Set();
+  const merged = [];
+  const addFixture = (fixture) => {
+    if (!fixture) return;
+    const key = fixture.matchId ? String(fixture.matchId) : null;
+    if (key){
+      if (seenMatchIds.has(key)) return;
+      seenMatchIds.add(key);
+    }
+    merged.push(fixture);
+  };
+
+  cupFixtures.forEach(addFixture);
+  matchFixtures.forEach(addFixture);
+
+  fixturesPublicCache = merged;
 }
 function renderFixturesPublic(){
   const list = fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
