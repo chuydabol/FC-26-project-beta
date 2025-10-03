@@ -1072,20 +1072,29 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .lineup-panel{max-height:0;overflow:hidden;transition:max-height .35s ease;}
 .lineup-panel.open{padding-bottom:4px;}
 .lineup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;padding:0 22px 22px;}
-.lineup-team{display:flex;flex-direction:column;gap:12px;}
+.lineup-team{display:flex;flex-direction:column;gap:16px;}
 .lineup-team-header{display:flex;justify-content:space-between;align-items:center;gap:12px;}
 .lineup-team-name{font-size:14px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#f8fafc;}
 .lineup-formation{font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);}
-.lineup-rows{display:flex;flex-direction:column;gap:12px;}
-.lineup-row{display:flex;flex-direction:column;gap:10px;}
-.lineup-role{font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-align:center;}
-.lineup-row-slots{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;}
-.lineup-slot{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:72px;}
-.player-circle{width:52px;height:52px;border-radius:50%;background:rgba(15,23,42,0.85);border:2px solid rgba(94,234,212,0.3);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#f8fafc;letter-spacing:0.08em;}
-.lineup-slot.placeholder .player-circle{border-style:dashed;border-color:rgba(148,163,184,0.35);background:rgba(15,23,42,0.4);color:var(--muted);}
-.player-name{font-size:13px;color:#f8fafc;max-width:100px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.player-pos{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);}
+.lineup-pitch{position:relative;display:flex;flex-direction:column;gap:clamp(14px,3vw,28px);padding:28px clamp(16px,4vw,32px);border-radius:20px;background:linear-gradient(160deg,#0f6f2a,#075a20);box-shadow:inset 0 0 0 1px rgba(15,118,110,0.4),inset 0 0 36px rgba(0,0,0,0.45);overflow:hidden;min-height:260px;animation:pitchFadeIn .45s ease both;}
+.lineup-pitch::before{content:"";position:absolute;inset:8px;border:2px solid rgba(226,232,240,0.18);border-radius:18px;pointer-events:none;box-shadow:0 0 0 1px rgba(15,118,110,0.35),inset 0 0 0 1px rgba(15,118,110,0.25);}
+.lineup-pitch::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(148,255,200,0.08)0,rgba(148,255,200,0.08)6%,transparent 6%,transparent 12%);opacity:0.28;pointer-events:none;}
+.pitch-row{position:relative;display:flex;align-items:center;gap:16px;padding:0 clamp(4px,2vw,16px);}
+.pitch-row-label{flex:0 0 auto;min-width:48px;text-align:center;font-size:11px;letter-spacing:0.28em;text-transform:uppercase;color:rgba(226,232,240,0.75);font-weight:600;}
+.pitch-row-slots{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:clamp(12px,3vw,22px);justify-items:center;align-items:flex-start;}
+.pitch-row--goalkeeper .pitch-row-slots{grid-template-columns:repeat(1,minmax(72px,120px));justify-content:center;justify-items:center;}
+.pitch-token{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:72px;transition:transform .28s ease,box-shadow .28s ease,opacity .28s ease;}
+.pitch-token:not(.placeholder):hover{transform:translateY(-4px);box-shadow:0 12px 24px rgba(0,0,0,0.35);}
+.player-circle{width:60px;height:60px;border-radius:50%;background:#f8fafc;color:#0f172a;font-weight:800;font-size:18px;letter-spacing:0.08em;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,0.35);border:3px solid rgba(15,118,110,0.55);transition:transform .28s ease,box-shadow .28s ease;background-image:radial-gradient(circle at 30% 30%,rgba(255,255,255,0.9),rgba(209,250,229,0.65));}
+.pitch-token.placeholder .player-circle{background:rgba(15,23,42,0.25);border-style:dashed;border-color:rgba(226,232,240,0.25);color:rgba(226,232,240,0.4);box-shadow:none;background-image:none;}
+.pitch-token.placeholder .player-name{color:rgba(226,232,240,0.45);}
+.pitch-token .player-name{font-size:13px;font-weight:500;color:#f8fafc;max-width:110px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,0.35);}
+.pitch-row--goalkeeper .pitch-token .player-circle{width:68px;height:68px;border-width:3px;}
+.pitch-row--goalkeeper .pitch-token .player-name{font-size:12px;letter-spacing:0.12em;text-transform:uppercase;}
+.pitch-row::after{content:"";position:absolute;left:50%;transform:translateX(-50%);top:-8px;width:60%;height:1px;background:rgba(226,232,240,0.12);}
+.pitch-row:first-child::after{display:none;}
 .lineup-empty{padding:12px;border-radius:14px;background:rgba(15,23,42,0.55);text-align:center;}
+@keyframes pitchFadeIn{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
 
 /* Results modal (sheet editor) */
 .modal{position:fixed;inset:0;background:rgba(3,6,12,0.85);display:none;align-items:center;justify-content:center;z-index:1000}
@@ -4277,52 +4286,183 @@ function renderLineupTeam(teamName, lineup){
       </div>
     `;
   }
-  const players = lineup.players || { defenders: [], midfielders: [], forwards: [] };
-  const layout = lineup.layout || { defenders: players.defenders?.length || 0, midfielders: players.midfielders?.length || 0, forwards: players.forwards?.length || 0 };
+  const roles = normalizeLineupRoles(lineup);
+  const defenderCount = roles.defenders.length;
+  const midfielderCount = roles.midfielders.length;
+  const forwardCount = roles.forwards.length;
+  const formationLabel = (defenderCount || midfielderCount || forwardCount)
+    ? `${defenderCount}-${midfielderCount}-${forwardCount}`
+    : String(lineup.formation || '').trim();
+  const layout = calculatePitchSlotLayout(defenderCount, midfielderCount, forwardCount);
   return `
     <div class="lineup-team">
       <div class="lineup-team-header">
         <span class="lineup-team-name">${escapeHtml(teamName)}</span>
-        <span class="lineup-formation">${escapeHtml(lineup.formation || '')}</span>
+        <span class="lineup-formation">${escapeHtml(formationLabel || lineup.formation || '')}</span>
       </div>
-      <div class="lineup-rows">
-        ${renderLineupRow('Defenders', players.defenders || [], layout.defenders)}
-        ${renderLineupRow('Midfielders', players.midfielders || [], layout.midfielders)}
-        ${renderLineupRow('Forwards', players.forwards || [], layout.forwards)}
+      <div class="lineup-pitch">
+        ${renderPitchRow('Forwards', roles.forwards, layout.forwards, 'forwards')}
+        ${renderPitchRow('Midfielders', roles.midfielders, layout.midfielders, 'midfielders')}
+        ${renderPitchRow('Defenders', roles.defenders, layout.defenders, 'defenders')}
+        ${renderPitchRow('Goalkeeper', roles.goalkeepers.slice(0, 1), 1, 'goalkeeper', roles.goalkeepers.length ? 'Empty Slot' : 'No Keeper')}
       </div>
     </div>
   `;
 }
 
-function renderLineupRow(label, players, slotCount){
+function renderPitchRow(label, players, slotCount, role, placeholderLabel){
   const list = Array.isArray(players) ? players : [];
-  const count = Math.max(slotCount || 0, list.length);
+  const sanitizedRole = String(role || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '') || 'slot';
+  const count = Math.max(Number(slotCount) || 0, list.length, 1);
   const items = [];
   for (let i = 0; i < count; i++){
     const player = list[i];
-    if (player){
-      items.push(`
-        <div class="lineup-slot">
-          <div class="player-circle" title="${escapeAttr(player.position || '')}">${escapeHtml(initialsFromName(player.name || player.playerId || '?'))}</div>
-          <div class="player-name" title="${escapeAttr(player.name || player.playerId || 'Unknown')}">${escapeHtml(player.name || player.playerId || 'Unknown')}</div>
-          <div class="player-pos">${escapeHtml(player.position || '')}</div>
-        </div>
-      `);
-    } else {
-      items.push(`
-        <div class="lineup-slot placeholder">
-          <div class="player-circle"></div>
-          <div class="player-name muted">Empty</div>
-        </div>
-      `);
-    }
+    items.push(renderPitchToken(player, sanitizedRole, placeholderLabel));
   }
   return `
-    <div class="lineup-row">
-      <div class="lineup-role">${escapeHtml(label)}</div>
-      <div class="lineup-row-slots">${items.join('')}</div>
+    <div class="pitch-row pitch-row--${sanitizeClassName(sanitizedRole)}">
+      <div class="pitch-row-label">${escapeHtml(label)}</div>
+      <div class="pitch-row-slots">${items.join('')}</div>
     </div>
   `;
+}
+
+function renderPitchToken(player, role, placeholderLabel){
+  const label = placeholderLabel || 'Empty Slot';
+  if (player){
+    return `
+      <div class="pitch-token" data-role="${escapeAttr(role)}">
+        <div class="player-circle" title="${escapeAttr(player.position || '')}">${escapeHtml(tokenLabelForPlayer(player))}</div>
+        <div class="player-name" title="${escapeAttr(player.name || player.playerId || 'Unknown')}">${escapeHtml(player.name || player.playerId || 'Unknown')}</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="pitch-token placeholder" data-role="${escapeAttr(role)}">
+      <div class="player-circle"></div>
+      <div class="player-name">${escapeHtml(label)}</div>
+    </div>
+  `;
+}
+
+function sanitizeClassName(value){
+  const str = String(value || '').trim().toLowerCase();
+  return str.replace(/[^a-z0-9-]/g, '') || 'slot';
+}
+
+function tokenLabelForPlayer(player){
+  if (!player) return '?';
+  const possibleNumbers = [player.shirtNumber, player.shirt, player.jerseyNumber, player.number, player.no];
+  for (const value of possibleNumbers){
+    if (value !== undefined && value !== null){
+      const str = String(value).trim();
+      if (str){
+        return str.toUpperCase();
+      }
+    }
+  }
+  return initialsFromName(player.name || player.playerId || '?');
+}
+
+function normalizeLineupRoles(lineup){
+  const source = lineup?.players || {};
+  const goalkeepers = [];
+  const defenders = extractRoleList(source.defenders, goalkeepers);
+  const midfielders = extractRoleList(source.midfielders, goalkeepers);
+  const forwards = extractRoleList(source.forwards, goalkeepers);
+  if (Array.isArray(source.goalkeepers)){
+    source.goalkeepers.forEach(player => {
+      if (player) goalkeepers.push(player);
+    });
+  }
+  if (!goalkeepers.length && lineup?.goalkeeper){
+    const keeper = lineup.goalkeeper;
+    goalkeepers.push({
+      playerId: keeper.playerId !== undefined && keeper.playerId !== null ? String(keeper.playerId) : '',
+      name: keeper.name || keeper.playerId || 'Goalkeeper',
+      position: keeper.position || 'GK',
+    });
+  }
+  return { goalkeepers, defenders, midfielders, forwards };
+}
+
+function extractRoleList(list, goalkeepers){
+  const arr = Array.isArray(list) ? list : [];
+  const out = [];
+  for (const player of arr){
+    if (!player) continue;
+    const position = typeof player.position === 'string' ? player.position : '';
+    if (isGoalkeeperPosition(position)){
+      goalkeepers.push(player);
+    } else {
+      out.push(player);
+    }
+  }
+  return out;
+}
+
+function isGoalkeeperPosition(position){
+  const code = typeof position === 'string' ? position.trim().toUpperCase() : '';
+  if (!code) return false;
+  return code === 'GK' || code === 'GOALKEEPER' || code === 'KEEPER' || code === 'GOALIE';
+}
+
+const PITCH_FORMATIONS_FIVE_A_SIDE = [
+  { formation: '2-2-1', counts: { defenders: 2, midfielders: 2, forwards: 1 } },
+  { formation: '1-3-1', counts: { defenders: 1, midfielders: 3, forwards: 1 } },
+  { formation: '3-1-1', counts: { defenders: 3, midfielders: 1, forwards: 1 } },
+  { formation: '2-1-2', counts: { defenders: 2, midfielders: 1, forwards: 2 } },
+  { formation: '1-2-2', counts: { defenders: 1, midfielders: 2, forwards: 2 } },
+];
+
+const PITCH_FORMATIONS_ELEVEN_A_SIDE = [
+  { formation: '4-3-3', counts: { defenders: 4, midfielders: 3, forwards: 3 } },
+  { formation: '4-4-2', counts: { defenders: 4, midfielders: 4, forwards: 2 } },
+  { formation: '4-5-1', counts: { defenders: 4, midfielders: 5, forwards: 1 } },
+  { formation: '3-5-2', counts: { defenders: 3, midfielders: 5, forwards: 2 } },
+  { formation: '3-4-3', counts: { defenders: 3, midfielders: 4, forwards: 3 } },
+  { formation: '5-3-2', counts: { defenders: 5, midfielders: 3, forwards: 2 } },
+  { formation: '5-4-1', counts: { defenders: 5, midfielders: 4, forwards: 1 } },
+  { formation: '4-2-4', counts: { defenders: 4, midfielders: 2, forwards: 4 } },
+  { formation: '3-6-1', counts: { defenders: 3, midfielders: 6, forwards: 1 } },
+];
+
+function calculatePitchSlotLayout(defenders, midfielders, forwards){
+  const totalOutfield = Math.max(0, Number(defenders) || 0) + Math.max(0, Number(midfielders) || 0) + Math.max(0, Number(forwards) || 0);
+  const hasPlayers = totalOutfield > 0;
+  const pool = hasPlayers && totalOutfield <= 5 ? PITCH_FORMATIONS_FIVE_A_SIDE : PITCH_FORMATIONS_ELEVEN_A_SIDE;
+  let best = pool[0];
+  let bestScore = Infinity;
+  for (const option of pool){
+    const counts = option.counts;
+    const diff =
+      Math.abs((counts.defenders || 0) - defenders) +
+      Math.abs((counts.midfielders || 0) - midfielders) +
+      Math.abs((counts.forwards || 0) - forwards);
+    const optionTotal = (counts.defenders || 0) + (counts.midfielders || 0) + (counts.forwards || 0);
+    const totalDiff = Math.abs(optionTotal - totalOutfield);
+    const score = diff + totalDiff * 0.5;
+    if (score < bestScore){
+      best = option;
+      bestScore = score;
+    }
+  }
+  const layout = {
+    defenders: Math.max((best?.counts?.defenders || 0), defenders, 1),
+    midfielders: Math.max((best?.counts?.midfielders || 0), midfielders, 1),
+    forwards: Math.max((best?.counts?.forwards || 0), forwards, 1),
+  };
+  const targetTotal = 10;
+  let slots = layout.defenders + layout.midfielders + layout.forwards;
+  const cycle = ['midfielders', 'defenders', 'forwards'];
+  let idx = 0;
+  while (slots < targetTotal){
+    const key = cycle[idx % cycle.length];
+    layout[key] += 1;
+    slots += 1;
+    idx += 1;
+  }
+  return layout;
 }
 
 function initialsFromName(name){
