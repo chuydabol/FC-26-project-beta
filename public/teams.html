@@ -1005,16 +1005,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .score-pill.score-final{color:var(--gold);border-color:rgba(212,175,55,0.45);}
 .score-pill.score-upcoming{color:rgba(45,212,191,0.95);border-color:rgba(45,212,191,0.35);}
 
-.match-card{display:flex;flex-direction:column;gap:6px;font-size:16px;padding:0;}
-.match-card.glow-card{padding:18px;}
-.match-card small{color:var(--muted);}
-.match-card .match-line{display:flex;align-items:center;flex-wrap:wrap;gap:6px;justify-content:center;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;}
-.match-card .club{color:#f6f9ff;}
-.match-card .score{font-weight:800;color:rgba(45,212,191,0.95);font-size:20px;}
-.match-card .score.score-gold{color:var(--gold);}
-.match-card .score.score-silver{color:var(--silver);}
-.match-card .score-pill{margin:0 8px;}
-
 /* Fixture accordion */
 .fixture-card{padding:0;overflow:hidden;}
 .fixture-card.glow-card{padding:0;}
@@ -1757,7 +1747,6 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   <!-- FIXTURES (PUBLIC) -->
   <section id="fixtures-public" class="tab-content space-y-6 p-2 sm:p-4 md:p-8" style="display:none">
     <h2>Fixtures</h2>
-    <div id="fixtures" class="fx-list" style="margin-top:10px"></div>
     <div id="fixturesPublicList" class="fx-list" style="margin-top:10px"></div>
   </section>
 
@@ -3849,46 +3838,6 @@ async function loadSquad(clubId){
 //   FIXTURES — PUBLIC
 // =======================
 const fixturesPublicList = document.getElementById('fixturesPublicList');
-
-async function refreshMatches() {
-  try {
-    const res = await fetch('/api/matches');
-    const { matches } = await res.json();
-    renderMatches(matches);
-  } catch (err) {
-    console.error('Failed to load matches', err);
-  }
-}
-
-function renderMatches(matches) {
-  const container = document.querySelector('#fixtures');
-  container.innerHTML = '';
-  if (!Array.isArray(matches) || !matches.length) {
-    container.innerHTML = '<p>No matches yet.</p>';
-    return;
-  }
-  matches.forEach(m => {
-    const teams = Object.values(m.clubs || {}).map(c => ({
-      name: c.details?.name || '',
-      score: Number(c.goals ?? c.score ?? 0)
-    }));
-    if (teams.length < 2) return;
-    const card = document.createElement('div');
-    card.className = 'match-card glow-card glow-green';
-    const status = String(m.status || '').toLowerCase();
-    const isFinal = status === 'final';
-    const homeClass = !isFinal ? 'score score-silver' : (teams[0].score === teams[1].score ? 'score score-silver' : (teams[0].score > teams[1].score ? 'score score-gold' : 'score'));
-    const awayClass = !isFinal ? 'score score-silver' : (teams[1].score === teams[0].score ? 'score score-silver' : (teams[1].score > teams[0].score ? 'score score-gold' : 'score'));
-    const scoreMarkup = isFinal
-      ? `<span class="${homeClass}">${teams[0].score}</span><span class="muted">-</span><span class="${awayClass}">${teams[1].score}</span>`
-      : `<span class="score-pill score-upcoming">vs</span>`;
-    card.innerHTML = `
-      <div class="match-line"><span class="club">${escapeHtml(teams[0].name)}</span>${scoreMarkup}<span class="club">${escapeHtml(teams[1].name)}</span></div>
-      <small>${fmtDate(m.timestamp)}</small>
-    `;
-    container.appendChild(card);
-  });
-}
 
 async function refreshFixturesPublic(){
   try {
@@ -6465,9 +6414,6 @@ async function init(){
       history.replaceState(null, '', nextUrl);
     }catch{}
   }
-
-  await refreshMatches();
-  setInterval(async () => { await refreshMatches(); }, 10*60*1000);
 
   await refreshFixturesPublic(); renderFixturesPublic();
   if (isAdmin){ await refreshFixturesSched(); renderFixturesSched(); }
