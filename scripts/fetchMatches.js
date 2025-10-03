@@ -1,5 +1,6 @@
 const eaApi = require('../services/eaApi');
 const { pool } = require('../db');
+const { toBigIntParam } = require('../services/pgwrap');
 
 // Only ingest matches on or after the league start date
 const START_MS = process.env.START_DATE
@@ -21,7 +22,9 @@ async function main() {
   for (const clubId of Object.keys(data || {})) {
     const matches = Array.isArray(data[clubId]) ? data[clubId] : [];
     for (const m of matches) {
-      const matchId = String(m.matchId);
+      const matchIdParam = toBigIntParam(m.matchId || m.matchid || m.id);
+      if (matchIdParam === null) continue;
+      const matchId = String(matchIdParam);
       const tsMs = Number(m.timestamp) * 1000;
       if (START_MS && tsMs < START_MS) continue;
       try {
@@ -29,7 +32,7 @@ async function main() {
           `INSERT INTO public.matches (match_id, ts_ms, raw)
            VALUES ($1,$2,$3::jsonb)
            ON CONFLICT (match_id) DO NOTHING`,
-          [matchId, tsMs, m]
+          [matchIdParam, tsMs, m]
         );
         if (rowCount) {
           const entries = Object.entries(m.clubs || {});
@@ -38,18 +41,26 @@ async function main() {
             const homeId = BigInt(idA) < BigInt(idB) ? idA : idB;
             const [homeData, awayData] = homeId === idA ? [clubA, clubB] : [clubB, clubA];
             const awayId = homeId === idA ? idB : idA;
+            const homeIdParam = toBigIntParam(homeId);
+            const awayIdParam = toBigIntParam(awayId);
+            if (homeIdParam === null || awayIdParam === null) continue;
             const homeGoals = parseInt(homeData?.goals ?? homeData?.score ?? '0', 10);
             const awayGoals = parseInt(awayData?.goals ?? awayData?.score ?? '0', 10);
             await pool.query(
               `INSERT INTO public.match_participants (match_id, club_id, is_home, goals)
                VALUES ($1,$2,TRUE,$3),($1,$4,FALSE,$5)
                ON CONFLICT (match_id, club_id) DO UPDATE SET goals = EXCLUDED.goals`,
-              [matchId, homeId, homeGoals, awayId, awayGoals]
+              [matchIdParam, homeIdParam, homeGoals, awayIdParam, awayGoals]
             );
             await pool.query(
               `INSERT INTO public.clubs (club_id, club_name) VALUES ($1,$2),($3,$4)
                ON CONFLICT (club_id) DO UPDATE SET club_name = EXCLUDED.club_name`,
-              [idA, clubA?.details?.name || '', idB, clubB?.details?.name || '']
+              [
+                homeIdParam,
+                homeData?.details?.name || '',
+                awayIdParam,
+                awayData?.details?.name || ''
+              ]
             );
           }
           inserted += rowCount;
