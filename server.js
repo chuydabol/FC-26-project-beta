@@ -706,6 +706,180 @@ function safeJsonParse(value) {
   }
 }
 
+const DEFENDER_POSITIONS = new Set(['CB', 'LB', 'RB', 'LWB', 'RWB', 'GK']);
+const MIDFIELDER_POSITIONS = new Set(['CM', 'CDM', 'CAM', 'LM', 'RM']);
+const FORWARD_POSITIONS = new Set(['ST', 'LW', 'RW', 'CF']);
+
+const POSITION_SORT_ORDER = {
+  GK: 0,
+  CB: 1,
+  LB: 2,
+  RB: 3,
+  LWB: 4,
+  RWB: 5,
+  CDM: 6,
+  CM: 7,
+  CAM: 8,
+  LM: 9,
+  RM: 10,
+  LW: 11,
+  RW: 12,
+  CF: 13,
+  ST: 14,
+};
+
+const FIVE_A_SIDE_FORMATIONS = [
+  { formation: '2-2-1', counts: { defenders: 2, midfielders: 2, forwards: 1 } },
+  { formation: '1-3-1', counts: { defenders: 1, midfielders: 3, forwards: 1 } },
+  { formation: '3-1-1', counts: { defenders: 3, midfielders: 1, forwards: 1 } },
+  { formation: '2-1-2', counts: { defenders: 2, midfielders: 1, forwards: 2 } },
+  { formation: '1-2-2', counts: { defenders: 1, midfielders: 2, forwards: 2 } },
+];
+
+const ELEVEN_A_SIDE_FORMATIONS = [
+  { formation: '4-3-3', counts: { defenders: 4, midfielders: 3, forwards: 3 } },
+  { formation: '4-4-2', counts: { defenders: 4, midfielders: 4, forwards: 2 } },
+  { formation: '4-5-1', counts: { defenders: 4, midfielders: 5, forwards: 1 } },
+  { formation: '3-5-2', counts: { defenders: 3, midfielders: 5, forwards: 2 } },
+  { formation: '3-4-3', counts: { defenders: 3, midfielders: 4, forwards: 3 } },
+  { formation: '5-3-2', counts: { defenders: 5, midfielders: 3, forwards: 2 } },
+  { formation: '5-4-1', counts: { defenders: 5, midfielders: 4, forwards: 1 } },
+  { formation: '4-2-4', counts: { defenders: 4, midfielders: 2, forwards: 4 } },
+  { formation: '3-6-1', counts: { defenders: 3, midfielders: 6, forwards: 1 } },
+];
+
+function mapPositionToRole(position) {
+  const code = typeof position === 'string' ? position.toUpperCase().trim() : '';
+  if (DEFENDER_POSITIONS.has(code)) return 'defenders';
+  if (MIDFIELDER_POSITIONS.has(code)) return 'midfielders';
+  if (FORWARD_POSITIONS.has(code)) return 'forwards';
+  return 'midfielders';
+}
+
+function guessFormationLayout(defenders, midfielders, forwards) {
+  const total = defenders + midfielders + forwards;
+  const pool = total <= 5 ? FIVE_A_SIDE_FORMATIONS : ELEVEN_A_SIDE_FORMATIONS;
+  let best = null;
+  let bestScore = Infinity;
+  for (const option of pool) {
+    const counts = option.counts;
+    const sum = counts.defenders + counts.midfielders + counts.forwards;
+    const diff =
+      Math.abs((counts.defenders || 0) - defenders) +
+      Math.abs((counts.midfielders || 0) - midfielders) +
+      Math.abs((counts.forwards || 0) - forwards);
+    const totalDiff = Math.abs(sum - total);
+    const score = diff + totalDiff * 0.5;
+    if (score < bestScore) {
+      best = option;
+      bestScore = score;
+    }
+  }
+  if (!best) {
+    best = pool[0];
+  }
+  const desiredTotal = total <= 5 ? 5 : 11;
+  const layout = {
+    defenders: Math.max(best.counts.defenders, defenders),
+    midfielders: Math.max(best.counts.midfielders, midfielders),
+    forwards: Math.max(best.counts.forwards, forwards),
+  };
+  let slots = layout.defenders + layout.midfielders + layout.forwards;
+  const order = ['midfielders', 'defenders', 'forwards'];
+  let idx = 0;
+  while (slots < desiredTotal) {
+    const key = order[idx % order.length];
+    layout[key] += 1;
+    slots += 1;
+    idx += 1;
+  }
+  return {
+    formation: `${layout.defenders}-${layout.midfielders}-${layout.forwards}`,
+    layout,
+  };
+}
+
+function sortLineupPlayers(a, b) {
+  const posA = typeof a.position === 'string' ? a.position.toUpperCase() : '';
+  const posB = typeof b.position === 'string' ? b.position.toUpperCase() : '';
+  const rankA = POSITION_SORT_ORDER[posA] ?? 99;
+  const rankB = POSITION_SORT_ORDER[posB] ?? 99;
+  if (rankA !== rankB) return rankA - rankB;
+  const nameA = a.name || '';
+  const nameB = b.name || '';
+  return nameA.localeCompare(nameB);
+}
+
+function normalizeGoalMinutes(values) {
+  if (!Array.isArray(values) || !values.length) return [];
+  const normalized = values
+    .map(value => {
+      const num = Number(value);
+      if (Number.isFinite(num)) {
+        return String(Math.max(0, Math.round(num)));
+      }
+      const str = String(value || '').trim();
+      return str;
+    })
+    .filter(Boolean);
+  normalized.sort((a, b) => {
+    const numA = Number(a);
+    const numB = Number(b);
+    if (Number.isFinite(numA) && Number.isFinite(numB)) {
+      return numA - numB;
+    }
+    return a.localeCompare(b);
+  });
+  return normalized;
+}
+
+function extractGoalMinutesFromRaw(raw) {
+  const minutes = new Map();
+  const data = safeJsonParse(raw);
+  if (!data) return minutes;
+  const visited = new WeakSet();
+  const visit = node => {
+    if (!node || typeof node !== 'object') return;
+    if (visited.has(node)) return;
+    visited.add(node);
+    if (Array.isArray(node)) {
+      node.forEach(visit);
+      return;
+    }
+    const candidateId =
+      node.playerId ??
+      node.playerid ??
+      node.scorerId ??
+      node.scorerid ??
+      node.scorer ??
+      node.goalScorer ??
+      node.personaId;
+    const minuteValue =
+      node.minute ??
+      node.goalMinute ??
+      node.goalMin ??
+      node.goalminute ??
+      node.minute_mark ??
+      node.minuteMark ??
+      node.minuteMarked ??
+      node.time ??
+      null;
+    if (candidateId && minuteValue !== null && minuteValue !== undefined) {
+      const id = String(candidateId);
+      const minute = normalizeGoalMinutes([minuteValue]);
+      if (minute.length) {
+        if (!minutes.has(id)) minutes.set(id, []);
+        minutes.get(id).push(...minute);
+      }
+    }
+    for (const value of Object.values(node)) {
+      if (typeof value === 'object') visit(value);
+    }
+  };
+  visit(data);
+  return minutes;
+}
+
 function deriveMatchSides(match = {}) {
   const clubs = match.clubs || {};
   const entries = Object.entries(clubs).map(([cid, c]) => {
@@ -2256,6 +2430,33 @@ const SQL_GET_CUP_FIXTURES = `
    WHERE cup = $1
    ORDER BY created_at ASC`;
 
+const SQL_GET_MATCH_PARTICIPANTS = `
+  SELECT mp.club_id::text AS club_id,
+         mp.is_home,
+         mp.goals,
+         c.club_name
+    FROM public.match_participants mp
+    JOIN public.clubs c ON c.club_id::text = mp.club_id::text
+   WHERE mp.match_id = $1
+   ORDER BY COALESCE(mp.is_home, false) DESC, c.club_name`;
+
+const SQL_GET_MATCH_PLAYER_STATS = `
+  SELECT pms.club_id::text AS club_id,
+         pms.player_id::text AS player_id,
+         pms.goals,
+         pms.assists,
+         pms.passesmade,
+         pms.passattempts,
+         COALESCE(p.position, '') AS position,
+         COALESCE(p.name, 'Unknown Player') AS name
+    FROM public.player_match_stats pms
+    LEFT JOIN public.players p
+      ON p.player_id = pms.player_id
+     AND p.club_id = pms.club_id
+   WHERE pms.match_id = $1`;
+
+const SQL_GET_MATCH_RAW = `SELECT raw FROM public.matches WHERE match_id = $1`;
+
 app.get('/api/cup/fixtures', async (req, res) => {
   const cup = new URL(req.url, 'http://localhost').searchParams.get('cup');
   if (!cup) return res.status(400).json({ fixtures: [] });
@@ -2276,6 +2477,134 @@ app.get('/api/cup/fixtures', async (req, res) => {
   } catch (err) {
     logger.error({ err }, 'Failed to fetch fixtures');
     res.status(500).json({ fixtures: [] });
+  }
+});
+
+
+app.get('/api/matches/:id/details', async (req, res) => {
+  const rawId = req.params?.id !== undefined && req.params.id !== null
+    ? String(req.params.id).trim()
+    : '';
+  if (!rawId) {
+    return res.status(400).json({ error: 'Invalid match id' });
+  }
+  const matchId = rawId;
+  try {
+    const [teamsRes, playersRes, rawRes] = await Promise.all([
+      q(SQL_GET_MATCH_PARTICIPANTS, [matchId]),
+      q(SQL_GET_MATCH_PLAYER_STATS, [matchId]),
+      q(SQL_GET_MATCH_RAW, [matchId]),
+    ]);
+
+    const teams = teamsRes.rows.map(row => ({
+      clubId: String(row.club_id || ''),
+      clubName: row.club_name || '',
+      isHome: row.is_home === true,
+      goals: Number(row.goals ?? 0),
+    }));
+
+    const goalMinuteMap = extractGoalMinutesFromRaw(rawRes.rows?.[0]?.raw);
+    const totals = new Map();
+    const goalscorers = Object.create(null);
+    const lineupPlayers = Object.create(null);
+    const teamIds = new Set(teams.map(team => team.clubId));
+
+    for (const row of playersRes.rows) {
+      const clubId = String(row.club_id || '');
+      if (!clubId) continue;
+      teamIds.add(clubId);
+      if (!totals.has(clubId)) totals.set(clubId, { made: 0, attempted: 0 });
+      const totalsEntry = totals.get(clubId);
+      totalsEntry.made += Number(row.passesmade || 0);
+      totalsEntry.attempted += Number(row.passattempts || 0);
+
+      if (!goalscorers[clubId]) goalscorers[clubId] = [];
+      const goals = Number(row.goals || 0);
+      if (goals > 0) {
+        const playerKey = row.player_id !== undefined && row.player_id !== null ? String(row.player_id) : '';
+        const minutes = normalizeGoalMinutes(goalMinuteMap.get(playerKey) || []);
+        goalscorers[clubId].push({
+          playerId: playerKey,
+          name: row.name || 'Unknown Player',
+          goals,
+          minutes,
+        });
+      }
+
+      if (!lineupPlayers[clubId]) {
+        lineupPlayers[clubId] = { defenders: [], midfielders: [], forwards: [] };
+      }
+      const role = mapPositionToRole(row.position);
+      lineupPlayers[clubId][role].push({
+        playerId: row.player_id !== undefined && row.player_id !== null ? String(row.player_id) : '',
+        name: row.name || 'Unknown Player',
+        position: (row.position || '').toUpperCase(),
+      });
+    }
+
+    teamIds.forEach(clubId => {
+      if (!totals.has(clubId)) totals.set(clubId, { made: 0, attempted: 0 });
+      if (!goalscorers[clubId]) goalscorers[clubId] = [];
+      if (!lineupPlayers[clubId]) {
+        lineupPlayers[clubId] = { defenders: [], midfielders: [], forwards: [] };
+      }
+    });
+
+    Object.values(goalscorers).forEach(list => {
+      list.sort((a, b) => {
+        if (b.goals !== a.goals) return b.goals - a.goals;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+    });
+
+    const lineups = {};
+    teamIds.forEach(clubId => {
+      const players = lineupPlayers[clubId] || { defenders: [], midfielders: [], forwards: [] };
+      const defenders = (players.defenders || []).slice().sort(sortLineupPlayers);
+      const midfielders = (players.midfielders || []).slice().sort(sortLineupPlayers);
+      const forwards = (players.forwards || []).slice().sort(sortLineupPlayers);
+      const layoutInfo = guessFormationLayout(defenders.length, midfielders.length, forwards.length);
+      lineups[clubId] = {
+        formation: layoutInfo.formation,
+        layout: {
+          defenders: layoutInfo.layout.defenders,
+          midfielders: layoutInfo.layout.midfielders,
+          forwards: layoutInfo.layout.forwards,
+        },
+        players: {
+          defenders,
+          midfielders,
+          forwards,
+        },
+        totalPlayers: defenders.length + midfielders.length + forwards.length,
+      };
+    });
+
+    const passingAccuracy = {};
+    const possession = {};
+    let totalAttempts = 0;
+    totals.forEach(entry => {
+      totalAttempts += entry.attempted;
+    });
+    totals.forEach((entry, clubId) => {
+      const attempts = entry.attempted;
+      const accuracy = attempts > 0 ? (entry.made / attempts) * 100 : null;
+      passingAccuracy[clubId] = accuracy !== null ? Number(accuracy.toFixed(2)) : null;
+      const share = totalAttempts > 0 ? (attempts / totalAttempts) * 100 : null;
+      possession[clubId] = share !== null ? Number(share.toFixed(2)) : null;
+    });
+
+    res.json({
+      matchId,
+      teams,
+      goalscorers,
+      passingAccuracy,
+      possession,
+      lineups,
+    });
+  } catch (err) {
+    logger.error({ err, matchId }, 'Failed to fetch match details');
+    res.status(500).json({ error: 'Failed to fetch match details' });
   }
 });
 
