@@ -618,295 +618,245 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
   .leaderboard-table tbody tr td > .pointer-events-none{display:none !important;}
   .brand-tagline{letter-spacing:0.24em;font-size:10px;}
   .players-grid{gap:14px;}
-  .player-card{min-height:260px;padding:18px;}
-  .player-stat-grid{gap:10px;}
-  .player-stat .stat-value{font-size:18px;}
-  .player-name{font-size:16px;}
-}
-@media (max-width:480px){
-  .team-card{padding:14px 16px;gap:12px;}
-  .team-card-header{gap:14px;}
-  .team-crest{width:78px;padding:10px;}
-  .team-logo{max-width:72px;}
-  .team-meta .name{font-size:15px;}
-  .team-meta .record{font-size:10px;padding:4px 8px;letter-spacing:0.1em;}
-  .team-country{font-size:11px;}
-  .jersey-swatch{padding:4px 7px;font-size:9px;letter-spacing:0.06em;}
-  .leaderboard-table tbody tr{padding:16px 14px;}
-  .leaderboard-table tbody tr td{font-size:12px;gap:10px;}
-  .leaderboard-table tbody tr td::before{font-size:10px;letter-spacing:0.16em;}
-  .player-card{padding:16px;min-height:240px;}
-  .player-avatar{width:72px;height:72px;}
+  .player-card{width:min(100%,260px);min-height:360px;padding:20px 18px 20px;}
+  .player-card .player-card-content{gap:20px;}
+  .player-card .player-name{font-size:22px;}
   .player-stat-grid{grid-template-columns:1fr;}
 }
-.players-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 18px;
-  justify-items: stretch;
-  margin-top: 12px;
-  width: 100%;
+
+.players-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:18px;
+  justify-items:center;
+  margin-top:12px;
+  width:100%;
 }
-.players-grid.compact{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+.players-grid.compact{grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}
 @media (min-width:640px){
   .players-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 }
 @media (min-width:1024px){
   .players-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
 }
-.team-card > .players-grid{display:none}
+.team-card > .players-grid{display:none;}
+
 .player-card{
-  --card-primary:#0f172a;
-  --card-secondary:#1f2937;
+  --card-base-gradient:linear-gradient(210deg,#172554,#0f172a);
   --card-accent:#38bdf8;
-  --card-glow:var(--card-accent);
-  --card-glow-shadow:rgba(56,189,248,0.45);
+  --card-glow-shadow:rgba(56,189,248,0.35);
+  --player-card-image:none;
   position:relative;
   display:flex;
   flex-direction:column;
-  align-items:center;
-  gap:16px;
-  padding:20px;
+  justify-content:space-between;
+  width:min(100%,280px);
+  min-height:420px;
+  padding:24px 22px 20px;
   border-radius:20px;
-  background:linear-gradient(160deg,var(--card-primary),var(--card-secondary));
   color:#f8fafc;
-  box-shadow:0 18px 45px rgba(2,6,23,0.55);
+  background:var(--card-base-gradient);
+  box-shadow:0 22px 48px rgba(15,23,42,0.62);
   border:1px solid rgba(255,255,255,0.08);
-  min-height:280px;
   overflow:hidden;
-  transition:transform .3s ease, box-shadow .3s ease, border-color .3s ease;
-  text-align:center;
+  row-gap:20px;
+  transition:transform .32s cubic-bezier(.21,.72,.35,1), box-shadow .32s ease, border-color .32s ease;
+  margin-inline:auto;
 }
 .player-card::before{
   content:"";
   position:absolute;
   inset:0;
-  border-radius:inherit;
-  background:linear-gradient(180deg,rgba(255,255,255,0.08),rgba(15,23,42,0.05));
-  mix-blend-mode:screen;
-  opacity:0.4;
-  pointer-events:none;
-  transition:opacity .3s ease;
+  background-image:var(--player-card-image);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  transform:scale(1.05);
+  filter:saturate(1.05);
+  opacity:0;
+  transition:opacity .32s ease, transform .32s ease;
+  z-index:0;
 }
+.player-card.has-image::before{opacity:1;}
 .player-card::after{
   content:"";
   position:absolute;
   inset:0;
-  border-radius:inherit;
-  border:1px solid rgba(255,255,255,0.06);
+  background:linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0.28));
+  z-index:1;
   pointer-events:none;
-  transition:box-shadow .3s ease, border-color .3s ease, opacity .3s ease;
-  opacity:0.7;
 }
 .player-card:hover,
 .player-card:focus-visible{
   outline:none;
   transform:translateY(-8px) scale(1.02);
-  box-shadow:0 26px 60px rgba(2,6,23,0.65),0 0 40px var(--card-glow-shadow, rgba(56,189,248,0.18));
-  border-color:var(--card-glow);
+  box-shadow:0 32px 68px rgba(15,23,42,0.68),0 0 40px var(--card-glow-shadow, rgba(56,189,248,0.28));
+  border-color:rgba(255,255,255,0.16);
 }
 .player-card:hover::before,
-.player-card:focus-visible::before{opacity:0.65;}
-.player-card:hover::after,
-.player-card:focus-visible::after{
-  border-color:var(--card-glow);
-  box-shadow:0 0 0 2px var(--card-glow-shadow, rgba(56,189,248,0.45));
-  opacity:1;
-}
+.player-card:focus-visible::before{transform:scale(1.08);}
 .player-card[data-is-captain="false"] .player-card-badge{display:none;}
 .player-card-badge{
   position:absolute;
-  top:14px;
-  right:14px;
-  font-size:20px;
-  filter:drop-shadow(0 4px 10px rgba(0,0,0,0.55));
-  z-index:2;
+  top:18px;
+  right:18px;
+  font-size:22px;
+  filter:drop-shadow(0 6px 18px rgba(0,0,0,0.55));
+  z-index:3;
 }
-.player-card-top,
+.player-card-content{
+  position:relative;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  gap:26px;
+  flex:1;
+}
 .player-card-header{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:space-between;
-  width:100%;
-  gap:12px;
+  gap:18px;
 }
-.player-card-header{padding-inline:4px;}
 .player-form-indicator{
   display:flex;
   align-items:center;
   gap:6px;
-  min-height:16px;
-}
-.player-form-indicator .player-form-dot{
-  width:10px;
-  height:10px;
-  border-radius:999px;
-  background:rgba(148,163,184,0.35);
-  box-shadow:0 0 12px rgba(15,23,42,0.65);
-  transition:transform .3s ease, box-shadow .3s ease, opacity .3s ease;
-}
-.player-form-indicator .player-form-dot.W{background:rgba(34,197,94,0.85);box-shadow:0 0 14px rgba(34,197,94,0.55);}
-.player-form-indicator .player-form-dot.D{background:rgba(148,163,184,0.85);box-shadow:0 0 12px rgba(148,163,184,0.55);}
-.player-form-indicator .player-form-dot.L{background:rgba(239,68,68,0.85);box-shadow:0 0 14px rgba(239,68,68,0.55);}
-.player-form-indicator .player-form-dot.empty{opacity:0.35;}
-.player-card:hover .player-form-indicator .player-form-dot,
-.player-card:focus-visible .player-form-indicator .player-form-dot{transform:translateY(-1px);}
-.player-card-info{
-  text-align:center;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.player-club{
-  font-size:12px;
+  font-size:13px;
   letter-spacing:0.22em;
   text-transform:uppercase;
-  color:rgba(226,232,240,0.6);
+  color:rgba(248,250,252,0.78);
+  min-height:24px;
 }
-.player-position-chip{
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:0.28em;
-  text-transform:uppercase;
-  padding:6px 14px;
+.player-form-indicator .player-form-code{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:20px;
+  padding:4px 6px;
   border-radius:999px;
-  background:rgba(15,23,42,0.75);
-  border:1px solid rgba(255,255,255,0.12);
-  color:rgba(226,232,240,0.9);
-  box-shadow:0 8px 20px rgba(2,6,23,0.4);
+  background:rgba(15,23,42,0.5);
+  border:1px solid rgba(255,255,255,0.16);
+  font-weight:700;
+  color:inherit;
 }
+.player-form-indicator .player-form-code.W{background:rgba(34,197,94,0.35);border-color:rgba(34,197,94,0.55);}
+.player-form-indicator .player-form-code.D{background:rgba(59,130,246,0.32);border-color:rgba(59,130,246,0.5);}
+.player-form-indicator .player-form-code.L{background:rgba(248,113,113,0.32);border-color:rgba(248,113,113,0.5);}
+.player-form-indicator .player-form-code.empty{opacity:0.35;}
+.player-position-chip{
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.36em;
+  text-transform:uppercase;
+  padding:6px 16px;
+  border-radius:999px;
+  background:rgba(15,23,42,0.62);
+  border:1px solid rgba(255,255,255,0.22);
+  color:#f8fafc;
+  box-shadow:0 10px 24px rgba(2,6,23,0.55);
+}
+.player-card-info{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  align-items:flex-start;
+  text-align:left;
+}
+.player-name-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.player-name{font-size:26px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;}
+.player-flag{width:24px;height:24px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px rgba(15,23,42,0.65);}
+.player-club{font-size:13px;letter-spacing:0.32em;text-transform:uppercase;color:rgba(241,245,249,0.72);}
 .player-ovr-pill{
   display:inline-flex;
   align-items:center;
-  justify-content:center;
-  gap:10px;
-  align-self:center;
-  padding:8px 20px;
-  border-radius:999px;
-  background:rgba(15,23,42,0.72);
-  border:1px solid rgba(255,255,255,0.12);
-  box-shadow:0 12px 28px rgba(2,6,23,0.45);
+  gap:12px;
+  padding:10px 22px;
+  border-radius:18px;
+  background:rgba(15,23,42,0.58);
+  border:1px solid rgba(255,255,255,0.16);
+  box-shadow:0 18px 32px rgba(2,6,23,0.55);
+  align-self:flex-start;
 }
 .player-ovr-pill .ovr-label{
-  font-size:11px;
-  letter-spacing:0.34em;
+  font-size:12px;
+  letter-spacing:0.32em;
   text-transform:uppercase;
-  color:rgba(226,232,240,0.6);
+  color:rgba(241,245,249,0.68);
 }
 .player-ovr-pill .ovr-value{
-  font-size:24px;
+  font-size:30px;
   font-weight:800;
   color:#f8fafc;
 }
-.player-avatar{
-  --avatar-primary:rgba(15,23,42,0.92);
-  --avatar-secondary:rgba(30,64,175,0.68);
-  position:relative;
-  width:84px;
-  height:84px;
-  margin:0 auto;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:linear-gradient(135deg,var(--avatar-primary),var(--avatar-secondary));
-  border:3px solid var(--avatar-ring, rgba(255,255,255,0.12));
-  box-shadow:0 16px 36px rgba(2,6,23,0.55);
-  transition:transform .3s ease, box-shadow .3s ease;
-  overflow:hidden;
-}
-.player-card:hover .player-avatar,
-.player-card:focus-visible .player-avatar{
-  transform:translateY(-2px);
-  box-shadow:0 22px 44px rgba(2,6,23,0.6);
-}
-.player-avatar::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  background:radial-gradient(circle at 30% 30%,rgba(255,255,255,0.22),transparent 65%);
-  mix-blend-mode:screen;
-  pointer-events:none;
-}
-.player-avatar-img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:none;
-}
-.player-avatar.has-image{
-  background:#020617;
-}
-.player-avatar.has-image::after{opacity:0;}
-.player-avatar.has-image .player-avatar-img{display:block;}
-.player-avatar-initial{
-  font-size:28px;
-  font-weight:800;
-  letter-spacing:0.08em;
-  text-transform:uppercase;
-  z-index:1;
-}
-.player-avatar.has-image .player-avatar-initial{opacity:0;}
-.player-meta{
-  text-align:center;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-.player-name-row{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  flex-wrap:wrap;
-}
-.player-name{font-size:18px;font-weight:800;letter-spacing:0.04em;}
-.player-flag{width:22px;height:22px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px rgba(255,255,255,0.18);}
-.player-position{
-  font-size:12px;
-  font-weight:700;
-  letter-spacing:0.24em;
-  text-transform:uppercase;
-  color:rgba(226,232,240,0.7);
+.player-card-stats{
+  margin-top:auto;
 }
 .player-stat-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:12px;
-  margin-top:auto;
+  gap:14px;
 }
 .player-stat{
-  background:rgba(15,23,42,0.58);
-  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(15,23,42,0.55);
   border-radius:16px;
-  padding:10px 12px;
+  border:1px solid rgba(255,255,255,0.14);
+  padding:14px 16px;
   display:flex;
   flex-direction:column;
-  gap:4px;
-  min-height:72px;
-  transition:border-color .3s ease, transform .3s ease;
+  gap:8px;
+  box-shadow:0 18px 32px rgba(2,6,23,0.48);
 }
-.player-card:hover .player-stat,
-.player-card:focus-visible .player-stat{border-color:rgba(255,255,255,0.14);}
 .player-stat .stat-label{
   font-size:11px;
-  letter-spacing:0.16em;
+  letter-spacing:0.36em;
   text-transform:uppercase;
-  color:rgba(226,232,240,0.6);
+  color:rgba(226,232,240,0.7);
 }
 .player-stat .stat-value{
-  font-size:20px;
-  font-weight:800;
+  font-size:22px;
+  font-weight:700;
   color:#f8fafc;
 }
-.player-stat.top-scorer .stat-value{color:var(--gold);}
+.player-stat.top-scorer{
+  border-color:rgba(234,179,8,0.65);
+  box-shadow:0 20px 36px rgba(234,179,8,0.35);
+}
 .player-card-actions{
-  width:100%;
+  position:relative;
+  z-index:2;
   display:none;
   justify-content:center;
-  margin-top:4px;
+  width:100%;
 }
+.player-card-actions .upload-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:12px 22px;
+  border-radius:999px;
+  background:rgba(15,23,42,0.72);
+  border:1px solid rgba(255,255,255,0.18);
+  color:#f8fafc;
+  font-size:12px;
+  letter-spacing:0.28em;
+  text-transform:uppercase;
+  cursor:pointer;
+  transition:transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+}
+.player-card-actions .upload-btn:hover,
+.player-card-actions .upload-btn:focus-visible{
+  outline:none;
+  transform:translateY(-1px);
+  border-color:rgba(148,163,184,0.6);
+  box-shadow:0 16px 32px rgba(2,6,23,0.55);
+}
+.player-card-actions .upload-btn.is-uploading{opacity:0.65;pointer-events:none;}
 .is-admin .player-card-actions{display:flex;}
 .upload-btn{
   display:inline-flex;
@@ -2115,6 +2065,61 @@ function escapeAttr(s){
   const map = { '&':'&amp;', '<':'&lt;', '"':'&quot;' };
   return String(s).replace(/[&<"]/g, c => map[c]);
 }
+
+function escapeCssUrl(value){
+  if(value === undefined || value === null) return '';
+  return String(value).replace(/(["\\\n\r])/g, '\\$1');
+}
+
+function stripDiacritics(value){
+  if(value === undefined || value === null) return '';
+  try{
+    return String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  }catch{
+    return String(value);
+  }
+}
+
+function hashForSlug(value){
+  const str = String(value ?? '');
+  let hash = 0;
+  for(let i = 0; i < str.length; i += 1){
+    hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function createPlayerSlug(name, clubId){
+  const normalizedName = stripDiacritics(name).toLowerCase();
+  const clubPartRaw = clubId !== undefined && clubId !== null
+    ? String(clubId).trim().toLowerCase()
+    : '';
+  const clubPart = clubPartRaw.replace(/[^a-z0-9]+/g, '');
+  let base = normalizedName.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if(!base){
+    const seed = `${normalizedName || 'player'}-${clubPart || 'club'}`;
+    base = `player-${hashForSlug(seed)}`;
+  }
+  const combined = clubPart ? `${base}-${clubPart}` : base;
+  const sanitized = combined.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  return sanitized.slice(0, 64) || `player-${hashForSlug('fallback')}`;
+}
+
+function getPlayerUploadKey(meta, fallbackId, existingKey){
+  if(fallbackId !== undefined && fallbackId !== null && fallbackId !== ''){
+    return String(fallbackId);
+  }
+  if(existingKey){
+    return String(existingKey);
+  }
+  const source = meta || {};
+  const candidate = source.playerId ?? source.playerid;
+  if(candidate !== undefined && candidate !== null && candidate !== ''){
+    return String(candidate);
+  }
+  const clubId = source.clubId ?? source.clubid ?? '';
+  return createPlayerSlug(source.name || 'Player', clubId);
+}
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
 function fmtDate(value){
   try{
@@ -2896,42 +2901,23 @@ function applyGradient(img, customKit){
 function applyCardTheme(card, customKit){
   if(!card) return;
   const colors = extractKitColors(customKit);
-  const primary = colors[0] || '#0f172a';
-  const secondary = colors[1] || mixColors(primary, '#1f2937', 0.35) || '#1f2937';
+  const primary = colors[0] || '#172554';
+  const secondary = colors[1] || mixColors(primary, '#020617', 0.35) || '#0f172a';
   const accent = colors[2] || colors[0] || '#38bdf8';
-  const glowShadow = hexToRgba(accent, 0.45);
-  card.style.setProperty('--card-primary', primary);
-  card.style.setProperty('--card-secondary', secondary);
-  card.style.setProperty('--card-accent', accent);
-  card.style.setProperty('--card-glow', accent);
+  const depth = mixColors(secondary, '#020617', 0.45) || secondary;
+  const highlight = mixColors(accent, '#0ea5e9', 0.3) || accent;
+  const fallbackA = mixColors(primary, '#020617', 0.25) || primary;
+  const fallbackB = depth;
+  card.style.setProperty('--card-base-gradient', `linear-gradient(210deg, ${fallbackA}, ${fallbackB})`);
+  if(accent) card.style.setProperty('--card-accent', accent);
+  const glowShadow = hexToRgba(highlight, 0.45) || hexToRgba(accent, 0.35);
   if(glowShadow) card.style.setProperty('--card-glow-shadow', glowShadow);
-  const avatar = card.querySelector('.player-avatar');
-  if(avatar){
-    const avatarPrimary = mixColors(primary, '#020617', 0.45) || primary;
-    const avatarSecondary = mixColors(accent, '#0f172a', 0.25) || accent;
-    avatar.style.setProperty('--avatar-primary', avatarPrimary);
-    avatar.style.setProperty('--avatar-secondary', avatarSecondary);
-    avatar.style.setProperty('--avatar-ring', accent);
-    if(!avatar.classList.contains('has-image')){
-      avatar.style.background = `linear-gradient(135deg, ${avatarPrimary}, ${avatarSecondary})`;
-      avatar.style.backgroundSize = 'cover';
-      avatar.style.backgroundPosition = 'center';
-    }
-  }
 }
 
 const clubInfoCache = new Map();
 const kitUrlCache = new Map();
 const PLAYER_IMAGE_ALLOWED_TYPES = new Set(['image/png','image/jpeg','image/webp','image/jpg']);
 const PLAYER_IMAGE_MAX_SIZE = 5 * 1024 * 1024;
-
-function getPlayerInitials(name){
-  if(!name) return '?';
-  const parts = String(name).trim().split(/\s+/).filter(Boolean);
-  if(!parts.length) return '?';
-  const initials = parts.slice(0,2).map(part => part[0]).join('');
-  return initials.toUpperCase();
-}
 
 function readNumeric(source, keys){
   if(!source) return null;
@@ -3006,19 +2992,16 @@ function normalizeFormArray(value){
 }
 
 function renderPlayerFormDots(formCodes){
-  const dots = Array.isArray(formCodes) ? formCodes.slice(0,5) : [];
-  while(dots.length < 5) dots.push(null);
-  return dots.map(code => {
-    if(code === 'W'){
-      return '<span class="player-form-dot W" aria-label="Win" title="Win"></span>';
-    }
-    if(code === 'D'){
-      return '<span class="player-form-dot D" aria-label="Draw" title="Draw"></span>';
-    }
-    if(code === 'L'){
-      return '<span class="player-form-dot L" aria-label="Loss" title="Loss"></span>';
-    }
-    return '<span class="player-form-dot empty" aria-hidden="true"></span>';
+  const normalized = Array.isArray(formCodes) ? formCodes.slice(0,5) : [];
+  const tokens = normalized.filter(Boolean);
+  if(!tokens.length){
+    return '<span class="player-form-code empty">–</span>';
+  }
+  return tokens.map(code => {
+    const cls = code === 'W' || code === 'D' || code === 'L' ? code : 'empty';
+    const label = code === 'W' ? 'Win' : code === 'D' ? 'Draw' : code === 'L' ? 'Loss' : '—';
+    const text = code === 'W' || code === 'D' || code === 'L' ? code : '–';
+    return `<span class="player-form-code ${cls}" aria-label="${label}" title="${label}">${text}</span>`;
   }).join('');
 }
 
@@ -3093,35 +3076,22 @@ function renderPlayerStat(key, label, value, highlight){
   return `<div class="${classes.join(' ')}" data-stat="${key}"><span class="stat-label">${label}</span><span class="stat-value">${escapeHtml(formatStatValue(value))}</span></div>`;
 }
 
-function applyPlayerImage(card, imageUrl, playerName){
+function applyPlayerImage(card, imageUrl){
   if(!card) return;
-  const avatar = card.querySelector('.player-avatar');
-  if(!avatar) return;
-  const img = avatar.querySelector('.player-avatar-img');
-  const initialsEl = avatar.querySelector('.player-avatar-initial');
-  if(initialsEl) initialsEl.textContent = getPlayerInitials(playerName);
   const trimmed = typeof imageUrl === 'string' ? imageUrl.trim() : '';
   const normalizedUrl = trimmed || '';
   card.dataset.imageUrl = normalizedUrl;
-  if(!img){
-    if(!normalizedUrl){
-      avatar.classList.remove('has-image');
-      avatar.dataset.hasPhoto = 'false';
-    }
-    return;
-  }
   if(normalizedUrl){
     const version = card.dataset.imageVersion;
     const finalUrl = version ? `${normalizedUrl}${normalizedUrl.includes('?') ? '&' : '?'}v=${version}` : normalizedUrl;
-    if(img.src !== finalUrl) img.src = finalUrl;
-    img.alt = playerName ? `${playerName} portrait` : 'Player portrait';
-    avatar.classList.add('has-image');
-    avatar.dataset.hasPhoto = 'true';
+    const safeUrl = escapeCssUrl(finalUrl);
+    card.style.setProperty('--player-card-image', `url("${safeUrl}")`);
+    card.classList.add('has-image');
+    card.dataset.hasImage = 'true';
   }else{
-    img.removeAttribute('src');
-    img.alt = '';
-    avatar.classList.remove('has-image');
-    avatar.dataset.hasPhoto = 'false';
+    card.style.setProperty('--player-card-image', 'none');
+    card.classList.remove('has-image');
+    card.dataset.hasImage = 'false';
   }
 }
 
@@ -3142,6 +3112,19 @@ function applyAdminStateToPlayerCard(card){
   if(!card) return;
   const input = card.querySelector('.player-upload-input');
   if(input){
+    if(card.dataset.playerUploadKey){
+      input.dataset.playerUploadKey = card.dataset.playerUploadKey;
+    }
+    if(card.dataset.playerId){
+      input.dataset.playerId = card.dataset.playerId;
+    }else{
+      delete input.dataset.playerId;
+    }
+    if(card.dataset.clubId){
+      input.dataset.clubId = card.dataset.clubId;
+    }else{
+      delete input.dataset.clubId;
+    }
     input.disabled = !isAdmin;
   }
 }
@@ -3192,9 +3175,16 @@ function buildPlayerCard(p, stats, tier, overrides){
   const classes = ['player-card'];
   if(t?.className) classes.push(t.className);
   card.className = classes.join(' ');
-  const playerId = p.player_id || p.playerId;
-  if(playerId) card.dataset.playerId = String(playerId);
-  if(meta.clubId) card.dataset.clubId = String(meta.clubId);
+  const rawPlayerId = p.player_id ?? p.playerId;
+  const playerId = rawPlayerId !== undefined && rawPlayerId !== null ? String(rawPlayerId) : '';
+  if(playerId){
+    card.dataset.playerId = playerId;
+  }
+  if(meta.clubId !== undefined && meta.clubId !== null){
+    card.dataset.clubId = String(meta.clubId);
+  }
+  const uploadKey = getPlayerUploadKey(meta, playerId, card.dataset.playerUploadKey);
+  card.dataset.playerUploadKey = uploadKey;
   if(meta.name) card.dataset.playerName = meta.name;
   if(meta.position !== undefined) card.dataset.playerPosition = meta.position;
   if(meta.clubName) card.dataset.clubName = meta.clubName;
@@ -3209,42 +3199,45 @@ function buildPlayerCard(p, stats, tier, overrides){
   const overallText = formatOverallValue(meta.overallRating);
   const formAria = escapeHtml(formatFormAria(meta.form));
   const formDots = renderPlayerFormDots(meta.form);
-  const uploadControls = playerId
-    ? `
-      <div class="player-card-actions">
-        <label class="upload-btn" for="upload-${playerId}">Upload Image</label>
-        <input type="file" class="player-upload-input" id="upload-${playerId}" data-player-id="${playerId}" accept="image/png,image/jpeg,image/webp" hidden>
-      </div>
-    `
+  const uploadId = `upload-${uploadKey}`;
+  const playerIdAttr = playerId ? ` data-player-id="${escapeAttr(playerId)}"` : '';
+  const clubIdAttr = meta.clubId !== undefined && meta.clubId !== null
+    ? ` data-club-id="${escapeAttr(meta.clubId)}"`
     : '';
+  const uploadControls = `
+      <div class="player-card-actions">
+        <label class="upload-btn" for="${escapeAttr(uploadId)}">Upload Image</label>
+        <input type="file" class="player-upload-input" id="${escapeAttr(uploadId)}" data-player-upload-key="${escapeAttr(uploadKey)}"${playerIdAttr}${clubIdAttr} accept="image/png,image/jpeg,image/webp" hidden>
+      </div>
+    `;
   card.innerHTML = `
     <div class="player-card-badge" title="${badgeTitle}" aria-label="${badgeTitle}">🏅</div>
-    <div class="player-card-header player-card-top">
-      <div class="player-form-indicator" aria-label="${formAria}" title="${formAria}">
-        ${formDots}
+    <div class="player-card-content">
+      <div class="player-card-header player-card-top">
+        <div class="player-form-indicator" aria-label="${formAria}" title="${formAria}">
+          ${formDots}
+        </div>
+        <div class="player-position-chip">${escapeHtml(meta.position || 'UNK')}</div>
       </div>
-      <div class="player-position-chip">${escapeHtml(meta.position || 'UNK')}</div>
-    </div>
-    <div class="player-avatar" data-has-photo="false">
-      <img class="player-avatar-img" alt="" loading="lazy">
-      <span class="player-avatar-initial">${escapeHtml(getPlayerInitials(meta.name))}</span>
-    </div>
-    <div class="player-card-info">
-      <div class="player-name-row">
-        <span class="player-name">${escapeHtml(meta.name)}</span>
-        ${flagHtml}
+      <div class="player-card-info">
+        <div class="player-name-row">
+          <span class="player-name">${escapeHtml(meta.name)}</span>
+          ${flagHtml}
+        </div>
+        <div class="player-club">${escapeHtml(meta.clubName || '')}</div>
       </div>
-      <div class="player-club">${escapeHtml(meta.clubName || '')}</div>
-    </div>
-    <div class="player-ovr-pill">
-      <span class="ovr-label">OVR</span>
-      <span class="ovr-value">${escapeHtml(String(overallText))}</span>
-    </div>
-    <div class="player-stat-grid">
-      ${renderPlayerStat('matches','Matches',meta.matches,false)}
-      ${renderPlayerStat('goals','Goals',meta.goals,meta.isTopScorer)}
-      ${renderPlayerStat('assists','Assists',meta.assists,false)}
-      ${renderPlayerStat('rating','Rating',meta.rating,false)}
+      <div class="player-ovr-pill">
+        <span class="ovr-label">OVR</span>
+        <span class="ovr-value">${escapeHtml(String(overallText))}</span>
+      </div>
+      <div class="player-card-stats">
+        <div class="player-stat-grid">
+          ${renderPlayerStat('matches','Matches',meta.matches,false)}
+          ${renderPlayerStat('goals','Goals',meta.goals,meta.isTopScorer)}
+          ${renderPlayerStat('assists','Assists',meta.assists,false)}
+          ${renderPlayerStat('rating','Rating',meta.rating,false)}
+        </div>
+      </div>
     </div>
     ${uploadControls}
   `;
@@ -3281,9 +3274,17 @@ function updatePlayerCard(card, stats, overrides={}){
     isCaptain: card.dataset.isCaptain === 'true'
   };
   const meta = composePlayerMeta(existing, stats, overrides);
+  const overridePlayerId = overrides.playerId ?? overrides.playerid;
+  if(overridePlayerId !== undefined && overridePlayerId !== null && overridePlayerId !== ''){
+    card.dataset.playerId = String(overridePlayerId);
+  }
+  const currentPlayerId = card.dataset.playerId || '';
+  const uploadKey = getPlayerUploadKey(meta, currentPlayerId, card.dataset.playerUploadKey);
+  card.dataset.playerUploadKey = uploadKey;
   card.dataset.playerName = meta.name;
   card.dataset.playerPosition = meta.position || '';
   if(meta.clubId !== null && meta.clubId !== undefined) card.dataset.clubId = String(meta.clubId);
+  else delete card.dataset.clubId;
   if(meta.clubName !== undefined && meta.clubName !== null) card.dataset.clubName = String(meta.clubName);
   card.dataset.overallRating = meta.overallRating !== null && meta.overallRating !== undefined
     ? String(meta.overallRating)
@@ -3304,14 +3305,32 @@ function updatePlayerCard(card, stats, overrides={}){
   }
   const nameEl = card.querySelector('.player-name');
   if(nameEl) nameEl.textContent = meta.name;
-  const initialsEl = card.querySelector('.player-avatar-initial');
-  if(initialsEl) initialsEl.textContent = getPlayerInitials(meta.name);
   const positionEl = card.querySelector('.player-position-chip');
   if(positionEl) positionEl.textContent = meta.position || 'UNK';
   const clubEl = card.querySelector('.player-club');
   if(clubEl) clubEl.textContent = meta.clubName || '';
   const ovrEl = card.querySelector('.player-ovr-pill .ovr-value');
   if(ovrEl) ovrEl.textContent = formatOverallValue(meta.overallRating);
+  const uploadId = `upload-${uploadKey}`;
+  const input = card.querySelector('.player-upload-input');
+  if(input){
+    input.dataset.playerUploadKey = uploadKey;
+    input.id = uploadId;
+    if(card.dataset.playerId){
+      input.dataset.playerId = card.dataset.playerId;
+    }else{
+      delete input.dataset.playerId;
+    }
+    if(meta.clubId !== null && meta.clubId !== undefined){
+      input.dataset.clubId = String(meta.clubId);
+    }else{
+      delete input.dataset.clubId;
+    }
+    const label = card.querySelector('.player-card-actions label.upload-btn');
+    if(label){
+      label.setAttribute('for', uploadId);
+    }
+  }
   applyPlayerImage(card, meta.imageUrl, meta.name);
   applyPlayerForm(card, meta.form);
   const nameRow = card.querySelector('.player-name-row');
@@ -3392,8 +3411,8 @@ async function upgradeClubPlayers(clubId, container){
   }
 }
 
-async function uploadPlayerImage(playerId, input){
-  if(!playerId || !input) return;
+async function uploadPlayerImage(uploadKey, input){
+  if(!uploadKey || !input) return;
   if(!isAdmin){
     alert('Admin access required.');
     input.value = '';
@@ -3413,7 +3432,7 @@ async function uploadPlayerImage(playerId, input){
     input.value = '';
     return;
   }
-  const card = document.querySelector(`.player-card[data-player-id="${playerId}"]`);
+  const card = input.closest('.player-card');
   const label = card ? card.querySelector(`label[for="${input.id}"]`) : null;
   if(label){
     label.dataset.originalText = label.dataset.originalText || label.textContent;
@@ -3422,8 +3441,20 @@ async function uploadPlayerImage(playerId, input){
   }
   const formData = new FormData();
   formData.append('image', file);
+  const cardClubId = input.dataset.clubId || card?.dataset.clubId || '';
+  const playerName = card?.dataset.playerName || '';
+  const playerPosition = card?.dataset.playerPosition || '';
+  if(cardClubId){
+    formData.append('clubId', cardClubId);
+  }
+  if(playerName){
+    formData.append('playerName', playerName);
+  }
+  if(playerPosition){
+    formData.append('position', playerPosition);
+  }
   try{
-    const res = await fetch(`/api/players/${encodeURIComponent(playerId)}/uploadImage`, {
+    const res = await fetch(`/api/players/${encodeURIComponent(uploadKey)}/uploadImage`, {
       method: 'POST',
       body: formData,
       credentials: 'include',
@@ -3452,12 +3483,12 @@ document.addEventListener('change', event => {
   const target = event.target;
   if(!target || !(target instanceof HTMLInputElement)) return;
   if(!target.classList.contains('player-upload-input')) return;
-  const playerId = target.dataset.playerId;
-  if(!playerId){
+  const uploadKey = target.dataset.playerUploadKey || target.closest('.player-card')?.dataset.playerUploadKey;
+  if(!uploadKey){
     target.value = '';
     return;
   }
-  uploadPlayerImage(playerId, target);
+  uploadPlayerImage(uploadKey, target);
 });
 async function openTeamView(clubId){
   teamsGrid.style.display = 'none';

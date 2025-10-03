@@ -59,16 +59,18 @@ const SQL_UPSERT_PLAYER_INFO = `
     position,
     vproattr,
     overall_rating,
+    slug,
     goals,
     assists,
     last_seen
   )
-  VALUES ($1, $2, $3, $4, $5, $6, 0, 0, NOW())
+  VALUES ($1, $2, $3, $4, $5, $6, $7, 0, 0, NOW())
   ON CONFLICT (player_id, club_id) DO UPDATE SET
     name = EXCLUDED.name,
     position = EXCLUDED.position,
     vproattr = EXCLUDED.vproattr,
     overall_rating = COALESCE(EXCLUDED.overall_rating, public.players.overall_rating),
+    slug = COALESCE(EXCLUDED.slug, public.players.slug),
     last_seen = NOW()
 `;
 
@@ -1039,6 +1041,7 @@ async function saveEaMatch(match) {
           pos,
           vproattr,
           null,
+          null,
         ]);
         const { rowCount: statInserted } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
           matchIdParam,
@@ -1257,6 +1260,7 @@ async function approvePendingMatch(matchId, options = {}) {
       position,
       vproattr,
       Number.isFinite(overallRating) ? overallRating : null,
+      null,
     ]);
 
     const { rowCount } = await q(SQL_INSERT_PLAYER_MATCH_STATS, [
@@ -2054,6 +2058,7 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
           member.position || 'UNK',
           member.vproattr || null,
           member.overallRating,
+          null,
         ]);
       } catch (err) {
         logger.error({ err, playerId: member.playerId }, 'Failed to sync player info');
@@ -2089,17 +2094,39 @@ app.get('/api/clubs/:clubId/player-cards', async (req, res) => {
 app.post('/api/players/:playerId/uploadImage', (req, res) => {
   if (!requireAdminSession(req, res)) return;
 
-  const { playerId } = req.params;
-  const playerIdParam = toBigIntParam(playerId);
-  if (playerIdParam === null) {
+  const rawParam = req.params?.playerId !== undefined && req.params.playerId !== null
+    ? String(req.params.playerId).trim()
+    : '';
+  if (!rawParam) {
     return res.status(400).json({ error: 'Invalid player id' });
   }
-  const playerIdText = String(playerIdParam);
+
+  const isNumericKey = /^[-+]?\d+$/.test(rawParam);
+  let normalizedKey = rawParam;
+  let numericKey = null;
+  if (isNumericKey) {
+    try {
+      numericKey = toBigIntParam(rawParam);
+    } catch (err) {
+      logger.warn({ err, playerId: rawParam }, 'Rejected non-numeric player id');
+      return res.status(400).json({ error: 'Invalid player id' });
+    }
+    if (numericKey === null) {
+      return res.status(400).json({ error: 'Invalid player id' });
+    }
+    normalizedKey = String(numericKey);
+  } else {
+    const lowered = rawParam.toLowerCase();
+    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(lowered)) {
+      return res.status(400).json({ error: 'Invalid player id' });
+    }
+    normalizedKey = lowered;
+  }
 
   playerImageUpload.single('image')(req, res, async uploadErr => {
     if (uploadErr) {
       const status = uploadErr.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
-      logger.warn({ err: uploadErr, playerId }, 'Player image upload rejected');
+      logger.warn({ err: uploadErr, playerId: rawParam }, 'Player image upload rejected');
       return res.status(status).json({ error: uploadErr.message || 'Upload failed' });
     }
 
@@ -2107,33 +2134,122 @@ app.post('/api/players/:playerId/uploadImage', (req, res) => {
       return res.status(400).json({ error: 'Image file is required' });
     }
 
+    const clubIdRaw = req.body?.clubId;
+    const clubId = typeof clubIdRaw === 'string'
+      ? clubIdRaw.trim()
+      : clubIdRaw !== undefined && clubIdRaw !== null
+        ? String(clubIdRaw).trim()
+        : '';
+    const playerNameRaw = req.body?.playerName;
+    const playerName = typeof playerNameRaw === 'string'
+      ? playerNameRaw.trim()
+      : playerNameRaw !== undefined && playerNameRaw !== null
+        ? String(playerNameRaw).trim()
+        : '';
+    const positionRaw = req.body?.position;
+    const position = typeof positionRaw === 'string'
+      ? positionRaw.trim()
+      : positionRaw !== undefined && positionRaw !== null
+        ? String(positionRaw).trim()
+        : '';
+
     try {
-      const { rowCount } = await q(
-        'SELECT 1 FROM public.players WHERE player_id::bigint = $1::bigint',
-        [playerIdParam]
-      );
-      if (rowCount === 0) {
-        return res.status(404).json({ error: 'Player not found' });
+      let targetClubId = clubId || null;
+      let playerRow = null;
+
+      if (numericKey !== null) {
+        if (targetClubId) {
+          const { rows } = await q(
+            'SELECT player_id, club_id, name, slug FROM public.players WHERE player_id = $1 AND club_id = $2 LIMIT 1',
+            [normalizedKey, targetClubId]
+          );
+          playerRow = rows[0] || null;
+        }
+
+        if (!playerRow) {
+          const { rows } = await q(
+            'SELECT player_id, club_id, name, slug FROM public.players WHERE player_id = $1 ORDER BY last_seen DESC LIMIT 1',
+            [normalizedKey]
+          );
+          playerRow = rows[0] || null;
+        }
+
+        if (!playerRow && targetClubId) {
+          const fallbackName = playerName || `Player_${normalizedKey}`;
+          const fallbackPosition = position || 'UNK';
+          await q(SQL_UPSERT_PLAYER_INFO, [
+            normalizedKey,
+            targetClubId,
+            fallbackName,
+            fallbackPosition,
+            null,
+            null,
+            null,
+          ]);
+          playerRow = { player_id: normalizedKey, club_id: targetClubId, name: fallbackName, slug: null };
+        }
+
+        if (!playerRow) {
+          return res.status(404).json({ error: 'Player not found' });
+        }
+
+        targetClubId = playerRow.club_id || targetClubId;
+        if (!targetClubId) {
+          return res.status(400).json({ error: 'Club id required for upload' });
+        }
+      } else {
+        if (!targetClubId) {
+          return res.status(400).json({ error: 'clubId is required for this player' });
+        }
+        if (!/^[A-Za-z0-9_-]+$/.test(targetClubId)) {
+          return res.status(400).json({ error: 'Invalid club id' });
+        }
+
+        const { rows } = await q(
+          'SELECT player_id, club_id, name, slug FROM public.players WHERE (player_id = $1 OR slug = $1) AND club_id = $2 LIMIT 1',
+          [normalizedKey, targetClubId]
+        );
+        playerRow = rows[0] || null;
+
+        if (!playerRow) {
+          const fallbackName = playerName || 'Unknown Player';
+          const fallbackPosition = position || 'UNK';
+          await q(SQL_UPSERT_PLAYER_INFO, [
+            normalizedKey,
+            targetClubId,
+            fallbackName,
+            fallbackPosition,
+            null,
+            null,
+            normalizedKey,
+          ]);
+          playerRow = { player_id: normalizedKey, club_id: targetClubId, name: fallbackName, slug: normalizedKey };
+        }
+      }
+
+      const resolvedClubId = playerRow?.club_id || targetClubId;
+      if (!resolvedClubId) {
+        return res.status(400).json({ error: 'Club id required for upload' });
       }
 
       const processed = await sharp(req.file.buffer)
-        .resize(300, 300, { fit: sharp.fit.cover, position: 'center' })
+        .resize(840, 1260, { fit: sharp.fit.cover, position: 'center' })
         .png({ quality: 90, compressionLevel: 9, adaptiveFiltering: true })
         .toBuffer();
 
       await fsp.mkdir(PLAYER_UPLOAD_DIR, { recursive: true });
-      const outputPath = path.join(PLAYER_UPLOAD_DIR, `${playerIdText}.png`);
+      const outputPath = path.join(PLAYER_UPLOAD_DIR, `${normalizedKey}.png`);
       await fsp.writeFile(outputPath, processed);
 
-      const publicPath = `/uploads/players/${playerIdText}.png`;
+      const publicPath = `/uploads/players/${normalizedKey}.png`;
       await q(
-        'UPDATE public.players SET image_url = $1 WHERE player_id::bigint = $2::bigint',
-        [publicPath, playerIdParam]
+        'UPDATE public.players SET image_url = $1 WHERE (player_id = $2 OR slug = $2) AND club_id = $3',
+        [publicPath, normalizedKey, resolvedClubId]
       );
 
       res.json({ success: true, imageUrl: publicPath });
     } catch (err) {
-      logger.error({ err, playerId }, 'Failed to process player image');
+      logger.error({ err, playerId: rawParam }, 'Failed to process player image');
       res.status(500).json({ error: 'Failed to process image' });
     }
   });
@@ -2225,7 +2341,7 @@ app.get('/api/league/leaders', async (_req, res) => {
     SELECT pms.club_id::bigint AS club_id, p.name, SUM(pms.goals) AS count
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id::bigint = pms.match_id::bigint
-      JOIN public.players p ON p.player_id::bigint = pms.player_id::bigint AND p.club_id::bigint = pms.club_id::bigint
+      JOIN public.players p ON p.player_id ~ '^\\d+$' AND p.player_id::bigint = pms.player_id::bigint AND p.club_id::bigint = pms.club_id::bigint
      WHERE pms.club_id::bigint = ANY($1::bigint[])
      GROUP BY club_id, p.name
      ORDER BY count DESC, p.name
@@ -2234,7 +2350,7 @@ app.get('/api/league/leaders', async (_req, res) => {
     SELECT pms.club_id::bigint AS club_id, p.name, SUM(pms.assists) AS count
       FROM public.player_match_stats pms
       JOIN public.matches m ON m.match_id::bigint = pms.match_id::bigint
-      JOIN public.players p ON p.player_id::bigint = pms.player_id::bigint AND p.club_id::bigint = pms.club_id::bigint
+      JOIN public.players p ON p.player_id ~ '^\\d+$' AND p.player_id::bigint = pms.player_id::bigint AND p.club_id::bigint = pms.club_id::bigint
      WHERE pms.club_id::bigint = ANY($1::bigint[])
      GROUP BY club_id, p.name
      ORDER BY count DESC, p.name
