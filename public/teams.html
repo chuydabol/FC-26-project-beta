@@ -2115,6 +2115,56 @@ function escapeAttr(s){
   const map = { '&':'&amp;', '<':'&lt;', '"':'&quot;' };
   return String(s).replace(/[&<"]/g, c => map[c]);
 }
+
+function stripDiacritics(value){
+  if(value === undefined || value === null) return '';
+  try{
+    return String(value).normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  }catch{
+    return String(value);
+  }
+}
+
+function hashForSlug(value){
+  const str = String(value ?? '');
+  let hash = 0;
+  for(let i = 0; i < str.length; i += 1){
+    hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function createPlayerSlug(name, clubId){
+  const normalizedName = stripDiacritics(name).toLowerCase();
+  const clubPartRaw = clubId !== undefined && clubId !== null
+    ? String(clubId).trim().toLowerCase()
+    : '';
+  const clubPart = clubPartRaw.replace(/[^a-z0-9]+/g, '');
+  let base = normalizedName.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if(!base){
+    const seed = `${normalizedName || 'player'}-${clubPart || 'club'}`;
+    base = `player-${hashForSlug(seed)}`;
+  }
+  const combined = clubPart ? `${base}-${clubPart}` : base;
+  const sanitized = combined.replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+  return sanitized.slice(0, 64) || `player-${hashForSlug('fallback')}`;
+}
+
+function getPlayerUploadKey(meta, fallbackId, existingKey){
+  if(fallbackId !== undefined && fallbackId !== null && fallbackId !== ''){
+    return String(fallbackId);
+  }
+  if(existingKey){
+    return String(existingKey);
+  }
+  const source = meta || {};
+  const candidate = source.playerId ?? source.playerid;
+  if(candidate !== undefined && candidate !== null && candidate !== ''){
+    return String(candidate);
+  }
+  const clubId = source.clubId ?? source.clubid ?? '';
+  return createPlayerSlug(source.name || 'Player', clubId);
+}
 function fmtMoney(n){ return '₵' + Number(n||0).toLocaleString(); }
 function fmtDate(value){
   try{
@@ -3142,6 +3192,19 @@ function applyAdminStateToPlayerCard(card){
   if(!card) return;
   const input = card.querySelector('.player-upload-input');
   if(input){
+    if(card.dataset.playerUploadKey){
+      input.dataset.playerUploadKey = card.dataset.playerUploadKey;
+    }
+    if(card.dataset.playerId){
+      input.dataset.playerId = card.dataset.playerId;
+    }else{
+      delete input.dataset.playerId;
+    }
+    if(card.dataset.clubId){
+      input.dataset.clubId = card.dataset.clubId;
+    }else{
+      delete input.dataset.clubId;
+    }
     input.disabled = !isAdmin;
   }
 }
@@ -3192,9 +3255,16 @@ function buildPlayerCard(p, stats, tier, overrides){
   const classes = ['player-card'];
   if(t?.className) classes.push(t.className);
   card.className = classes.join(' ');
-  const playerId = p.player_id || p.playerId;
-  if(playerId) card.dataset.playerId = String(playerId);
-  if(meta.clubId) card.dataset.clubId = String(meta.clubId);
+  const rawPlayerId = p.player_id ?? p.playerId;
+  const playerId = rawPlayerId !== undefined && rawPlayerId !== null ? String(rawPlayerId) : '';
+  if(playerId){
+    card.dataset.playerId = playerId;
+  }
+  if(meta.clubId !== undefined && meta.clubId !== null){
+    card.dataset.clubId = String(meta.clubId);
+  }
+  const uploadKey = getPlayerUploadKey(meta, playerId, card.dataset.playerUploadKey);
+  card.dataset.playerUploadKey = uploadKey;
   if(meta.name) card.dataset.playerName = meta.name;
   if(meta.position !== undefined) card.dataset.playerPosition = meta.position;
   if(meta.clubName) card.dataset.clubName = meta.clubName;
@@ -3209,14 +3279,17 @@ function buildPlayerCard(p, stats, tier, overrides){
   const overallText = formatOverallValue(meta.overallRating);
   const formAria = escapeHtml(formatFormAria(meta.form));
   const formDots = renderPlayerFormDots(meta.form);
-  const uploadControls = playerId
-    ? `
-      <div class="player-card-actions">
-        <label class="upload-btn" for="upload-${playerId}">Upload Image</label>
-        <input type="file" class="player-upload-input" id="upload-${playerId}" data-player-id="${playerId}" accept="image/png,image/jpeg,image/webp" hidden>
-      </div>
-    `
+  const uploadId = `upload-${uploadKey}`;
+  const playerIdAttr = playerId ? ` data-player-id="${escapeAttr(playerId)}"` : '';
+  const clubIdAttr = meta.clubId !== undefined && meta.clubId !== null
+    ? ` data-club-id="${escapeAttr(meta.clubId)}"`
     : '';
+  const uploadControls = `
+      <div class="player-card-actions">
+        <label class="upload-btn" for="${escapeAttr(uploadId)}">Upload Image</label>
+        <input type="file" class="player-upload-input" id="${escapeAttr(uploadId)}" data-player-upload-key="${escapeAttr(uploadKey)}"${playerIdAttr}${clubIdAttr} accept="image/png,image/jpeg,image/webp" hidden>
+      </div>
+    `;
   card.innerHTML = `
     <div class="player-card-badge" title="${badgeTitle}" aria-label="${badgeTitle}">🏅</div>
     <div class="player-card-header player-card-top">
@@ -3281,9 +3354,17 @@ function updatePlayerCard(card, stats, overrides={}){
     isCaptain: card.dataset.isCaptain === 'true'
   };
   const meta = composePlayerMeta(existing, stats, overrides);
+  const overridePlayerId = overrides.playerId ?? overrides.playerid;
+  if(overridePlayerId !== undefined && overridePlayerId !== null && overridePlayerId !== ''){
+    card.dataset.playerId = String(overridePlayerId);
+  }
+  const currentPlayerId = card.dataset.playerId || '';
+  const uploadKey = getPlayerUploadKey(meta, currentPlayerId, card.dataset.playerUploadKey);
+  card.dataset.playerUploadKey = uploadKey;
   card.dataset.playerName = meta.name;
   card.dataset.playerPosition = meta.position || '';
   if(meta.clubId !== null && meta.clubId !== undefined) card.dataset.clubId = String(meta.clubId);
+  else delete card.dataset.clubId;
   if(meta.clubName !== undefined && meta.clubName !== null) card.dataset.clubName = String(meta.clubName);
   card.dataset.overallRating = meta.overallRating !== null && meta.overallRating !== undefined
     ? String(meta.overallRating)
@@ -3312,6 +3393,26 @@ function updatePlayerCard(card, stats, overrides={}){
   if(clubEl) clubEl.textContent = meta.clubName || '';
   const ovrEl = card.querySelector('.player-ovr-pill .ovr-value');
   if(ovrEl) ovrEl.textContent = formatOverallValue(meta.overallRating);
+  const uploadId = `upload-${uploadKey}`;
+  const input = card.querySelector('.player-upload-input');
+  if(input){
+    input.dataset.playerUploadKey = uploadKey;
+    input.id = uploadId;
+    if(card.dataset.playerId){
+      input.dataset.playerId = card.dataset.playerId;
+    }else{
+      delete input.dataset.playerId;
+    }
+    if(meta.clubId !== null && meta.clubId !== undefined){
+      input.dataset.clubId = String(meta.clubId);
+    }else{
+      delete input.dataset.clubId;
+    }
+    const label = card.querySelector('.player-card-actions label.upload-btn');
+    if(label){
+      label.setAttribute('for', uploadId);
+    }
+  }
   applyPlayerImage(card, meta.imageUrl, meta.name);
   applyPlayerForm(card, meta.form);
   const nameRow = card.querySelector('.player-name-row');
@@ -3392,8 +3493,8 @@ async function upgradeClubPlayers(clubId, container){
   }
 }
 
-async function uploadPlayerImage(playerId, input){
-  if(!playerId || !input) return;
+async function uploadPlayerImage(uploadKey, input){
+  if(!uploadKey || !input) return;
   if(!isAdmin){
     alert('Admin access required.');
     input.value = '';
@@ -3413,7 +3514,7 @@ async function uploadPlayerImage(playerId, input){
     input.value = '';
     return;
   }
-  const card = document.querySelector(`.player-card[data-player-id="${playerId}"]`);
+  const card = input.closest('.player-card');
   const label = card ? card.querySelector(`label[for="${input.id}"]`) : null;
   if(label){
     label.dataset.originalText = label.dataset.originalText || label.textContent;
@@ -3422,8 +3523,20 @@ async function uploadPlayerImage(playerId, input){
   }
   const formData = new FormData();
   formData.append('image', file);
+  const cardClubId = input.dataset.clubId || card?.dataset.clubId || '';
+  const playerName = card?.dataset.playerName || '';
+  const playerPosition = card?.dataset.playerPosition || '';
+  if(cardClubId){
+    formData.append('clubId', cardClubId);
+  }
+  if(playerName){
+    formData.append('playerName', playerName);
+  }
+  if(playerPosition){
+    formData.append('position', playerPosition);
+  }
   try{
-    const res = await fetch(`/api/players/${encodeURIComponent(playerId)}/uploadImage`, {
+    const res = await fetch(`/api/players/${encodeURIComponent(uploadKey)}/uploadImage`, {
       method: 'POST',
       body: formData,
       credentials: 'include',
@@ -3452,12 +3565,12 @@ document.addEventListener('change', event => {
   const target = event.target;
   if(!target || !(target instanceof HTMLInputElement)) return;
   if(!target.classList.contains('player-upload-input')) return;
-  const playerId = target.dataset.playerId;
-  if(!playerId){
+  const uploadKey = target.dataset.playerUploadKey || target.closest('.player-card')?.dataset.playerUploadKey;
+  if(!uploadKey){
     target.value = '';
     return;
   }
-  uploadPlayerImage(playerId, target);
+  uploadPlayerImage(uploadKey, target);
 });
 async function openTeamView(clubId){
   teamsGrid.style.display = 'none';
