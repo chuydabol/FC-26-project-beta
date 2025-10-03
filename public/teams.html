@@ -2622,19 +2622,27 @@ function convertMatchRecordToFixture(match){
   const clubs = match.clubs || match.clubs_obj;
   const entries = Object.entries(clubs || {});
   if (entries.length < 2) return null;
+  const leagueClubIds = new Set((Array.isArray(teams) ? teams : []).map(team => normalizeId(team.id)));
   const [homeIdRaw, homeData] = entries[0];
   const [awayIdRaw, awayData] = entries[1];
   const homeId = String(homeIdRaw);
   const awayId = String(awayIdRaw);
+  const homeNorm = normalizeId(homeId);
+  const awayNorm = normalizeId(awayId);
+  if (!leagueClubIds.has(homeNorm) && !leagueClubIds.has(awayNorm)) return null;
   const when = match.timestamp !== undefined && match.timestamp !== null
     ? Number(match.timestamp)
     : match.timestamp;
+  const homeName = homeData?.details?.name ? String(homeData.details.name) : null;
+  const awayName = awayData?.details?.name ? String(awayData.details.name) : null;
   return {
     matchId: match.matchId !== undefined && match.matchId !== null ? String(match.matchId) : null,
     when,
     createdAt: when,
     home: homeId,
     away: awayId,
+    homeName,
+    awayName,
     status: 'final',
     score: {
       hs: Number(homeData?.goals ?? homeData?.score?.hs ?? 0),
@@ -3970,8 +3978,8 @@ function createFixtureCard(fixture){
 function renderFixtureSummary(fixture){
   const homeTeam = byId(fixture.home);
   const awayTeam = byId(fixture.away);
-  const homeName = homeTeam?.name || fixture.home;
-  const awayName = awayTeam?.name || fixture.away;
+  const homeName = homeTeam?.name || fixture.homeName || fixture.home;
+  const awayName = awayTeam?.name || fixture.awayName || fixture.away;
   const homeLogo = teamLogoUrl(homeTeam);
   const awayLogo = teamLogoUrl(awayTeam);
   const status = formatFixtureStatus(fixture);
@@ -4046,8 +4054,8 @@ function formatFixtureStatus(fixture){
 function renderFixtureDetails(fixture, details){
   const homeTeam = byId(fixture.home);
   const awayTeam = byId(fixture.away);
-  const homeName = homeTeam?.name || fixture.home;
-  const awayName = awayTeam?.name || fixture.away;
+  const homeName = homeTeam?.name || fixture.homeName || fixture.home;
+  const awayName = awayTeam?.name || fixture.awayName || fixture.away;
   const homeLogo = teamLogoUrl(homeTeam);
   const awayLogo = teamLogoUrl(awayTeam);
   const status = formatFixtureStatus(fixture);
