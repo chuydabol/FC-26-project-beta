@@ -30,7 +30,7 @@ async function getPlayerAttributes(playerId, clubId) {
   const m = await pool.query(
     `SELECT m.raw->'players'->$1->$2->>'vproattr' AS vproattr
        FROM public.matches m
-       JOIN public.match_participants mp ON mp.match_id = m.match_id
+       JOIN public.match_participants mp ON mp.match_id::bigint = m.match_id::bigint
        ${matchWhere}
        ORDER BY m.ts_ms DESC
        LIMIT 1`,

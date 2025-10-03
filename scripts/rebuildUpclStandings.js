@@ -2,15 +2,15 @@ const { q } = require('../services/pgwrap');
 
 const SQL_LEAGUE_STANDINGS = `
   WITH matches AS (
-    SELECT home.club_id AS home,
-           away.club_id AS away,
+    SELECT home.club_id::bigint AS home,
+           away.club_id::bigint AS away,
            home.goals AS home_goals,
            away.goals AS away_goals
       FROM public.matches m
       JOIN public.match_participants home
-        ON home.match_id = m.match_id AND home.is_home = true
+        ON home.match_id::bigint = m.match_id::bigint AND home.is_home = true
       JOIN public.match_participants away
-        ON away.match_id = m.match_id AND away.is_home = false
+        ON away.match_id::bigint = m.match_id::bigint AND away.is_home = false
   ), sides AS (
     SELECT home AS club_id, away AS opp_id, home_goals AS gf, away_goals AS ga
       FROM matches
