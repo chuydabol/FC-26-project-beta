@@ -1015,6 +1015,88 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .match-card .score.score-silver{color:var(--silver);}
 .match-card .score-pill{margin:0 8px;}
 
+/* Fixture accordion */
+.fixture-card{padding:0;overflow:hidden;}
+.fixture-card.glow-card{padding:0;}
+.fixture-summary{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;width:100%;background:rgba(4,7,12,0.35);color:inherit;border:none;padding:22px 26px;text-align:left;cursor:pointer;position:relative;transition:background .3s ease;}
+.fixture-summary:hover,.fixture-summary:focus-visible{background:rgba(15,23,42,0.6);outline:none;}
+.fixture-summary::after{content:"";position:absolute;right:26px;top:50%;width:11px;height:11px;border:2px solid rgba(148,163,184,0.5);border-top:none;border-left:none;transform:translateY(-50%) rotate(45deg);transition:transform .25s ease,border-color .25s ease;}
+.fixture-card.is-open .fixture-summary::after{transform:translateY(-50%) rotate(-135deg);border-color:rgba(148,163,184,0.8);}
+.fixture-summary-team{display:flex;align-items:center;gap:12px;}
+.fixture-summary-team img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:rgba(15,23,42,0.8);box-shadow:0 0 0 2px rgba(56,189,248,0.25);}
+.fixture-summary-team .team-name{font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#f8fafc;}
+.fixture-summary-team.is-away{justify-content:flex-end;}
+.fixture-summary-team.is-away .team-name{text-align:right;}
+.fixture-summary-score{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:160px;}
+.summary-score{font-size:26px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#f8fafc;}
+.summary-meta{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);text-align:center;}
+.summary-status{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;border-radius:999px;padding:4px 12px;border:1px solid rgba(148,163,184,0.3);background:rgba(15,23,42,0.65);color:rgba(226,232,240,0.85);}
+.summary-status.status-final{color:var(--gold);border-color:rgba(212,175,55,0.45);background:rgba(212,175,55,0.12);}
+.summary-status.status-live{color:#fca5a5;border-color:rgba(248,113,113,0.5);background:rgba(127,29,29,0.35);}
+.summary-status.status-upcoming{color:rgba(94,234,212,0.95);border-color:rgba(94,234,212,0.45);background:rgba(13,148,136,0.25);}
+.fixture-body{overflow:hidden;max-height:0;transition:max-height .35s ease;}
+.fixture-body-inner{padding:0 26px 24px;display:flex;flex-direction:column;gap:20px;}
+.fixture-placeholder{text-align:center;padding:24px;border-radius:16px;border:1px dashed rgba(148,163,184,0.25);color:var(--muted);background:rgba(2,6,23,0.45);}
+.match-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+.match-meta{display:flex;flex-direction:column;gap:4px;}
+.match-competition{font-size:12px;letter-spacing:0.24em;text-transform:uppercase;color:var(--muted);}
+.match-date{font-size:14px;font-weight:600;color:rgba(226,232,240,0.9);letter-spacing:0.08em;}
+.match-status{font-size:12px;letter-spacing:0.24em;text-transform:uppercase;padding:4px 12px;border-radius:999px;border:1px solid rgba(148,163,184,0.32);background:rgba(15,23,42,0.6);color:rgba(226,232,240,0.85);}
+.match-status.status-final{color:var(--gold);border-color:rgba(212,175,55,0.5);background:rgba(212,175,55,0.15);}
+.match-status.status-live{color:#fca5a5;border-color:rgba(248,113,113,0.5);background:rgba(127,29,29,0.35);}
+.match-status.status-upcoming{color:rgba(94,234,212,0.95);border-color:rgba(94,234,212,0.45);background:rgba(13,148,136,0.25);}
+.match-round{font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);}
+.match-scoreboard{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:20px;padding:18px;border-radius:18px;border:1px solid rgba(148,163,184,0.22);background:linear-gradient(145deg, rgba(8,12,20,0.9), rgba(10,15,25,0.85));}
+.match-team{display:flex;align-items:center;gap:14px;}
+.match-team img{width:60px;height:60px;border-radius:50%;object-fit:cover;background:rgba(15,23,42,0.8);box-shadow:0 0 0 2px rgba(56,189,248,0.25);}
+.match-team.is-winner .team-score{color:var(--gold);}
+.match-team.is-away{justify-content:flex-end;}
+.team-info{display:flex;flex-direction:column;gap:4px;align-items:flex-start;}
+.match-team.is-away .team-info{align-items:flex-end;}
+.team-name{font-size:16px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#f8fafc;}
+.team-score{font-size:28px;font-weight:800;color:rgba(226,232,240,0.92);}
+.match-score{font-size:38px;font-weight:800;color:rgba(148,197,255,0.95);letter-spacing:0.12em;text-transform:uppercase;}
+.match-stats{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:18px;border:1px solid rgba(148,163,184,0.2);background:linear-gradient(145deg, rgba(11,16,25,0.85), rgba(8,12,19,0.9));}
+.match-stats--empty{padding:18px;border-radius:18px;border:1px dashed rgba(148,163,184,0.25);text-align:center;color:var(--muted);background:rgba(4,7,12,0.45);}
+.stat-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;}
+.stat-team{display:flex;flex-direction:column;gap:6px;}
+.stat-team.is-away{align-items:flex-end;}
+.stat-value{font-size:16px;font-weight:700;color:#f8fafc;}
+.stat-team.is-leading .stat-value{color:var(--gold);}
+.stat-bar{width:100%;height:6px;border-radius:999px;background:rgba(30,41,59,0.7);overflow:hidden;}
+.stat-bar span{display:block;height:100%;background:linear-gradient(90deg, rgba(56,189,248,0.8), rgba(129,140,248,0.65));border-radius:999px;}
+.stat-team.is-away .stat-bar span{background:linear-gradient(90deg, rgba(168,85,247,0.75), rgba(244,114,182,0.65));}
+.stat-label{font-size:12px;text-transform:uppercase;letter-spacing:0.24em;color:var(--muted);text-align:center;}
+.match-goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;padding:18px;border-radius:18px;border:1px solid rgba(148,163,184,0.2);background:linear-gradient(145deg, rgba(11,15,24,0.9), rgba(6,9,16,0.92));}
+.match-goals--empty{padding:18px;border-radius:18px;border:1px dashed rgba(148,163,184,0.25);text-align:center;color:var(--muted);background:rgba(4,7,12,0.45);}
+.goal-team-title{font-size:13px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.goal-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
+.goal-entry{display:flex;justify-content:space-between;gap:12px;font-size:14px;color:#f8fafc;}
+.goal-minute{color:var(--muted);font-size:13px;letter-spacing:0.08em;}
+.goal-empty{padding:12px;border-radius:12px;background:rgba(15,23,42,0.55);}
+.lineup-section{border:1px solid rgba(148,163,184,0.22);border-radius:20px;background:linear-gradient(145deg, rgba(8,12,19,0.92), rgba(4,7,12,0.92));overflow:hidden;}
+.lineup-toggle{width:100%;background:none;border:none;color:inherit;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:background .25s ease;}
+.lineup-toggle:hover,.lineup-toggle:focus-visible{background:rgba(15,23,42,0.6);outline:none;}
+.lineup-toggle::after{content:"";width:10px;height:10px;border:2px solid rgba(148,163,184,0.5);border-top:none;border-left:none;transform:rotate(45deg);transition:transform .25s ease,border-color .25s ease;}
+.lineup-toggle.is-open::after{transform:rotate(-135deg);border-color:rgba(148,163,184,0.8);}
+.lineup-panel{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+.lineup-panel.open{padding-bottom:4px;}
+.lineup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;padding:0 22px 22px;}
+.lineup-team{display:flex;flex-direction:column;gap:12px;}
+.lineup-team-header{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.lineup-team-name{font-size:14px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#f8fafc;}
+.lineup-formation{font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);}
+.lineup-rows{display:flex;flex-direction:column;gap:12px;}
+.lineup-row{display:flex;flex-direction:column;gap:10px;}
+.lineup-role{font-size:12px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);text-align:center;}
+.lineup-row-slots{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;}
+.lineup-slot{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:72px;}
+.player-circle{width:52px;height:52px;border-radius:50%;background:rgba(15,23,42,0.85);border:2px solid rgba(94,234,212,0.3);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#f8fafc;letter-spacing:0.08em;}
+.lineup-slot.placeholder .player-circle{border-style:dashed;border-color:rgba(148,163,184,0.35);background:rgba(15,23,42,0.4);color:var(--muted);}
+.player-name{font-size:13px;color:#f8fafc;max-width:100px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.player-pos{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);}
+.lineup-empty{padding:12px;border-radius:14px;background:rgba(15,23,42,0.55);text-align:center;}
+
 /* Results modal (sheet editor) */
 .modal{position:fixed;inset:0;background:rgba(3,6,12,0.85);display:none;align-items:center;justify-content:center;z-index:1000}
 .modal.show{display:flex}
@@ -2510,6 +2592,7 @@ let isMgr   = false;
 let rankings = {};
 let payouts  = { elite:0, mid:0, bottom:0 };
 let fixturesPublicCache = [];
+const fixtureDetailsCache = new Map();
 let fixturesSchedCache  = [];
 let friendliesFxCache  = [];
 let friendliesTeams    = [];
@@ -2526,12 +2609,23 @@ const competitionsAdminState = {
 let competitionDefaultsSetup = false;
 
 function normalizeFixtures(list){
-  return (Array.isArray(list)?list:[]).map(f=>({
-    ...f,
-    when: f.when?Number(f.when):f.when,
-    createdAt: f.createdAt?Number(f.createdAt):f.createdAt,
-    score: f.score || { hs: f.hs, as: f.as }
-  }));
+  return (Array.isArray(list)?list:[]).map(f=>{
+    const matchIdCandidate = [
+      f.matchId,
+      f.match_id,
+      f.matchid,
+      f.match,
+      f.details?.matchId,
+      f.details?.match_id
+    ].find(v => v !== undefined && v !== null && v !== '');
+    return ({
+      ...f,
+      when: f.when?Number(f.when):f.when,
+      createdAt: f.createdAt?Number(f.createdAt):f.createdAt,
+      score: f.score || { hs: f.hs, as: f.as },
+      matchId: matchIdCandidate !== undefined ? String(matchIdCandidate) : null
+    });
+  });
 }
 
 // api
@@ -3804,29 +3898,479 @@ async function refreshFixturesPublic(){
 }
 function renderFixturesPublic(){
   const list = fixturesPublicCache.slice().sort((a,b)=>(a.when||a.createdAt)-(b.when||b.createdAt));
-  fixturesPublicList.innerHTML = list.length ? list.map(f=>{
-    const banner = getFixtureBanner();
-    const H = byId(f.home), A = byId(f.away);
-    const hn = H?.name || f.home;
-    const an = A?.name || f.away;
-    const whenTxt = f.when ? fmtDate(f.when) : 'TBD';
-    const isFinal = String(f.status||'').toLowerCase()==='final';
-    const scoreTxt = isFinal ? `${f.score.hs}–${f.score.as}` : 'vs';
-    const scoreClass = isFinal ? 'score-final' : 'score-upcoming';
-    const ccBadge = (f.cup===CC_ID) ? ' • <span class="chip">Champions Cup</span>' : '';
+  fixturesPublicList.innerHTML = '';
+  if (!list.length){
+    fixturesPublicList.innerHTML = '<div class="muted">No fixtures yet.</div>';
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  list.forEach(fixture => {
+    frag.appendChild(createFixtureCard(fixture));
+  });
+  fixturesPublicList.appendChild(frag);
+}
+
+function createFixtureCard(fixture){
+  const card = document.createElement('article');
+  card.className = 'fixture-card glow-card glow-silver';
+  card.dataset.fixtureId = String(fixture.id ?? fixture.matchId ?? '');
+
+  const summary = document.createElement('button');
+  summary.type = 'button';
+  summary.className = 'fixture-summary';
+  summary.setAttribute('aria-expanded', 'false');
+  summary.innerHTML = renderFixtureSummary(fixture);
+
+  const body = document.createElement('div');
+  body.className = 'fixture-body';
+  const inner = document.createElement('div');
+  inner.className = 'fixture-body-inner';
+  inner.innerHTML = '<div class="fixture-placeholder">Select to view match details.</div>';
+  body.appendChild(inner);
+
+  summary.addEventListener('click', async () => {
+    const isExpanded = summary.getAttribute('aria-expanded') === 'true';
+    if (isExpanded){
+      summary.setAttribute('aria-expanded', 'false');
+      card.classList.remove('is-open');
+      body.style.maxHeight = '0px';
+      resetLineupToggles(card);
+      return;
+    }
+
+    summary.setAttribute('aria-expanded', 'true');
+    card.classList.add('is-open');
+    inner.innerHTML = '<div class="fixture-placeholder">Loading match details...</div>';
+    body.style.maxHeight = body.scrollHeight + 'px';
+
+    const key = fixture.matchId || fixture.match_id || fixture.id;
+    const token = Symbol('fixture-load');
+    card.__fixtureToken = token;
+    const details = await loadFixtureDetails(key);
+    if (card.__fixtureToken !== token){
+      return;
+    }
+    inner.innerHTML = renderFixtureDetails(fixture, details);
+    setupLineupToggles(card);
+    requestAnimationFrame(() => {
+      body.style.maxHeight = body.scrollHeight + 'px';
+    });
+  });
+
+  card.appendChild(summary);
+  card.appendChild(body);
+  return card;
+}
+
+function renderFixtureSummary(fixture){
+  const homeTeam = byId(fixture.home);
+  const awayTeam = byId(fixture.away);
+  const homeName = homeTeam?.name || fixture.home;
+  const awayName = awayTeam?.name || fixture.away;
+  const homeLogo = teamLogoUrl(homeTeam);
+  const awayLogo = teamLogoUrl(awayTeam);
+  const status = formatFixtureStatus(fixture);
+  const isFinal = status.variant === 'final';
+  const homeScore = Number(fixture.score?.hs ?? fixture.score?.home ?? 0);
+  const awayScore = Number(fixture.score?.as ?? fixture.score?.away ?? 0);
+  const centerScore = isFinal ? `${homeScore} – ${awayScore}` : 'vs';
+  const whenTxt = fixture.when ? fmtMatchDayTime(fixture.when) : 'TBD';
+  const roundTxt = fixture.round ? `${fixture.round} • ` : '';
+  return `
+    <div class="fixture-summary-team">
+      <img src="${escapeAttr(homeLogo)}" alt="" loading="lazy">
+      <div class="fixture-summary-text">
+        <span class="team-name">${escapeHtml(homeName)}</span>
+      </div>
+    </div>
+    <div class="fixture-summary-score">
+      <div class="summary-score">${escapeHtml(centerScore)}</div>
+      <div class="summary-meta">${escapeHtml(roundTxt + whenTxt)}</div>
+      <span class="summary-status ${status.variant ? `status-${status.variant}` : ''}">${escapeHtml(status.label)}</span>
+    </div>
+    <div class="fixture-summary-team is-away">
+      <img src="${escapeAttr(awayLogo)}" alt="" loading="lazy">
+      <div class="fixture-summary-text">
+        <span class="team-name">${escapeHtml(awayName)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function fixtureCompetitionName(fixture){
+  const map = {
+    UPCL: 'League',
+    [CC_ID]: 'Champions Cup',
+    [FRIENDLIES_ID]: 'Friendly'
+  };
+  return map[fixture.cup] || (fixture.cup ? String(fixture.cup) : 'League');
+}
+
+function fmtMatchDayTime(value){
+  try{
+    if (!value && value !== 0) return 'TBD';
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return 'TBD';
+    return date.toLocaleString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }catch{
+    return 'TBD';
+  }
+}
+
+function formatFixtureStatus(fixture){
+  const raw = String(fixture.status || '').toLowerCase();
+  if (raw === 'final' || raw === 'finished'){
+    return { label: 'Full-Time', variant: 'final' };
+  }
+  if (raw === 'live' || raw === 'in-progress' || raw === 'inprogress'){
+    return { label: 'Live', variant: 'live' };
+  }
+  if (raw) {
+    const label = raw.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return { label, variant: 'upcoming' };
+  }
+  return { label: 'Scheduled', variant: 'upcoming' };
+}
+
+function renderFixtureDetails(fixture, details){
+  const homeTeam = byId(fixture.home);
+  const awayTeam = byId(fixture.away);
+  const homeName = homeTeam?.name || fixture.home;
+  const awayName = awayTeam?.name || fixture.away;
+  const homeLogo = teamLogoUrl(homeTeam);
+  const awayLogo = teamLogoUrl(awayTeam);
+  const status = formatFixtureStatus(fixture);
+  const competition = fixtureCompetitionName(fixture);
+  const dateText = fixture.when ? fmtMatchDayTime(fixture.when) : 'Date TBD';
+  const isFinal = status.variant === 'final';
+  const homeScore = Number(fixture.score?.hs ?? fixture.score?.home ?? 0);
+  const awayScore = Number(fixture.score?.as ?? fixture.score?.away ?? 0);
+  const centerScore = isFinal ? `${homeScore} - ${awayScore}` : 'vs';
+  const homeWin = isFinal && homeScore > awayScore;
+  const awayWin = isFinal && awayScore > homeScore;
+  const roundMarkup = fixture.round ? `<div class="match-round">${escapeHtml(fixture.round)}</div>` : '';
+
+  if (!details || details.error){
+    const message = details?.error ? `Unable to load match details (${escapeHtml(details.error)})` : 'Match details will appear here once available.';
     return `
-      <div class="fx glow-card glow-silver">
-        <div>
-          ${banner ? `<img class="fx-banner" src="${banner}" alt="">` : ''}
-          <div class="fx-vs">
-            <span class="fx-team"><img src="${teamLogoUrl(H)}" alt=""><span>${escapeHtml(hn)}</span></span>
-            <span class="score-pill ${scoreClass}">${scoreTxt}</span>
-            <span class="fx-team"><img src="${teamLogoUrl(A)}" alt=""><span>${escapeHtml(an)}</span></span>
-          </div>
-          <div class="meta">${escapeHtml(f.round||'')}${ccBadge} • ${escapeHtml(whenTxt)} • ${escapeHtml(f.status||'')}</div>
+      <div class="match-header">
+        <div class="match-meta">
+          <span class="match-competition">${escapeHtml(competition)}</span>
+          <span class="match-date">${escapeHtml(dateText)}</span>
         </div>
-      </div>`;
-  }).join('') : `<div class="muted">No fixtures yet.</div>`;
+        <span class="match-status status-${status.variant}">${escapeHtml(status.label)}</span>
+      </div>
+      ${roundMarkup}
+      <div class="match-scoreboard">
+        <div class="match-team ${homeWin ? 'is-winner' : ''}">
+          <img src="${escapeAttr(homeLogo)}" alt="" loading="lazy">
+          <div class="team-info">
+            <span class="team-name">${escapeHtml(homeName)}</span>
+            <span class="team-score">${escapeHtml(isFinal ? String(homeScore) : '—')}</span>
+          </div>
+        </div>
+        <div class="match-score">${escapeHtml(centerScore)}</div>
+        <div class="match-team is-away ${awayWin ? 'is-winner' : ''}">
+          <img src="${escapeAttr(awayLogo)}" alt="" loading="lazy">
+          <div class="team-info">
+            <span class="team-name">${escapeHtml(awayName)}</span>
+            <span class="team-score">${escapeHtml(isFinal ? String(awayScore) : '—')}</span>
+          </div>
+        </div>
+      </div>
+      <div class="fixture-placeholder">${message}</div>
+    `;
+  }
+
+  const statsMarkup = buildStatsMarkup(details, fixture);
+  const goalsMarkup = buildGoalsMarkup(details, fixture, homeName, awayName);
+  const lineupMarkup = buildLineupSection(details, fixture, homeName, awayName);
+
+  return `
+    <div class="match-header">
+      <div class="match-meta">
+        <span class="match-competition">${escapeHtml(competition)}</span>
+        <span class="match-date">${escapeHtml(dateText)}</span>
+      </div>
+      <span class="match-status status-${status.variant}">${escapeHtml(status.label)}</span>
+    </div>
+    ${roundMarkup}
+    <div class="match-scoreboard">
+      <div class="match-team ${homeWin ? 'is-winner' : ''}">
+        <img src="${escapeAttr(homeLogo)}" alt="" loading="lazy">
+        <div class="team-info">
+          <span class="team-name">${escapeHtml(homeName)}</span>
+          <span class="team-score">${escapeHtml(isFinal ? String(homeScore) : '—')}</span>
+        </div>
+      </div>
+      <div class="match-score">${escapeHtml(centerScore)}</div>
+      <div class="match-team is-away ${awayWin ? 'is-winner' : ''}">
+        <img src="${escapeAttr(awayLogo)}" alt="" loading="lazy">
+        <div class="team-info">
+          <span class="team-name">${escapeHtml(awayName)}</span>
+          <span class="team-score">${escapeHtml(isFinal ? String(awayScore) : '—')}</span>
+        </div>
+      </div>
+    </div>
+    ${statsMarkup}
+    ${goalsMarkup}
+    ${lineupMarkup}
+  `;
+}
+
+function buildStatsMarkup(details, fixture){
+  const homeId = String(fixture.home);
+  const awayId = String(fixture.away);
+  const passing = details?.passingAccuracy || {};
+  const possession = details?.possession || {};
+  const rows = [
+    buildStatRow('Passing Accuracy', passing[homeId], passing[awayId]),
+    buildStatRow('Possession', possession[homeId], possession[awayId])
+  ].filter(Boolean);
+  if (!rows.length){
+    return '<div class="match-stats match-stats--empty">Match stats will appear here once available.</div>';
+  }
+  return `<div class="match-stats">${rows.join('')}</div>`;
+}
+
+function buildStatRow(label, homeValue, awayValue){
+  const homeText = formatPercent(homeValue);
+  const awayText = formatPercent(awayValue);
+  const homeWidth = clampPercent(homeValue);
+  const awayWidth = clampPercent(awayValue);
+  const homeNumeric = Number.isFinite(Number(homeValue)) ? Number(homeValue) : null;
+  const awayNumeric = Number.isFinite(Number(awayValue)) ? Number(awayValue) : null;
+  const homeLeading = homeNumeric !== null && awayNumeric !== null && homeNumeric > awayNumeric;
+  const awayLeading = homeNumeric !== null && awayNumeric !== null && awayNumeric > homeNumeric;
+  return `
+    <div class="stat-row">
+      <div class="stat-team${homeLeading ? ' is-leading' : ''}">
+        <div class="stat-value">${escapeHtml(homeText)}</div>
+        <div class="stat-bar"><span style="width:${homeWidth}%"></span></div>
+      </div>
+      <div class="stat-label">${escapeHtml(label)}</div>
+      <div class="stat-team is-away${awayLeading ? ' is-leading' : ''}">
+        <div class="stat-value">${escapeHtml(awayText)}</div>
+        <div class="stat-bar"><span style="width:${awayWidth}%"></span></div>
+      </div>
+    </div>
+  `;
+}
+
+function formatPercent(value){
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '—';
+  if (Math.abs(num) >= 10) return `${Math.round(num)}%`;
+  return `${num.toFixed(1)}%`;
+}
+
+function clampPercent(value){
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.max(0, Math.min(100, num));
+}
+
+function buildGoalsMarkup(details, fixture, homeName, awayName){
+  const goals = details?.goalscorers || {};
+  const homeGoals = Array.isArray(goals[String(fixture.home)]) ? goals[String(fixture.home)] : [];
+  const awayGoals = Array.isArray(goals[String(fixture.away)]) ? goals[String(fixture.away)] : [];
+  if (!homeGoals.length && !awayGoals.length){
+    return '<div class="match-goals match-goals--empty">No goals recorded yet.</div>';
+  }
+  return `
+    <div class="match-goals">
+      ${renderGoalColumn(homeName, homeGoals)}
+      ${renderGoalColumn(awayName, awayGoals)}
+    </div>
+  `;
+}
+
+function renderGoalColumn(teamName, list){
+  if (!Array.isArray(list) || !list.length){
+    return `
+      <div class="goal-team">
+        <div class="goal-team-title">${escapeHtml(teamName)}</div>
+        <div class="goal-empty muted">No goals</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="goal-team">
+      <div class="goal-team-title">${escapeHtml(teamName)}</div>
+      <ul class="goal-list">
+        ${list.map(entry => {
+          const minutes = Array.isArray(entry.minutes) && entry.minutes.length
+            ? entry.minutes.map(formatGoalMinute).filter(Boolean).join(', ')
+            : (Number(entry.goals || 0) > 1
+              ? `⚽×${Number(entry.goals || 0)}`
+              : (Number(entry.goals || 0) === 1 ? '⚽' : ''));
+          return `
+            <li class="goal-entry">
+              <span class="goal-player">${escapeHtml(entry.name || entry.playerId || 'Unknown')}</span>
+              <span class="goal-minute">${escapeHtml(minutes || '')}</span>
+            </li>
+          `;
+        }).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function formatGoalMinute(value){
+  if (value === undefined || value === null) return '';
+  const str = String(value).trim();
+  if (!str) return '';
+  if (/^\d+$/.test(str)) return `${str}'`;
+  return str.endsWith("'") ? str : `${str}'`;
+}
+
+function buildLineupSection(details, fixture, homeName, awayName){
+  const lineups = details?.lineups || {};
+  const homeLineup = lineups[String(fixture.home)] || null;
+  const awayLineup = lineups[String(fixture.away)] || null;
+  const content = homeLineup || awayLineup
+    ? `
+      <div class="lineup-grid">
+        ${renderLineupTeam(homeName, homeLineup)}
+        ${renderLineupTeam(awayName, awayLineup)}
+      </div>
+    `
+    : '<div class="lineup-empty muted">Lineups will appear once stats are recorded.</div>';
+  return `
+    <div class="lineup-section">
+      <button type="button" class="lineup-toggle" aria-expanded="false">View Lineups</button>
+      <div class="lineup-panel">
+        ${content}
+      </div>
+    </div>
+  `;
+}
+
+function renderLineupTeam(teamName, lineup){
+  if (!lineup){
+    return `
+      <div class="lineup-team">
+        <div class="lineup-team-header">
+          <span class="lineup-team-name">${escapeHtml(teamName)}</span>
+          <span class="lineup-formation muted">N/A</span>
+        </div>
+        <div class="lineup-empty muted">No lineup data</div>
+      </div>
+    `;
+  }
+  const players = lineup.players || { defenders: [], midfielders: [], forwards: [] };
+  const layout = lineup.layout || { defenders: players.defenders?.length || 0, midfielders: players.midfielders?.length || 0, forwards: players.forwards?.length || 0 };
+  return `
+    <div class="lineup-team">
+      <div class="lineup-team-header">
+        <span class="lineup-team-name">${escapeHtml(teamName)}</span>
+        <span class="lineup-formation">${escapeHtml(lineup.formation || '')}</span>
+      </div>
+      <div class="lineup-rows">
+        ${renderLineupRow('Defenders', players.defenders || [], layout.defenders)}
+        ${renderLineupRow('Midfielders', players.midfielders || [], layout.midfielders)}
+        ${renderLineupRow('Forwards', players.forwards || [], layout.forwards)}
+      </div>
+    </div>
+  `;
+}
+
+function renderLineupRow(label, players, slotCount){
+  const list = Array.isArray(players) ? players : [];
+  const count = Math.max(slotCount || 0, list.length);
+  const items = [];
+  for (let i = 0; i < count; i++){
+    const player = list[i];
+    if (player){
+      items.push(`
+        <div class="lineup-slot">
+          <div class="player-circle" title="${escapeAttr(player.position || '')}">${escapeHtml(initialsFromName(player.name || player.playerId || '?'))}</div>
+          <div class="player-name" title="${escapeAttr(player.name || player.playerId || 'Unknown')}">${escapeHtml(player.name || player.playerId || 'Unknown')}</div>
+          <div class="player-pos">${escapeHtml(player.position || '')}</div>
+        </div>
+      `);
+    } else {
+      items.push(`
+        <div class="lineup-slot placeholder">
+          <div class="player-circle"></div>
+          <div class="player-name muted">Empty</div>
+        </div>
+      `);
+    }
+  }
+  return `
+    <div class="lineup-row">
+      <div class="lineup-role">${escapeHtml(label)}</div>
+      <div class="lineup-row-slots">${items.join('')}</div>
+    </div>
+  `;
+}
+
+function initialsFromName(name){
+  const str = String(name || '').trim();
+  if (!str) return '?';
+  const parts = str.split(/\s+/).slice(0, 2);
+  return parts.map(part => part.charAt(0)).join('').toUpperCase();
+}
+
+async function loadFixtureDetails(matchId){
+  const key = matchId ? String(matchId) : null;
+  if (!key){
+    return { error: 'No match ID available' };
+  }
+  if (fixtureDetailsCache.has(key)){
+    return fixtureDetailsCache.get(key);
+  }
+  try {
+    const data = await apiGet(`/api/matches/${encodeURIComponent(key)}/details`);
+    fixtureDetailsCache.set(key, data);
+    return data;
+  } catch (err) {
+    console.error('Failed to load match details', err);
+    const error = { error: err.message || 'Failed to load match details' };
+    fixtureDetailsCache.set(key, error);
+    return error;
+  }
+}
+
+function resetLineupToggles(card){
+  card.querySelectorAll('.lineup-toggle').forEach(btn => {
+    const panel = btn.nextElementSibling;
+    btn.setAttribute('aria-expanded', 'false');
+    btn.classList.remove('is-open');
+    if (panel){
+      panel.classList.remove('open');
+      panel.style.maxHeight = '0px';
+    }
+  });
+}
+
+function setupLineupToggles(card){
+  card.querySelectorAll('.lineup-toggle').forEach(btn => {
+    const panel = btn.nextElementSibling;
+    if (!panel) return;
+    panel.style.maxHeight = '0px';
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
+      if (expanded){
+        btn.setAttribute('aria-expanded', 'false');
+        btn.classList.remove('is-open');
+        panel.classList.remove('open');
+        panel.style.maxHeight = '0px';
+      } else {
+        btn.setAttribute('aria-expanded', 'true');
+        btn.classList.add('is-open');
+        panel.classList.add('open');
+        panel.style.maxHeight = panel.scrollHeight + 'px';
+      }
+    });
+  });
 }
 
 // Next & recent for team (from public cache)
