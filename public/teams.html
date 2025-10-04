@@ -1018,6 +1018,15 @@ h2{margin:0 0 12px;font-size:28px;letter-spacing:0.08em;text-transform:uppercase
 .fixture-summary-team.is-away{justify-content:flex-end;}
 .fixture-summary-team.is-away .team-name{text-align:right;}
 .fixture-summary-score{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:160px;}
+@media (max-width: 640px){
+  .fixture-summary{grid-template-columns:1fr;padding:16px 18px;gap:12px;text-align:center;}
+  .fixture-summary-team{flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;}
+  .fixture-summary-team img{width:36px;height:36px;}
+  .fixture-summary-team .team-name{width:100%;text-align:center;}
+  .fixture-summary-team.is-away{justify-content:center;}
+  .fixture-summary-team.is-away .team-name{text-align:center;}
+  .fixture-summary-score{min-width:auto;}
+}
 .summary-score{font-size:26px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#f8fafc;}
 .summary-meta{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);text-align:center;}
 .summary-status{font-size:11px;letter-spacing:0.22em;text-transform:uppercase;border-radius:999px;padding:4px 12px;border:1px solid rgba(148,163,184,0.3);background:rgba(15,23,42,0.65);color:rgba(226,232,240,0.85);}
