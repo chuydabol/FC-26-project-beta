@@ -134,6 +134,13 @@
       font-size: 0.95rem;
     }
 
+    .fixture-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
     button.refresh {
       border: 1px solid var(--border);
       border-radius: 999px;
@@ -149,10 +156,14 @@
       opacity: 0.7;
     }
 
-    #matches {
+    #matches,
+    #dbMatches {
       display: grid;
       gap: 16px;
+      padding: 16px;
     }
+
+    #matches { padding: 0; }
 
     .match-card {
       display: grid;
@@ -1158,10 +1169,21 @@
             <strong id="teamLabel">Bota FC</strong>
             <div class="status" id="status">Loading friendly matches…</div>
           </div>
-          <button class="refresh" id="refresh" type="button">Refresh</button>
+          <div class="fixture-actions">
+            <button class="refresh" id="refresh" type="button">Refresh</button>
+            <button class="refresh" id="syncMatches" type="button">Sync Matches to Database</button>
+          </div>
         </section>
 
         <section id="matches" aria-label="Bota FC fixtures"></section>
+
+        <section class="standings-card" aria-label="Saved database matches">
+          <div class="section-heading">
+            <h2>Database Matches</h2>
+            <span class="conference-chip" id="dbStatus">Not loaded</span>
+          </div>
+          <section id="dbMatches" aria-label="Saved Postgres matches"></section>
+        </section>
       </section>
 
       <section class="tab-panel" id="tables-panel" aria-label="UPCL conference tables">
@@ -1186,6 +1208,9 @@
     const statusEl = document.getElementById('status');
     const teamLabelEl = document.getElementById('teamLabel');
     const refreshButton = document.getElementById('refresh');
+    const syncMatchesButton = document.getElementById('syncMatches');
+    const dbMatchesEl = document.getElementById('dbMatches');
+    const dbStatusEl = document.getElementById('dbStatus');
 
     const tabButtons = document.querySelectorAll('.tab');
     const tabPanels = document.querySelectorAll('.tab-panel');
@@ -1293,6 +1318,22 @@
             <div class="team-line"><span>${escapeHtml(opponent.name)}</span><span class="score">${scoreValue(match.score?.against)}</span></div>
           </div>
           <div class="match-id">Match ID<br>${escapeHtml(match.id)}</div>
+        </article>
+      `;
+    }
+
+    function renderDbMatch(match) {
+      return `
+        <article class="match-card">
+          <div>
+            <div class="result ${escapeHtml(match.result || '—')}">${escapeHtml(match.result || '—')}</div>
+            <div class="date">${escapeHtml(formatDate(match.match_date))}</div>
+          </div>
+          <div class="teams">
+            <div class="team-line"><span>${escapeHtml(match.club_name || `Club ${match.source_club_id}`)}</span><span class="score">${scoreValue(match.club_score)}</span></div>
+            <div class="team-line"><span>${escapeHtml(match.opponent_name || 'Opponent TBD')}</span><span class="score">${scoreValue(match.opponent_score)}</span></div>
+          </div>
+          <div class="match-id">DB Match ID<br>${escapeHtml(match.match_id)}</div>
         </article>
       `;
     }
@@ -1459,13 +1500,51 @@
       }
     }
 
+    async function loadDbMatches() {
+      dbStatusEl.textContent = 'Loading saved matches…';
+      try {
+        const response = await fetch('/api/db-matches');
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Request failed');
+        const matches = Array.isArray(payload.matches) ? payload.matches : [];
+        dbStatusEl.textContent = `${matches.length} saved ${matches.length === 1 ? 'match' : 'matches'}`;
+        dbMatchesEl.innerHTML = matches.length
+          ? matches.map(renderDbMatch).join('')
+          : '<div class="empty">No matches have been saved to Postgres yet. Use the sync button to import recent EA matches.</div>';
+      } catch (error) {
+        dbStatusEl.textContent = 'Database unavailable';
+        dbMatchesEl.innerHTML = `<div class="error">Saved database matches could not be loaded: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function syncMatchesToDatabase() {
+      syncMatchesButton.disabled = true;
+      dbStatusEl.textContent = 'Syncing matches…';
+      try {
+        const response = await fetch('/api/sync-matches', { method: 'POST' });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Sync failed');
+        dbStatusEl.textContent = `${payload.inserted} inserted, ${payload.skipped} skipped`;
+        statusEl.textContent = `Database sync complete: ${payload.totalFetched} fetched, ${payload.inserted} inserted, ${payload.skipped} skipped.`;
+        await loadDbMatches();
+      } catch (error) {
+        dbStatusEl.textContent = 'Sync failed';
+        statusEl.textContent = 'Database sync failed.';
+        dbMatchesEl.innerHTML = `<div class="error">Matches could not be synced to Postgres: ${escapeHtml(error.message)}</div>`;
+      } finally {
+        syncMatchesButton.disabled = false;
+      }
+    }
+
     tabButtons.forEach(button => {
       button.addEventListener('click', () => activateTab(button.dataset.tab));
     });
 
     refreshButton.addEventListener('click', loadMatches);
+    syncMatchesButton.addEventListener('click', syncMatchesToDatabase);
     renderStaticLeagueLayers();
     loadMatches();
+    loadDbMatches();
   </script>
 </body>
 </html>
