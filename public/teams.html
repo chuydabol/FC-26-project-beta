@@ -1124,9 +1124,350 @@
 
     .news-category { color: var(--success); }
 
+
+    .schedule-shell {
+      display: grid;
+      gap: 16px;
+    }
+
+    .schedule-hero,
+    .schedule-view,
+    .schedule-week,
+    .schedule-series-card,
+    .calendar-day {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      box-shadow: none;
+    }
+
+    .schedule-hero {
+      display: grid;
+      gap: 14px;
+      padding: 22px;
+      border-radius: 22px;
+    }
+
+    .schedule-hero-top,
+    .schedule-controls,
+    .series-card-header,
+    .series-card-teams,
+    .calendar-header,
+    .calendar-series-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .schedule-hero h2 {
+      margin: 0;
+      font-size: clamp(1.65rem, 3vw, 2.45rem);
+      letter-spacing: -0.05em;
+    }
+
+    .schedule-hero p {
+      max-width: 840px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .schedule-rule-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .schedule-rule {
+      display: grid;
+      gap: 6px;
+      min-height: 92px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface-subtle);
+    }
+
+    .schedule-rule span {
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .schedule-rule strong {
+      color: var(--text);
+      font-size: 0.98rem;
+      line-height: 1.35;
+    }
+
+    .schedule-view-toggle {
+      display: inline-flex;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-subtle);
+    }
+
+    .schedule-view-button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 10px 14px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+    }
+
+    .schedule-view-button:hover,
+    .schedule-view-button.active {
+      border-color: var(--border);
+      background: var(--panel-strong);
+      color: var(--text);
+    }
+
+    .schedule-view { display: none; }
+
+    .schedule-view.active {
+      display: grid;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 22px;
+    }
+
+    .schedule-week {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      background: var(--surface-subtle);
+    }
+
+    .schedule-week-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .schedule-week-header h3,
+    .calendar-title h3 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .schedule-week-header p,
+    .calendar-title p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    .schedule-series-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .schedule-series-card {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border-radius: 16px;
+    }
+
+    .series-card-header { align-items: flex-start; }
+
+    .series-conference {
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .series-status-pill {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 9px;
+      color: var(--text);
+      background: var(--panel-strong);
+      font-size: 0.62rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .series-card-teams {
+      align-items: baseline;
+      flex-wrap: nowrap;
+      color: var(--text);
+      font-size: clamp(1.05rem, 2vw, 1.3rem);
+      font-weight: 950;
+      letter-spacing: -0.03em;
+    }
+
+    .series-card-teams span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .series-card-teams small {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .series-detail-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .series-detail-row {
+      display: grid;
+      grid-template-columns: 92px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-subtle);
+      color: var(--text);
+      font-size: 0.86rem;
+    }
+
+    .series-detail-row dt {
+      color: var(--muted);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .series-detail-row dd { margin: 0; }
+
+    .schedule-view[hidden] { display: none; }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--border);
+    }
+
+    .calendar-weekday,
+    .calendar-day {
+      min-height: 122px;
+      padding: 10px;
+    }
+
+    .calendar-weekday {
+      min-height: auto;
+      background: var(--panel-strong);
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .calendar-day {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      border: 0;
+      border-radius: 0;
+      background: var(--panel);
+    }
+
+    .calendar-day.is-muted { background: #11141b; color: var(--muted); }
+
+    .calendar-date-number {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 900;
+    }
+
+    .calendar-series {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-subtle);
+      overflow: hidden;
+    }
+
+    .calendar-series summary {
+      display: block;
+      padding: 9px;
+      cursor: pointer;
+      list-style: none;
+    }
+
+    .calendar-series summary::-webkit-details-marker { display: none; }
+
+    .calendar-series-summary {
+      align-items: flex-start;
+      flex-wrap: nowrap;
+    }
+
+    .calendar-series-title {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+      font-size: 0.78rem;
+      font-weight: 900;
+      line-height: 1.25;
+    }
+
+    .calendar-series-title span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .calendar-series-title small {
+      color: var(--muted);
+      font-size: 0.6rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .calendar-series-details {
+      display: grid;
+      gap: 6px;
+      padding: 0 9px 9px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      line-height: 1.4;
+    }
+
     @media (max-width: 920px) {
       .league-grid { grid-template-columns: 1fr; }
       .overview-layout { grid-template-columns: 1fr; }
+      .schedule-rule-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .schedule-series-grid { grid-template-columns: 1fr; }
       .news-center { position: static; max-height: 520px; }
     }
 
@@ -1147,6 +1488,14 @@
       .series-score { justify-items: start; text-align: left; }
       .series-subtext { text-align: left; }
       .news-center { max-height: 460px; }
+      .schedule-hero { padding: 18px; }
+      .schedule-rule-grid { grid-template-columns: 1fr; }
+      .schedule-controls { align-items: stretch; flex-direction: column; }
+      .schedule-view-toggle { width: 100%; }
+      .schedule-view-button { flex: 1; padding-inline: 10px; font-size: 0.72rem; }
+      .calendar-grid { grid-template-columns: 1fr; gap: 8px; border: 0; background: transparent; }
+      .calendar-weekday { display: none; }
+      .calendar-day { min-height: auto; border: 1px solid var(--border); border-radius: 14px; }
       .playoff-panel {
         width: calc(100vw - 20px);
         margin-left: calc(50% - 50vw + 10px);
@@ -1201,6 +1550,7 @@
     <nav class="tabs" aria-label="Primary">
       <button class="tab active" data-tab="overview" type="button">Overview</button>
       <button class="tab" data-tab="fixtures" type="button">Fixtures</button>
+      <button class="tab" data-tab="schedule" type="button">Schedule</button>
       <button class="tab" data-tab="tables" type="button">Tables</button>
       <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
       <button class="tab" data-tab="admin" type="button">Admin</button>
@@ -1330,6 +1680,36 @@
         </section>
       </section>
 
+
+      <section class="tab-panel" id="schedule-panel" aria-label="UPCL schedule">
+        <div class="schedule-shell">
+          <section class="schedule-hero" aria-labelledby="scheduleTitle">
+            <div class="schedule-hero-top">
+              <div>
+                <p class="eyebrow">League Calendar</p>
+                <h2 id="scheduleTitle">UPCL Schedule</h2>
+              </div>
+              <div class="schedule-controls" aria-label="Schedule view controls">
+                <div class="schedule-view-toggle" role="group" aria-label="Choose schedule view">
+                  <button class="schedule-view-button active" data-schedule-view="week" type="button">Week View</button>
+                  <button class="schedule-view-button" data-schedule-view="calendar" type="button">Calendar View</button>
+                </div>
+              </div>
+            </div>
+            <p>Placeholder regular season series for the 10-team UPCL format. Clubs play only inside their conference, each regular season series is exactly three matches, and all three matches are scheduled regardless of scoreline.</p>
+            <div class="schedule-rule-grid" aria-label="Schedule format summary">
+              <div class="schedule-rule"><span>League Size</span><strong>10 teams · 5 East · 5 West</strong></div>
+              <div class="schedule-rule"><span>Regular Season</span><strong>4 series and 12 matches per team</strong></div>
+              <div class="schedule-rule"><span>Weekly Load</span><strong>Week 1: 2 series · Week 2: 2 series</strong></div>
+              <div class="schedule-rule"><span>Playoff Cut</span><strong>Top 4 per conference advance</strong></div>
+            </div>
+          </section>
+
+          <section class="schedule-view active" id="scheduleWeekView" aria-label="Week 1 and Week 2 regular season schedule"></section>
+          <section class="schedule-view" id="scheduleCalendarView" aria-label="Monthly calendar schedule" hidden></section>
+        </div>
+      </section>
+
       <section class="tab-panel" id="tables-panel" aria-label="UPCL conference tables">
         <div class="league-grid" id="standings"></div>
       </section>
@@ -1397,6 +1777,9 @@
     const adminPasswordInput = document.getElementById('adminPasswordInput');
     const adminLoginErrorEl = document.getElementById('adminLoginError');
     const adminLogoutButton = document.getElementById('adminLogout');
+    const scheduleViewButtons = document.querySelectorAll('.schedule-view-button');
+    const scheduleWeekViewEl = document.getElementById('scheduleWeekView');
+    const scheduleCalendarViewEl = document.getElementById('scheduleCalendarView');
 
     const tabButtons = document.querySelectorAll('.tab');
     const tabPanels = document.querySelectorAll('.tab-panel');
@@ -1429,6 +1812,30 @@
       'FC Sutton St': 'Club ID 129307',
       'FC Sutton': 'Club ID 129307'
     };
+
+
+    const scheduleSeries = [
+      { id: 'E-W1-01', week: 1, conference: 'Eastern Conference', home: 'Bota FC', away: 'Inferign Utd', date: 'Saturday, July 11', time: '7:00 PM ET', day: 11, status: 'Scheduled' },
+      { id: 'E-W1-02', week: 1, conference: 'Eastern Conference', home: 'Inferign Utd', away: 'Egoistas', date: 'Saturday, July 11', time: '8:30 PM ET', day: 11, status: 'Scheduled' },
+      { id: 'E-W1-03', week: 1, conference: 'Eastern Conference', home: 'Egoistas', away: 'Royal Republic', date: 'Sunday, July 12', time: '6:00 PM ET', day: 12, status: 'Scheduled' },
+      { id: 'E-W1-04', week: 1, conference: 'Eastern Conference', home: 'Royal Republic', away: 'Sporting de la MA', date: 'Sunday, July 12', time: '7:30 PM ET', day: 12, status: 'Scheduled' },
+      { id: 'E-W1-05', week: 1, conference: 'Eastern Conference', home: 'Sporting de la MA', away: 'Bota FC', date: 'Monday, July 13', time: '8:00 PM ET', day: 13, status: 'Scheduled' },
+      { id: 'W-W1-01', week: 1, conference: 'Western Conference', home: 'Versus One', away: 'FC Wisconsin', date: 'Saturday, July 11', time: '7:00 PM PT', day: 11, status: 'Scheduled' },
+      { id: 'W-W1-02', week: 1, conference: 'Western Conference', home: 'FC Wisconsin', away: 'FC Sutton', date: 'Saturday, July 11', time: '8:30 PM PT', day: 11, status: 'Scheduled' },
+      { id: 'W-W1-03', week: 1, conference: 'Western Conference', home: 'FC Sutton', away: 'Razorblack FC', date: 'Sunday, July 12', time: '6:00 PM PT', day: 12, status: 'Scheduled' },
+      { id: 'W-W1-04', week: 1, conference: 'Western Conference', home: 'Razorblack FC', away: 'Elite VT', date: 'Sunday, July 12', time: '7:30 PM PT', day: 12, status: 'Scheduled' },
+      { id: 'W-W1-05', week: 1, conference: 'Western Conference', home: 'Elite VT', away: 'Versus One', date: 'Monday, July 13', time: '8:00 PM PT', day: 13, status: 'Scheduled' },
+      { id: 'E-W2-01', week: 2, conference: 'Eastern Conference', home: 'Bota FC', away: 'Egoistas', date: 'Saturday, July 18', time: '7:00 PM ET', day: 18, status: 'Scheduled' },
+      { id: 'E-W2-02', week: 2, conference: 'Eastern Conference', home: 'Bota FC', away: 'Royal Republic', date: 'Saturday, July 18', time: '8:30 PM ET', day: 18, status: 'Scheduled' },
+      { id: 'E-W2-03', week: 2, conference: 'Eastern Conference', home: 'Inferign Utd', away: 'Royal Republic', date: 'Sunday, July 19', time: '6:00 PM ET', day: 19, status: 'Scheduled' },
+      { id: 'E-W2-04', week: 2, conference: 'Eastern Conference', home: 'Inferign Utd', away: 'Sporting de la MA', date: 'Sunday, July 19', time: '7:30 PM ET', day: 19, status: 'Scheduled' },
+      { id: 'E-W2-05', week: 2, conference: 'Eastern Conference', home: 'Egoistas', away: 'Sporting de la MA', date: 'Monday, July 20', time: '8:00 PM ET', day: 20, status: 'Scheduled' },
+      { id: 'W-W2-01', week: 2, conference: 'Western Conference', home: 'Versus One', away: 'FC Sutton', date: 'Saturday, July 18', time: '7:00 PM PT', day: 18, status: 'Scheduled' },
+      { id: 'W-W2-02', week: 2, conference: 'Western Conference', home: 'Versus One', away: 'Razorblack FC', date: 'Saturday, July 18', time: '8:30 PM PT', day: 18, status: 'Scheduled' },
+      { id: 'W-W2-03', week: 2, conference: 'Western Conference', home: 'FC Wisconsin', away: 'Razorblack FC', date: 'Sunday, July 19', time: '6:00 PM PT', day: 19, status: 'Scheduled' },
+      { id: 'W-W2-04', week: 2, conference: 'Western Conference', home: 'FC Wisconsin', away: 'Elite VT', date: 'Sunday, July 19', time: '7:30 PM PT', day: 19, status: 'Scheduled' },
+      { id: 'W-W2-05', week: 2, conference: 'Western Conference', home: 'FC Sutton', away: 'Elite VT', date: 'Monday, July 20', time: '8:00 PM PT', day: 20, status: 'Scheduled' }
+    ];
 
     const playoffData = {
       eastSemifinals: {
@@ -1685,6 +2092,124 @@
       playoffBracketEl.innerHTML = renderPlayoffBracket();
     }
 
+
+    function getSeriesHosts(series) {
+      return [
+        { label: 'Game 1 host', host: series.home },
+        { label: 'Game 2 host', host: series.away },
+        { label: 'Game 3 host', host: series.home }
+      ];
+    }
+
+    function renderSeriesDetails(series) {
+      const hosts = getSeriesHosts(series);
+      return `
+        <dl class="series-detail-list">
+          <div class="series-detail-row"><dt>Format</dt><dd>3 Match Series</dd></div>
+          ${hosts.map(game => `<div class="series-detail-row"><dt>${escapeHtml(game.label)}</dt><dd>${escapeHtml(game.host)}</dd></div>`).join('')}
+          <div class="series-detail-row"><dt>Status</dt><dd>${escapeHtml(series.status)}</dd></div>
+          <div class="series-detail-row"><dt>Date/time</dt><dd>${escapeHtml(series.date)} · ${escapeHtml(series.time)} placeholder</dd></div>
+        </dl>
+      `;
+    }
+
+    function renderScheduleSeriesCard(series) {
+      return `
+        <article class="schedule-series-card">
+          <div class="series-card-header">
+            <span class="series-conference">${escapeHtml(series.conference)}</span>
+            <span class="series-status-pill">${escapeHtml(series.status)}</span>
+          </div>
+          <div class="series-card-teams">
+            <span>${escapeHtml(series.home)}</span>
+            <small>vs</small>
+            <span>${escapeHtml(series.away)}</span>
+          </div>
+          ${renderSeriesDetails(series)}
+        </article>
+      `;
+    }
+
+    function renderScheduleWeek(weekNumber) {
+      const weekSeries = scheduleSeries.filter(series => series.week === weekNumber);
+      return `
+        <section class="schedule-week" aria-labelledby="scheduleWeek${weekNumber}Title">
+          <div class="schedule-week-header">
+            <div>
+              <h3 id="scheduleWeek${weekNumber}Title">Week ${weekNumber}</h3>
+              <p>Each team plays two intra-conference series this week.</p>
+            </div>
+            <span class="conference-chip">${weekSeries.length} series</span>
+          </div>
+          <div class="schedule-series-grid">
+            ${weekSeries.map(renderScheduleSeriesCard).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderScheduleWeekView() {
+      scheduleWeekViewEl.innerHTML = [renderScheduleWeek(1), renderScheduleWeek(2)].join('');
+    }
+
+    function renderCalendarSeries(series) {
+      return `
+        <details class="calendar-series">
+          <summary>
+            <span class="calendar-series-summary">
+              <span class="calendar-series-title">
+                <span>${escapeHtml(series.home)} vs ${escapeHtml(series.away)}</span>
+                <small>${escapeHtml(series.conference.replace(' Conference', ''))} · Week ${series.week}</small>
+              </span>
+              <span class="series-status-pill">${escapeHtml(series.status)}</span>
+            </span>
+          </summary>
+          <div class="calendar-series-details">
+            <span>3 Match Series · ${escapeHtml(series.time)} placeholder</span>
+            <span>Game 1: ${escapeHtml(series.home)} hosts</span>
+            <span>Game 2: ${escapeHtml(series.away)} hosts</span>
+            <span>Game 3: ${escapeHtml(series.home)} hosts</span>
+          </div>
+        </details>
+      `;
+    }
+
+    function renderScheduleCalendarView() {
+      const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const days = Array.from({ length: 35 }, (_, index) => index + 1);
+      scheduleCalendarViewEl.innerHTML = `
+        <div class="calendar-header">
+          <div class="calendar-title">
+            <h3>July placeholder calendar</h3>
+            <p>Click a series inside a date box to expand hosting details.</p>
+          </div>
+          <span class="conference-chip">Placeholder dates</span>
+        </div>
+        <div class="calendar-grid">
+          ${weekdays.map(day => `<div class="calendar-weekday">${escapeHtml(day)}</div>`).join('')}
+          ${days.map(day => {
+            const daySeries = scheduleSeries.filter(series => series.day === day);
+            const isMuted = day < 11 || day > 20;
+            return `
+              <div class="calendar-day ${isMuted ? 'is-muted' : ''}">
+                <span class="calendar-date-number">${day}</span>
+                ${daySeries.map(renderCalendarSeries).join('')}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function activateScheduleView(viewName) {
+      const isCalendar = viewName === 'calendar';
+      scheduleViewButtons.forEach(button => button.classList.toggle('active', button.dataset.scheduleView === viewName));
+      scheduleWeekViewEl.classList.toggle('active', !isCalendar);
+      scheduleWeekViewEl.hidden = isCalendar;
+      scheduleCalendarViewEl.classList.toggle('active', isCalendar);
+      scheduleCalendarViewEl.hidden = !isCalendar;
+    }
+
     function getAdminPassword() {
       return localStorage.getItem('adminPassword') || '';
     }
@@ -1852,6 +2377,10 @@
       button.addEventListener('click', () => activateTab(button.dataset.tab));
     });
 
+    scheduleViewButtons.forEach(button => {
+      button.addEventListener('click', () => activateScheduleView(button.dataset.scheduleView));
+    });
+
     refreshButton.addEventListener('click', loadMatches);
     syncMatchesButton.addEventListener('click', syncMatchesToDatabase);
     adminLoginForm.addEventListener('submit', event => {
@@ -1880,6 +2409,8 @@
         button.disabled = false;
       }
     });
+    renderScheduleWeekView();
+    renderScheduleCalendarView();
     renderAdminState();
     renderStandingsLoading();
     loadMatches();
