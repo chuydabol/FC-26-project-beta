@@ -68,3 +68,62 @@ test('GET /api/matches returns friendly matches for Bota FC', async () => {
 
   fetchStub.mock.restore();
 });
+
+test('POST /api/sync-matches stores recent matches for all league clubs', async () => {
+  const db = require('../db');
+  const fetchedClubIds = [];
+  const insertedMatches = [];
+  const fetchStub = mock.method(eaApi, 'fetchFriendlyMatches', async clubId => {
+    fetchedClubIds.push(clubId);
+    return [
+      {
+        matchId: `match-${clubId}`,
+        timestamp: 1_700_000_000,
+        clubs: {
+          [clubId]: { goals: 2, details: { name: `Club ${clubId}` } },
+          999: { goals: 1, details: { name: 'Opponent FC' } },
+        },
+      },
+    ];
+  });
+  const ensureStub = mock.method(db, 'ensureMatchesTable', async () => {});
+  const insertStub = mock.method(db, 'insertMatch', async (match, club) => {
+    insertedMatches.push({ match, club });
+    return insertedMatches.length % 2 === 1;
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/sync-matches`, { method: 'POST' });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body, { totalFetched: 6, inserted: 3, skipped: 3 });
+  });
+
+  assert.deepEqual(fetchedClubIds, app.LEAGUE_CLUBS.map(club => club.id));
+  assert.equal(ensureStub.mock.callCount(), 1);
+  assert.equal(insertStub.mock.callCount(), 6);
+  assert.equal(insertedMatches[0].club.name, 'Bota FC');
+  assert.equal(insertedMatches[0].match.id, 'match-57985');
+
+  fetchStub.mock.restore();
+  ensureStub.mock.restore();
+  insertStub.mock.restore();
+});
+
+test('GET /api/db-matches returns saved Postgres matches', async () => {
+  const db = require('../db');
+  const getStub = mock.method(db, 'getSavedMatches', async () => [
+    { match_id: 'newer', match_date: '2026-01-02T00:00:00.000Z' },
+    { match_id: 'older', match_date: '2026-01-01T00:00:00.000Z' },
+  ]);
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/db-matches`);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.matches.map(match => match.match_id), ['newer', 'older']);
+  });
+
+  assert.equal(getStub.mock.callCount(), 1);
+  getStub.mock.restore();
+});

@@ -3,19 +3,29 @@ const path = require('path');
 const fs = require('fs');
 const logger = require('./logger');
 const eaApi = require('./services/eaApi');
+const db = require('./db');
 
 const app = express();
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
+const LEAGUE_CLUBS = [
+  { id: '57985', name: 'Bota FC' },
+  { id: '6297844', name: 'Inferign Utd' },
+  { id: '1171188', name: 'Egoistas' },
+  { id: '4671025', name: 'Versus One' },
+  { id: '654142', name: 'FC Wisconsin' },
+  { id: '129307', name: 'FC Sutton' },
+];
+
 const BOTA_FC = {
-  id: process.env.BOTA_CLUB_ID || '57985',
-  name: process.env.BOTA_CLUB_NAME || 'Bota FC',
+  id: process.env.BOTA_CLUB_ID || LEAGUE_CLUBS[0].id,
+  name: process.env.BOTA_CLUB_NAME || LEAGUE_CLUBS[0].name,
 };
 const ACTIVE_MATCH_TYPE = 'friendlyMatch';
 
 app.use((_req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS');
+  res.set('Access-Control-Allow-Methods', 'GET,HEAD,POST,OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
@@ -44,8 +54,8 @@ function normalizeClub(clubId, club = {}) {
   };
 }
 
-function getMatchId(match, index) {
-  return String(match.matchId ?? match.matchid ?? match.id ?? `friendly-${index}`);
+function getMatchId(match, index, team = BOTA_FC) {
+  return String(match.matchId ?? match.matchid ?? match.id ?? `${team.id}-friendly-${index}`);
 }
 
 function normalizeMatch(match, index, team = BOTA_FC) {
@@ -62,7 +72,7 @@ function normalizeMatch(match, index, team = BOTA_FC) {
   }
 
   return {
-    id: getMatchId(match, index),
+    id: getMatchId(match, index, team),
     timestamp: normalizeTimestamp(match),
     team: bota || { id: team.id, name: team.name, goals: botaGoals, isHome: false },
     opponent,
@@ -119,6 +129,53 @@ async function sendFriendlyMatches(_req, res) {
 app.get('/api/matches', sendFriendlyMatches);
 app.get('/api/fixtures', sendFriendlyMatches);
 
+app.post('/api/sync-matches', async (_req, res) => {
+  const totals = {
+    totalFetched: 0,
+    inserted: 0,
+    skipped: 0,
+  };
+
+  try {
+    await db.ensureMatchesTable();
+
+    for (const club of LEAGUE_CLUBS) {
+      const rawMatches = await eaApi.fetchFriendlyMatches(club.id);
+      totals.totalFetched += rawMatches.length;
+
+      const matches = rawMatches.map((match, index) => normalizeMatch(match, index, club));
+      for (const match of matches) {
+        const inserted = await db.insertMatch(match, club);
+        if (inserted) totals.inserted += 1;
+        else totals.skipped += 1;
+      }
+    }
+
+    res.json(totals);
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to sync friendly matches to Postgres');
+    res.status(500).json({
+      error: 'Failed to sync friendly matches to Postgres',
+      details: error.message || 'Database sync failed',
+      ...totals,
+    });
+  }
+});
+
+app.get('/api/db-matches', async (_req, res) => {
+  try {
+    const matches = await db.getSavedMatches();
+    res.json({ matches });
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to load saved matches from Postgres');
+    res.status(500).json({
+      error: 'Failed to load saved matches from Postgres',
+      details: error.message || 'Database query failed',
+      matches: [],
+    });
+  }
+});
+
 if (require.main === module) {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
@@ -130,3 +187,4 @@ module.exports = app;
 module.exports.normalizeMatch = normalizeMatch;
 module.exports.normalizeTimestamp = normalizeTimestamp;
 module.exports.BOTA_FC = BOTA_FC;
+module.exports.LEAGUE_CLUBS = LEAGUE_CLUBS;
