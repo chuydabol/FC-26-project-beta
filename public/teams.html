@@ -751,8 +751,220 @@
     .finals .team-meta { font-size: 0.73rem; }
     .finals .round-chip { color: var(--success); border-color: var(--border); background: var(--surface-subtle); }
 
+
+
+    .overview-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .overview-main,
+    .overview-sidebar {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .overview-card,
+    .news-center {
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .overview-card-body {
+      padding: 18px;
+    }
+
+    .snapshot-grid,
+    .leader-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .snapshot-stat,
+    .leader-card,
+    .fixture-row,
+    .result-row,
+    .news-card {
+      border: 1px solid var(--border);
+      background: var(--surface-subtle);
+    }
+
+    .snapshot-stat,
+    .leader-card {
+      display: grid;
+      gap: 8px;
+      min-height: 116px;
+      padding: 14px;
+      border-radius: 16px;
+    }
+
+    .stat-label,
+    .leader-label,
+    .fixture-meta,
+    .result-meta,
+    .news-category,
+    .news-time {
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 850;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .stat-value,
+    .leader-value {
+      color: var(--text);
+      font-size: clamp(1.45rem, 3vw, 2.2rem);
+      font-weight: 950;
+      letter-spacing: -0.06em;
+      line-height: 1;
+    }
+
+    .stat-note,
+    .leader-note {
+      color: #cbd5e1;
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    .result-list,
+    .fixture-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .result-row,
+    .fixture-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      border-radius: 16px;
+    }
+
+    .overview-team {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      font-weight: 900;
+    }
+
+    .overview-team:last-child { justify-content: flex-end; text-align: right; }
+
+    .overview-team img {
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      border: 1px solid var(--border);
+      background: var(--panel-strong);
+      padding: 2px;
+    }
+
+    .overview-team span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .overview-score,
+    .fixture-date {
+      display: grid;
+      gap: 3px;
+      min-width: 74px;
+      color: var(--text);
+      text-align: center;
+      font-size: 1.05rem;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .fixture-date small,
+    .overview-score small {
+      color: var(--muted);
+      font-size: 0.65rem;
+      font-weight: 850;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .news-center {
+      position: sticky;
+      top: 16px;
+      max-height: min(760px, calc(100vh - 32px));
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+    }
+
+    .news-feed {
+      display: grid;
+      gap: 10px;
+      max-height: 100%;
+      overflow-y: auto;
+      padding: 14px;
+      scrollbar-width: thin;
+    }
+
+    .news-card {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr);
+      gap: 12px;
+      padding: 13px;
+      border-radius: 16px;
+      transition: border-color 140ms ease, background 140ms ease;
+    }
+
+    .news-card:hover {
+      border-color: #343b4a;
+      background: var(--panel-strong);
+    }
+
+    .news-icon {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel-strong);
+      font-size: 1rem;
+    }
+
+    .news-content {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .news-headline {
+      margin: 0;
+      color: var(--text);
+      font-size: 0.94rem;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .news-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .news-category { color: var(--success); }
+
     @media (max-width: 920px) {
       .league-grid { grid-template-columns: 1fr; }
+      .overview-layout { grid-template-columns: 1fr; }
+      .news-center { position: static; max-height: 520px; }
     }
 
     @media (max-width: 720px) {
@@ -761,6 +973,14 @@
       .tabs { gap: 6px; }
       .tab { padding: 10px 12px; font-size: 0.75rem; }
       .section-heading { align-items: flex-start; flex-direction: column; }
+      .snapshot-grid,
+      .leader-grid { grid-template-columns: 1fr 1fr; }
+      .result-row,
+      .fixture-row { grid-template-columns: 1fr; text-align: left; }
+      .overview-team:last-child { justify-content: flex-start; text-align: left; }
+      .overview-score,
+      .fixture-date { justify-items: start; text-align: left; }
+      .news-center { max-height: 460px; }
       .playoff-panel {
         width: calc(100vw - 20px);
         margin-left: calc(50% - 50vw + 10px);
@@ -813,13 +1033,129 @@
     </header>
 
     <nav class="tabs" aria-label="Primary">
-      <button class="tab active" data-tab="fixtures" type="button">Fixtures</button>
+      <button class="tab active" data-tab="overview" type="button">Overview</button>
+      <button class="tab" data-tab="fixtures" type="button">Fixtures</button>
       <button class="tab" data-tab="tables" type="button">Tables</button>
       <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
     </nav>
 
     <main>
-      <section class="tab-panel active" id="fixtures-panel" aria-label="Fixtures">
+
+      <section class="tab-panel active" id="overview-panel" aria-label="UPCL overview">
+        <div class="overview-layout">
+          <div class="overview-main">
+            <article class="overview-card" aria-labelledby="conferenceSnapshotTitle">
+              <div class="section-heading">
+                <h2 id="conferenceSnapshotTitle">Conference Snapshot</h2>
+                <span class="conference-chip">Placeholder data</span>
+              </div>
+              <div class="overview-card-body snapshot-grid">
+                <div class="snapshot-stat">
+                  <span class="stat-label">East Leader</span>
+                  <span class="stat-value">Bota FC</span>
+                  <span class="stat-note">7-2-1 record with the strongest defensive mark in the conference.</span>
+                </div>
+                <div class="snapshot-stat">
+                  <span class="stat-label">West Leader</span>
+                  <span class="stat-value">Razorblack</span>
+                  <span class="stat-note">Eight wins from ten keeps the West bracket running through Razorblack.</span>
+                </div>
+                <div class="snapshot-stat">
+                  <span class="stat-label">Playoff Cut</span>
+                  <span class="stat-value">Top 2</span>
+                  <span class="stat-note">Each conference sends two clubs into the UPCL playoff stage.</span>
+                </div>
+                <div class="snapshot-stat">
+                  <span class="stat-label">Total Clubs</span>
+                  <span class="stat-value">12</span>
+                  <span class="stat-note">Six clubs in each conference during the beta hub preview.</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="overview-card" aria-labelledby="recentResultsTitle">
+              <div class="section-heading">
+                <h2 id="recentResultsTitle">Recent Results</h2>
+                <span class="conference-chip">Latest scorelines</span>
+              </div>
+              <div class="overview-card-body result-list">
+                <div class="result-row">
+                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>Bota FC</span></div>
+                  <div class="overview-score">3 - 1<small>Final</small></div>
+                  <div class="overview-team"><span>AFC Warriors</span><img src="/assets/logos/afc-warriors.png" alt="" loading="lazy"></div>
+                </div>
+                <div class="result-row">
+                  <div class="overview-team"><img src="/assets/logos/razorblack-fc.png" alt="" loading="lazy"><span>Razorblack FC</span></div>
+                  <div class="overview-score">2 - 2<small>Final</small></div>
+                  <div class="overview-team"><span>Sporting de la MA</span><img src="/assets/logos/sporting-de-la-ma.png" alt="" loading="lazy"></div>
+                </div>
+                <div class="result-row">
+                  <div class="overview-team"><img src="/assets/logos/club-frijol.png" alt="" loading="lazy"><span>Club Frijol</span></div>
+                  <div class="overview-score">1 - 0<small>Final</small></div>
+                  <div class="overview-team"><span>Ethabella FC</span><img src="/assets/logos/ethabella-fc.png" alt="" loading="lazy"></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="overview-card" aria-labelledby="upcomingFixturesTitle">
+              <div class="section-heading">
+                <h2 id="upcomingFixturesTitle">Upcoming Fixtures</h2>
+                <span class="conference-chip">Next slate</span>
+              </div>
+              <div class="overview-card-body fixture-list">
+                <div class="fixture-row">
+                  <div class="overview-team"><img src="/assets/logos/royal-republic.png" alt="" loading="lazy"><span>Royal Republic</span></div>
+                  <div class="fixture-date">Jun 12<small>8:00 PM</small></div>
+                  <div class="overview-team"><span>Bota FC</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
+                </div>
+                <div class="fixture-row">
+                  <div class="overview-team"><img src="/assets/logos/jids-trivela.png" alt="" loading="lazy"><span>Jids Trivela</span></div>
+                  <div class="fixture-date">Jun 13<small>7:30 PM</small></div>
+                  <div class="overview-team"><span>Elite VT</span><img src="/assets/logos/elite-vt.png" alt="" loading="lazy"></div>
+                </div>
+                <div class="fixture-row">
+                  <div class="overview-team"><img src="/assets/logos/fc-dhizz.png" alt="" loading="lazy"><span>FC Dhizz</span></div>
+                  <div class="fixture-date">Jun 14<small>9:00 PM</small></div>
+                  <div class="overview-team"><span>Khalch FC</span><img src="/assets/logos/khalch-fc.png" alt="" loading="lazy"></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="overview-card" aria-labelledby="leagueLeadersTitle">
+              <div class="section-heading">
+                <h2 id="leagueLeadersTitle">League Leaders</h2>
+                <span class="conference-chip">Beta leaders</span>
+              </div>
+              <div class="overview-card-body leader-grid">
+                <div class="leader-card"><span class="leader-label">Goals</span><span class="leader-value">18</span><span class="leader-note">Bota FC attack sets the pace through ten matches.</span></div>
+                <div class="leader-card"><span class="leader-label">Clean Sheets</span><span class="leader-value">5</span><span class="leader-note">Razorblack FC keeps pressure off the West pack.</span></div>
+                <div class="leader-card"><span class="leader-label">Assists</span><span class="leader-value">11</span><span class="leader-note">Sporting de la MA leads creative production.</span></div>
+                <div class="leader-card"><span class="leader-label">Form</span><span class="leader-value">13 pts</span><span class="leader-note">Bota FC owns the strongest five-match run.</span></div>
+              </div>
+            </article>
+          </div>
+
+          <aside class="overview-sidebar" aria-label="UPCL News Center">
+            <section class="news-center">
+              <div class="section-heading">
+                <h2>UPCL News Center</h2>
+                <span class="conference-chip">Live feed mock</span>
+              </div>
+              <div class="news-feed" aria-label="UPCL placeholder news feed">
+                <article class="news-card"><span class="news-icon" aria-hidden="true">🏆</span><div class="news-content"><p class="news-headline">Bota FC remain top of the East after a statement night at home.</p><div class="news-meta"><span class="news-category">Conference</span><span class="news-time">12m ago</span></div></div></article>
+                <article class="news-card"><span class="news-icon" aria-hidden="true">⚡</span><div class="news-content"><p class="news-headline">Razorblack FC's unbeaten West run becomes the headline race to watch.</p><div class="news-meta"><span class="news-category">Power Rankings</span><span class="news-time">28m ago</span></div></div></article>
+                <article class="news-card"><span class="news-icon" aria-hidden="true">📋</span><div class="news-content"><p class="news-headline">Playoff picture tightens with Club Frijol chasing the final East seed.</p><div class="news-meta"><span class="news-category">Playoffs</span><span class="news-time">43m ago</span></div></div></article>
+                <article class="news-card"><span class="news-icon" aria-hidden="true">🎙️</span><div class="news-content"><p class="news-headline">Managers preview a decisive cross-conference fixture slate this weekend.</p><div class="news-meta"><span class="news-category">Press Room</span><span class="news-time">1h ago</span></div></div></article>
+                <article class="news-card"><span class="news-icon" aria-hidden="true">🔥</span><div class="news-content"><p class="news-headline">Sporting de la MA find rhythm as their creative numbers keep climbing.</p><div class="news-meta"><span class="news-category">Tactics</span><span class="news-time">2h ago</span></div></div></article>
+                <article class="news-card"><span class="news-icon" aria-hidden="true">🧤</span><div class="news-content"><p class="news-headline">Elite VT keeper earns spotlight after another late-match save sequence.</p><div class="news-meta"><span class="news-category">Players</span><span class="news-time">3h ago</span></div></div></article>
+                <article class="news-card"><span class="news-icon" aria-hidden="true">📈</span><div class="news-content"><p class="news-headline">UPCL beta table trends show both conferences separating at the top.</p><div class="news-meta"><span class="news-category">Analysis</span><span class="news-time">4h ago</span></div></div></article>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="fixtures-panel" aria-label="Fixtures">
         <section class="toolbar" aria-live="polite">
           <div>
             <strong id="teamLabel">Bota FC</strong>
