@@ -138,6 +138,8 @@ test('calculateStandings builds conference tables from saved league matches only
       club_score: 3,
       opponent_score: 1,
       match_date: '2026-01-01T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
     },
     {
       id: 2,
@@ -147,6 +149,8 @@ test('calculateStandings builds conference tables from saved league matches only
       club_score: 2,
       opponent_score: 2,
       match_date: '2026-01-02T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
     },
     {
       id: 3,
@@ -156,6 +160,8 @@ test('calculateStandings builds conference tables from saved league matches only
       club_score: 0,
       opponent_score: 1,
       match_date: '2026-01-03T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
     },
     {
       id: 4,
@@ -165,6 +171,30 @@ test('calculateStandings builds conference tables from saved league matches only
       club_score: 9,
       opponent_score: 0,
       match_date: '2026-01-04T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
+    },
+    {
+      id: 5,
+      source_club_id: '57985',
+      club_name: 'Bota FC',
+      opponent_name: 'Inferign United',
+      club_score: 9,
+      opponent_score: 0,
+      match_date: '2026-01-05T00:00:00.000Z',
+      status: 'pending',
+      competition: 'league',
+    },
+    {
+      id: 6,
+      source_club_id: '57985',
+      club_name: 'Bota FC',
+      opponent_name: 'Inferign United',
+      club_score: 9,
+      opponent_score: 0,
+      match_date: '2026-01-06T00:00:00.000Z',
+      status: 'approved',
+      competition: 'friendly',
     },
   ]);
 
@@ -189,7 +219,7 @@ test('calculateStandings builds conference tables from saved league matches only
 
 test('GET /api/standings returns calculated standings from saved Postgres matches', async () => {
   const db = require('../db');
-  const getStub = mock.method(db, 'getSavedMatches', async () => [
+  const getStub = mock.method(db, 'getApprovedLeagueMatches', async () => [
     {
       id: 1,
       source_club_id: '57985',
@@ -198,6 +228,8 @@ test('GET /api/standings returns calculated standings from saved Postgres matche
       club_score: 1,
       opponent_score: 0,
       match_date: '2026-01-01T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
     },
   ]);
 
@@ -214,4 +246,63 @@ test('GET /api/standings returns calculated standings from saved Postgres matche
 
   assert.equal(getStub.mock.callCount(), 1);
   getStub.mock.restore();
+});
+
+test('GET /api/pending-matches returns synced matches awaiting approval', async () => {
+  const db = require('../db');
+  const getStub = mock.method(db, 'getPendingMatches', async () => [
+    { match_id: 'pending-1', status: 'pending', competition: 'friendly' },
+  ]);
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/pending-matches`);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.matches.map(match => match.match_id), ['pending-1']);
+  });
+
+  assert.equal(getStub.mock.callCount(), 1);
+  getStub.mock.restore();
+});
+
+test('POST /api/matches/:matchId/approve approves a league match with optional matchday', async () => {
+  const db = require('../db');
+  const approveStub = mock.method(db, 'approveMatch', async (matchId, options) => {
+    assert.equal(matchId, 'match-123');
+    assert.deepEqual(options, { competition: 'league', matchday: 2, notes: undefined });
+    return { match_id: matchId, status: 'approved', competition: 'league', matchday: 2 };
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/matches/match-123/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ competition: 'league', matchday: 2 }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.match.status, 'approved');
+    assert.equal(body.match.competition, 'league');
+  });
+
+  assert.equal(approveStub.mock.callCount(), 1);
+  approveStub.mock.restore();
+});
+
+test('POST /api/matches/:matchId/reject marks a match rejected', async () => {
+  const db = require('../db');
+  const rejectStub = mock.method(db, 'rejectMatch', async matchId => {
+    assert.equal(matchId, 'match-456');
+    return { match_id: matchId, status: 'rejected', competition: 'friendly' };
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/matches/match-456/reject`, { method: 'POST' });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.match.status, 'rejected');
+  });
+
+  assert.equal(rejectStub.mock.callCount(), 1);
+  rejectStub.mock.restore();
 });

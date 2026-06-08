@@ -155,6 +155,8 @@ function calculateStandings(savedMatches = []) {
   const formByClubId = new Map(LEAGUE_CLUBS.map(club => [club.id, []]));
 
   for (const match of savedMatches) {
+    if (match.status !== 'approved' || match.competition !== 'league') continue;
+
     const homeClub = findLeagueClub(match.source_club_id, match.club_name);
     const awayClub = findLeagueClub(null, match.opponent_name);
     const clubScore = Number(match.club_score);
@@ -279,9 +281,67 @@ app.get('/api/db-matches', async (_req, res) => {
 });
 
 
+app.get('/api/pending-matches', async (_req, res) => {
+  try {
+    const matches = await db.getPendingMatches();
+    res.json({ matches });
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to load pending matches from Postgres');
+    res.status(500).json({
+      error: 'Failed to load pending matches from Postgres',
+      details: error.message || 'Database query failed',
+      matches: [],
+    });
+  }
+});
+
+app.post('/api/matches/:matchId/approve', async (req, res) => {
+  try {
+    const match = await db.approveMatch(req.params.matchId, {
+      competition: req.body?.competition || 'league',
+      matchday: req.body?.matchday,
+      notes: req.body?.notes,
+    });
+
+    if (!match) {
+      res.status(404).json({ error: 'Match not found' });
+      return;
+    }
+
+    res.json({ match });
+  } catch (error) {
+    const status = /competition|matchday/.test(error.message || '') ? 400 : 500;
+    logger.error({ err: error, matchId: req.params.matchId }, 'Failed to approve match');
+    res.status(status).json({
+      error: 'Failed to approve match',
+      details: error.message || 'Database update failed',
+    });
+  }
+});
+
+app.post('/api/matches/:matchId/reject', async (req, res) => {
+  try {
+    const match = await db.rejectMatch(req.params.matchId, { notes: req.body?.notes });
+
+    if (!match) {
+      res.status(404).json({ error: 'Match not found' });
+      return;
+    }
+
+    res.json({ match });
+  } catch (error) {
+    logger.error({ err: error, matchId: req.params.matchId }, 'Failed to reject match');
+    res.status(500).json({
+      error: 'Failed to reject match',
+      details: error.message || 'Database update failed',
+    });
+  }
+});
+
+
 app.get('/api/standings', async (_req, res) => {
   try {
-    const matches = await db.getSavedMatches();
+    const matches = await db.getApprovedLeagueMatches();
     res.json(calculateStandings(matches));
   } catch (error) {
     logger.error({ err: error }, 'Failed to build standings from Postgres matches');
