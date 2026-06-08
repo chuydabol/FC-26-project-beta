@@ -9,12 +9,12 @@ const app = express();
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const LEAGUE_CLUBS = [
-  { id: '57985', name: 'Bota FC' },
-  { id: '6297844', name: 'Inferign Utd' },
-  { id: '1171188', name: 'Egoistas' },
-  { id: '4671025', name: 'Versus One' },
-  { id: '654142', name: 'FC Wisconsin' },
-  { id: '129307', name: 'FC Sutton' },
+  { id: '57985', name: 'Bota FC', conference: 'east', aliases: ['Bota FC'] },
+  { id: '6297844', name: 'Inferign United', conference: 'east', aliases: ['Inferign United', 'Inferign Utd'] },
+  { id: '1171188', name: 'True Egoistas', conference: 'east', aliases: ['True Egoistas', 'Egoistas'] },
+  { id: '4671025', name: 'Versus One', conference: 'west', aliases: ['Versus One'] },
+  { id: '654142', name: 'FC Wisconsin', conference: 'west', aliases: ['FC Wisconsin'] },
+  { id: '129307', name: 'FC Sutton St', conference: 'west', aliases: ['FC Sutton St', 'FC Sutton'] },
 ];
 
 const BOTA_FC = {
@@ -88,6 +88,108 @@ function normalizeMatch(match, index, team = BOTA_FC) {
 
 function sortMatches(matches) {
   return [...matches].sort((a, b) => toNumber(b.timestamp, 0) - toNumber(a.timestamp, 0));
+}
+
+const CLUB_BY_ID = new Map(LEAGUE_CLUBS.map(club => [club.id, club]));
+const CLUB_BY_NORMALIZED_NAME = new Map(
+  LEAGUE_CLUBS.flatMap(club => [club.name, ...(club.aliases || [])].map(name => [normalizeTeamName(name), club]))
+);
+
+function normalizeTeamName(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\butd\b/g, 'united')
+    .replace(/\bst\b/g, 'st')
+    .replace(/\s+/g, ' ');
+}
+
+function findLeagueClub(id, name) {
+  const idMatch = id === null || id === undefined ? null : CLUB_BY_ID.get(String(id));
+  if (idMatch) return idMatch;
+  return CLUB_BY_NORMALIZED_NAME.get(normalizeTeamName(name)) || null;
+}
+
+function createEmptyStanding(club, seed = 0) {
+  return {
+    seed,
+    id: club.id,
+    team: club.name,
+    conference: club.conference,
+    pl: 0,
+    w: 0,
+    d: 0,
+    l: 0,
+    gf: 0,
+    ga: 0,
+    gd: 0,
+    pts: 0,
+    form: [],
+  };
+}
+
+function getMatchSortTime(match) {
+  const rawDate = match.match_date || match.created_at;
+  const dateTime = rawDate ? new Date(rawDate).getTime() : NaN;
+  return Number.isFinite(dateTime) ? dateTime : toNumber(match.id, 0);
+}
+
+function addStandingResult(row, goalsFor, goalsAgainst, result) {
+  row.pl += 1;
+  row.gf += goalsFor;
+  row.ga += goalsAgainst;
+
+  if (result === 'W') {
+    row.w += 1;
+    row.pts += 3;
+  } else if (result === 'L') {
+    row.l += 1;
+  } else {
+    row.d += 1;
+    row.pts += 1;
+  }
+}
+
+function calculateStandings(savedMatches = []) {
+  const rowsByClubId = new Map(LEAGUE_CLUBS.map(club => [club.id, createEmptyStanding(club)]));
+  const formByClubId = new Map(LEAGUE_CLUBS.map(club => [club.id, []]));
+
+  for (const match of savedMatches) {
+    const homeClub = findLeagueClub(match.source_club_id, match.club_name);
+    const awayClub = findLeagueClub(null, match.opponent_name);
+    const clubScore = Number(match.club_score);
+    const opponentScore = Number(match.opponent_score);
+
+    if (!homeClub || !awayClub || homeClub.id === awayClub.id) continue;
+    if (!Number.isFinite(clubScore) || !Number.isFinite(opponentScore)) continue;
+
+    const homeResult = clubScore > opponentScore ? 'W' : clubScore < opponentScore ? 'L' : 'D';
+    const awayResult = homeResult === 'W' ? 'L' : homeResult === 'L' ? 'W' : 'D';
+    const sortTime = getMatchSortTime(match);
+
+    addStandingResult(rowsByClubId.get(homeClub.id), clubScore, opponentScore, homeResult);
+    addStandingResult(rowsByClubId.get(awayClub.id), opponentScore, clubScore, awayResult);
+    formByClubId.get(homeClub.id).push({ result: homeResult, sortTime });
+    formByClubId.get(awayClub.id).push({ result: awayResult, sortTime });
+  }
+
+  for (const row of rowsByClubId.values()) {
+    row.gd = row.gf - row.ga;
+    row.form = formByClubId
+      .get(row.id)
+      .sort((a, b) => b.sortTime - a.sortTime)
+      .slice(0, 5)
+      .map(item => item.result);
+  }
+
+  const sortRows = rows => rows
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.team.localeCompare(b.team))
+    .map((row, index) => ({ ...row, seed: index + 1 }));
+
+  return {
+    east: sortRows([...rowsByClubId.values()].filter(row => row.conference === 'east')),
+    west: sortRows([...rowsByClubId.values()].filter(row => row.conference === 'west')),
+  };
 }
 
 app.get('/', (_req, res) => {
@@ -176,6 +278,22 @@ app.get('/api/db-matches', async (_req, res) => {
   }
 });
 
+
+app.get('/api/standings', async (_req, res) => {
+  try {
+    const matches = await db.getSavedMatches();
+    res.json(calculateStandings(matches));
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to build standings from Postgres matches');
+    res.status(500).json({
+      error: 'Failed to build standings from Postgres matches',
+      details: error.message || 'Database query failed',
+      east: [],
+      west: [],
+    });
+  }
+});
+
 if (require.main === module) {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
@@ -188,3 +306,5 @@ module.exports.normalizeMatch = normalizeMatch;
 module.exports.normalizeTimestamp = normalizeTimestamp;
 module.exports.BOTA_FC = BOTA_FC;
 module.exports.LEAGUE_CLUBS = LEAGUE_CLUBS;
+module.exports.calculateStandings = calculateStandings;
+module.exports.findLeagueClub = findLeagueClub;
