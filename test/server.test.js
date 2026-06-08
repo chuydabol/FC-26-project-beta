@@ -127,3 +127,91 @@ test('GET /api/db-matches returns saved Postgres matches', async () => {
   assert.equal(getStub.mock.callCount(), 1);
   getStub.mock.restore();
 });
+
+test('calculateStandings builds conference tables from saved league matches only', () => {
+  const standings = app.calculateStandings([
+    {
+      id: 1,
+      source_club_id: '57985',
+      club_name: 'Bota FC',
+      opponent_name: 'Inferign Utd',
+      club_score: 3,
+      opponent_score: 1,
+      match_date: '2026-01-01T00:00:00.000Z',
+    },
+    {
+      id: 2,
+      source_club_id: '1171188',
+      club_name: 'Egoistas',
+      opponent_name: 'Bota FC',
+      club_score: 2,
+      opponent_score: 2,
+      match_date: '2026-01-02T00:00:00.000Z',
+    },
+    {
+      id: 3,
+      source_club_id: '4671025',
+      club_name: 'Versus One',
+      opponent_name: 'FC Wisconsin',
+      club_score: 0,
+      opponent_score: 1,
+      match_date: '2026-01-03T00:00:00.000Z',
+    },
+    {
+      id: 4,
+      source_club_id: '57985',
+      club_name: 'Bota FC',
+      opponent_name: 'Non League FC',
+      club_score: 9,
+      opponent_score: 0,
+      match_date: '2026-01-04T00:00:00.000Z',
+    },
+  ]);
+
+  assert.deepEqual(standings.east.map(row => row.team), ['Bota FC', 'True Egoistas', 'Inferign United']);
+  assert.deepEqual(standings.west.map(row => row.team), ['FC Wisconsin', 'FC Sutton St', 'Versus One']);
+
+  const bota = standings.east[0];
+  assert.equal(bota.pl, 2);
+  assert.equal(bota.w, 1);
+  assert.equal(bota.d, 1);
+  assert.equal(bota.l, 0);
+  assert.equal(bota.gf, 5);
+  assert.equal(bota.ga, 3);
+  assert.equal(bota.gd, 2);
+  assert.equal(bota.pts, 4);
+  assert.deepEqual(bota.form, ['D', 'W']);
+
+  const sutton = standings.west.find(row => row.team === 'FC Sutton St');
+  assert.equal(sutton.pl, 0);
+  assert.equal(sutton.pts, 0);
+});
+
+test('GET /api/standings returns calculated standings from saved Postgres matches', async () => {
+  const db = require('../db');
+  const getStub = mock.method(db, 'getSavedMatches', async () => [
+    {
+      id: 1,
+      source_club_id: '57985',
+      club_name: 'Bota FC',
+      opponent_name: 'Inferign United',
+      club_score: 1,
+      opponent_score: 0,
+      match_date: '2026-01-01T00:00:00.000Z',
+    },
+  ]);
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/standings`);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.east.length, 3);
+    assert.equal(body.west.length, 3);
+    assert.equal(body.east[0].team, 'Bota FC');
+    assert.equal(body.east[0].pts, 3);
+    assert.equal(body.east[0].form[0], 'W');
+  });
+
+  assert.equal(getStub.mock.callCount(), 1);
+  getStub.mock.restore();
+});
