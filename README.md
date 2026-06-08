@@ -1,57 +1,51 @@
 # FC-26 Project Beta
 
+This repository has been reset into a minimal **Bota FC friendly match viewer**.
+The current goal is intentionally small: show EAFC friendly matches for Bota FC
+without storing matches, player IDs, player cards, rankings, news, admin tools,
+or competition features.
+
+## Current Team
+
+- Club name: `Bota FC`
+- EA club ID: `57985`
+- EA match type: `friendlyMatch`
+
+The active team can be overridden for local experiments with:
+
+```bash
+BOTA_CLUB_ID=57985 BOTA_CLUB_NAME="Bota FC" node server.js
+```
+
 ## API
 
-### `GET /api/players`
+### `GET /api/health`
 
-Returns the latest squad members stored in Postgres.
-The response shape is `{ players: [...] }` where each player row contains
-`player_id`, `club_id`, `name`, `position` and `last_seen`.
+Returns basic service health and the active EA club configuration.
 
-Player attribute snapshots are stored directly on the `players` table via the
-`vproattr` column. When rendering cards, stats are parsed from `players.vproattr`
-if available; otherwise a placeholder set is used.
+### `GET /api/team`
 
-The `/api/clubs/:clubId/player-cards` endpoint fetches club members from EA,
-merges any stored attributes from `players`, and updates that table so aggregate
-queries via `GET /api/players` stay in sync.
+Returns the active team and match type.
 
-The `/api/clubs/:clubId/player-cards` endpoint fetches club members from EA,
-merges any stored attributes, and updates the `players` table so aggregate
-queries via `GET /api/players` stay in sync.
+### `GET /api/matches`
 
-## Logging
+Fetches Bota FC friendly matches directly from EA and returns normalized match
+cards for the website. No match data is written to storage.
 
-This project uses a Pino-based logger. Logs default to the `info` level. To see
-verbose output, set a `LOG_LEVEL` environment variable before starting the
-server, for example:
+### `GET /api/fixtures`
 
-```bash
-LOG_LEVEL=debug node server.js
-```
+Alias for `GET /api/matches`, kept so the frontend can treat friendly matches as
+fixtures while the project is rebuilt.
 
-## Season Date Range
+## Frontend
 
-When importing fixtures from EA the server ignores matches that occurred before
-`LEAGUE_START_MS`. The default value reflects the current season's opening day,
-but you can override it with an environment variable. The variable accepts
-either a Unix millisecond timestamp or an ISO date string. For example:
+The root route `/` serves `public/teams.html`, which is now a single fixtures
+view. Removed legacy UI areas include player cards, rankings, news, Champions
+Cup, admin login, and multi-team pages.
+
+## Development
 
 ```bash
-LEAGUE_START_MS="2026-08-25T23:59:00-07:00" \
-node server.js
+npm test
+npm start
 ```
-
-Update this variable at the start of each season to adjust the import window.
-Use `scripts/rebuildLeagueStandings.js` to refresh the `mv_league_standings`
-materialized view.
-
-## Card Assets
-
-Place card frame PNGs in `public/assets/cards/` with the following names:
-- `iron_rookie.png`
-- `steel_card.png`
-- `crimson_card.png`
-- `obsidian_elite.png`
-
-These files are ignored in git and must be supplied manually.
