@@ -90,10 +90,22 @@ function sortMatches(matches) {
   return [...matches].sort((a, b) => toNumber(b.timestamp, 0) - toNumber(a.timestamp, 0));
 }
 
+const TEAM_ALIASES = {
+  'bota fc': 'Bota FC',
+  bota: 'Bota FC',
+  'true egoistas': 'True Egoistas',
+  egoistas: 'True Egoistas',
+  'inferign united': 'Inferign United',
+  'inferign utd': 'Inferign United',
+  'versus one': 'Versus One',
+  'fc wisconson': 'FC Wisconsin',
+  'fc wisconsin': 'FC Wisconsin',
+  'fc sutton st': 'FC Sutton St',
+  'fc sutton': 'FC Sutton St',
+};
+
 const CLUB_BY_ID = new Map(LEAGUE_CLUBS.map(club => [club.id, club]));
-const CLUB_BY_NORMALIZED_NAME = new Map(
-  LEAGUE_CLUBS.flatMap(club => [club.name, ...(club.aliases || [])].map(name => [normalizeTeamName(name), club]))
-);
+const CLUB_BY_CANONICAL_NAME = new Map(LEAGUE_CLUBS.map(club => [club.name, club]));
 
 function normalizeTeamName(name) {
   return String(name || '')
@@ -104,10 +116,21 @@ function normalizeTeamName(name) {
     .replace(/\s+/g, ' ');
 }
 
+function getCanonicalTeamName(name) {
+  return TEAM_ALIASES[normalizeTeamName(name)] || null;
+}
+
 function findLeagueClub(id, name) {
   const idMatch = id === null || id === undefined ? null : CLUB_BY_ID.get(String(id));
   if (idMatch) return idMatch;
-  return CLUB_BY_NORMALIZED_NAME.get(normalizeTeamName(name)) || null;
+
+  const canonicalName = getCanonicalTeamName(name);
+  return canonicalName ? CLUB_BY_CANONICAL_NAME.get(canonicalName) || null : null;
+}
+
+function findLeagueClubByName(name) {
+  const canonicalName = getCanonicalTeamName(name);
+  return canonicalName ? CLUB_BY_CANONICAL_NAME.get(canonicalName) || null : null;
 }
 
 function createEmptyStanding(club, seed = 0) {
@@ -157,8 +180,8 @@ function calculateStandings(savedMatches = []) {
   for (const match of savedMatches) {
     if (match.status !== 'approved' || match.competition !== 'league') continue;
 
-    const homeClub = findLeagueClub(match.source_club_id, match.club_name);
-    const awayClub = findLeagueClub(null, match.opponent_name);
+    const homeClub = findLeagueClubByName(match.club_name);
+    const awayClub = findLeagueClubByName(match.opponent_name);
     const clubScore = Number(match.club_score);
     const opponentScore = Number(match.opponent_score);
 
@@ -366,5 +389,8 @@ module.exports.normalizeMatch = normalizeMatch;
 module.exports.normalizeTimestamp = normalizeTimestamp;
 module.exports.BOTA_FC = BOTA_FC;
 module.exports.LEAGUE_CLUBS = LEAGUE_CLUBS;
+module.exports.TEAM_ALIASES = TEAM_ALIASES;
 module.exports.calculateStandings = calculateStandings;
 module.exports.findLeagueClub = findLeagueClub;
+module.exports.findLeagueClubByName = findLeagueClubByName;
+module.exports.getCanonicalTeamName = getCanonicalTeamName;

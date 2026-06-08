@@ -156,7 +156,7 @@ test('calculateStandings builds conference tables from saved league matches only
       id: 3,
       source_club_id: '4671025',
       club_name: 'Versus One',
-      opponent_name: 'FC Wisconsin',
+      opponent_name: 'FC Wisconson',
       club_score: 0,
       opponent_score: 1,
       match_date: '2026-01-03T00:00:00.000Z',
@@ -215,6 +215,50 @@ test('calculateStandings builds conference tables from saved league matches only
   const sutton = standings.west.find(row => row.team === 'FC Sutton St');
   assert.equal(sutton.pl, 0);
   assert.equal(sutton.pts, 0);
+});
+
+
+test('calculateStandings canonicalizes team aliases before counting league matches', () => {
+  const standings = app.calculateStandings([
+    {
+      id: 1,
+      source_club_id: '654142',
+      club_name: 'FC Wisconson',
+      opponent_name: 'fc sutton',
+      club_score: 2,
+      opponent_score: 0,
+      match_date: '2026-01-01T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
+    },
+    {
+      id: 2,
+      source_club_id: '57985',
+      club_name: 'Non League FC',
+      opponent_name: 'Bota FC',
+      club_score: 9,
+      opponent_score: 0,
+      match_date: '2026-01-02T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
+    },
+  ]);
+
+  assert.deepEqual(standings.west.map(row => row.team), ['FC Wisconsin', 'Versus One', 'FC Sutton St']);
+
+  const wisconsin = standings.west.find(row => row.team === 'FC Wisconsin');
+  assert.equal(wisconsin.pl, 1);
+  assert.equal(wisconsin.w, 1);
+  assert.equal(wisconsin.gf, 2);
+  assert.equal(wisconsin.pts, 3);
+
+  const sutton = standings.west.find(row => row.team === 'FC Sutton St');
+  assert.equal(sutton.pl, 1);
+  assert.equal(sutton.l, 1);
+  assert.equal(sutton.ga, 2);
+
+  const bota = standings.east.find(row => row.team === 'Bota FC');
+  assert.equal(bota.pl, 0);
 });
 
 test('GET /api/standings returns calculated standings from saved Postgres matches', async () => {
