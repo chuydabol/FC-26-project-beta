@@ -1,5 +1,12 @@
 {
-  "BOTA_FC_FRIENDLIES": [
-    "57985"
+  "EASTERN_CONFERENCE": [
+    "57985",
+    "6297844",
+    "1171188"
+  ],
+  "WESTERN_CONFERENCE": [
+    "4671025",
+    "654142",
+    "129307"
   ]
 }
