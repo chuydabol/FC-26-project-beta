@@ -20,6 +20,7 @@ app.use((_req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '1mb' }));
+app.use('/assets', express.static(path.join(PUBLIC_DIR, 'assets')));
 
 function toNumber(value, fallback = 0) {
   const number = Number(value);
