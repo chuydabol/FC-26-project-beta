@@ -1125,60 +1125,6 @@
     .news-category { color: var(--success); }
 
 
-
-
-    .player-stats-panel {
-      display: grid;
-      gap: 16px;
-      padding: 18px;
-    }
-
-    .player-leader-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .player-leader-card {
-      display: grid;
-      gap: 8px;
-      min-height: 128px;
-      padding: 14px;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      background: var(--surface-subtle);
-    }
-
-    .player-leader-value {
-      color: var(--text);
-      font-size: clamp(1.15rem, 2.2vw, 1.65rem);
-      font-weight: 950;
-      letter-spacing: -0.045em;
-      line-height: 1.05;
-    }
-
-    .player-leader-stat {
-      color: var(--success);
-      font-size: 0.82rem;
-      font-weight: 900;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .player-name-cell {
-      min-width: 220px;
-      text-align: left;
-      font-weight: 900;
-    }
-
-    .player-club-cell {
-      min-width: 180px;
-      text-align: left;
-      color: #cbd5e1;
-      font-weight: 800;
-    }
-
-
     .schedule-shell {
       display: grid;
       gap: 14px;
@@ -1450,8 +1396,7 @@
       .tab { padding: 10px 12px; font-size: 0.75rem; }
       .section-heading { align-items: flex-start; flex-direction: column; }
       .snapshot-grid,
-      .leader-grid,
-      .player-leader-grid { grid-template-columns: 1fr 1fr; }
+      .leader-grid { grid-template-columns: 1fr 1fr; }
       .result-row,
       .fixture-row,
       .series-card { grid-template-columns: 1fr; text-align: left; }
@@ -1528,7 +1473,6 @@
       <button class="tab" data-tab="fixtures" type="button">Fixtures</button>
       <button class="tab" data-tab="schedule" type="button">Schedule</button>
       <button class="tab" data-tab="tables" type="button">Tables</button>
-      <button class="tab" data-tab="player-stats" type="button">Player Stats</button>
       <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
       <button class="tab" data-tab="admin" type="button">Admin</button>
     </nav>
@@ -1690,22 +1634,6 @@
         <div class="league-grid" id="standings"></div>
       </section>
 
-      <section class="tab-panel" id="player-stats-panel" aria-label="UPCL player stats">
-        <section class="standings-card" aria-label="Approved league player stats">
-          <div class="section-heading">
-            <div>
-              <h2>Player Stats</h2>
-              <div class="status">Only approved league matches count toward player totals.</div>
-            </div>
-            <span class="conference-chip" id="playerStatsStatus">Not loaded</span>
-          </div>
-          <div class="player-stats-panel">
-            <div class="player-leader-grid" id="playerLeaderCards" aria-label="Player stat leaders"></div>
-            <div class="table-wrap" id="playerStatsTableWrap"></div>
-          </div>
-        </section>
-      </section>
-
       <section class="tab-panel" id="admin-panel" aria-label="Admin pending matches">
         <section class="standings-card" id="adminLogin" aria-label="Admin login">
           <div class="section-heading">
@@ -1778,9 +1706,6 @@
     const tabPanels = document.querySelectorAll('.tab-panel');
     const standingsEl = document.getElementById('standings');
     const playoffBracketEl = document.getElementById('playoffBracket');
-    const playerStatsStatusEl = document.getElementById('playerStatsStatus');
-    const playerLeaderCardsEl = document.getElementById('playerLeaderCards');
-    const playerStatsTableWrapEl = document.getElementById('playerStatsTableWrap');
 
     let standingsData = { east: [], west: [] };
     let activeScheduleFilter = 'all';
@@ -2084,82 +2009,6 @@
     }
 
 
-
-
-    function formatPercentage(value) {
-      const number = Number(value);
-      return Number.isFinite(number) ? `${number.toFixed(1)}%` : '0.0%';
-    }
-
-    function renderPlayerLeaderCard(label, player, statText) {
-      return `
-        <article class="player-leader-card">
-          <span class="leader-label">${escapeHtml(label)}</span>
-          <span class="player-leader-value">${escapeHtml(player?.player_name || '—')}</span>
-          <span class="leader-note">${escapeHtml(player?.club_name || 'No approved stats')}</span>
-          <span class="player-leader-stat">${escapeHtml(statText)}</span>
-        </article>
-      `;
-    }
-
-    function getLeader(players, selector) {
-      return [...players].sort((a, b) => selector(b) - selector(a) || String(a.player_name).localeCompare(String(b.player_name)))[0] || null;
-    }
-
-    function renderPlayerLeaders(players) {
-      const topScorer = getLeader(players, player => Number(player.goals) || 0);
-      const topAssister = getLeader(players, player => Number(player.assists) || 0);
-      const bestPasser = getLeader(players, player => Number(player.pass_percentage) || 0);
-      const bestTackler = getLeader(players, player => Number(player.tackle_percentage) || 0);
-      const mostMotm = getLeader(players, player => Number(player.motm_count) || 0);
-
-      playerLeaderCardsEl.innerHTML = [
-        renderPlayerLeaderCard('Top Scorer', topScorer, `${Number(topScorer?.goals) || 0} G`),
-        renderPlayerLeaderCard('Top Assister', topAssister, `${Number(topAssister?.assists) || 0} A`),
-        renderPlayerLeaderCard('Best Passer', bestPasser, formatPercentage(bestPasser?.pass_percentage)),
-        renderPlayerLeaderCard('Best Tackler', bestTackler, formatPercentage(bestTackler?.tackle_percentage)),
-        renderPlayerLeaderCard('Most MOTM', mostMotm, `${Number(mostMotm?.motm_count) || 0} MOTM`)
-      ].join('');
-    }
-
-    function renderPlayerStatsTable(players) {
-      if (!players.length) {
-        playerLeaderCardsEl.innerHTML = '';
-        playerStatsTableWrapEl.innerHTML = '<div class="empty">No approved player stats yet.</div>';
-        return;
-      }
-
-      renderPlayerLeaders(players);
-      playerStatsTableWrapEl.innerHTML = `
-        <table class="standings" aria-label="Full player stats table">
-          <thead>
-            <tr><th>Player</th><th>Club</th><th>MP</th><th>G</th><th>A</th><th>Pass %</th><th>Tackle %</th><th>MOTM</th></tr>
-          </thead>
-          <tbody>
-            ${players.map(player => `
-              <tr>
-                <td class="player-name-cell">${escapeHtml(player.player_name)}</td>
-                <td class="player-club-cell">${escapeHtml(player.club_name || '—')}</td>
-                <td>${Number(player.matches_played) || 0}</td>
-                <td>${Number(player.goals) || 0}</td>
-                <td>${Number(player.assists) || 0}</td>
-                <td>${formatPercentage(player.pass_percentage)}</td>
-                <td>${formatPercentage(player.tackle_percentage)}</td>
-                <td>${Number(player.motm_count) || 0}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
-    }
-
-    function renderPlayerStatsLoading(message = 'Loading approved league player stats…') {
-      playerStatsStatusEl.textContent = 'Loading';
-      playerLeaderCardsEl.innerHTML = '';
-      playerStatsTableWrapEl.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
-    }
-
-
     function getSeriesHosts(series) {
       return [
         { label: 'Game 1 host', host: series.home },
@@ -2300,29 +2149,6 @@
         renderAdminState();
         if (getAdminPassword()) loadPendingMatches();
       }
-
-      if (tabName === 'player-stats') {
-        loadPlayerStats();
-      }
-    }
-
-
-
-
-    async function loadPlayerStats() {
-      renderPlayerStatsLoading();
-      try {
-        const response = await fetch('/api/player-stats');
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.details || payload.error || 'Request failed');
-        const players = Array.isArray(payload.players) ? payload.players : [];
-        playerStatsStatusEl.textContent = `${players.length} ${players.length === 1 ? 'player' : 'players'}`;
-        renderPlayerStatsTable(players);
-      } catch (error) {
-        playerStatsStatusEl.textContent = 'Stats unavailable';
-        playerLeaderCardsEl.innerHTML = '';
-        playerStatsTableWrapEl.innerHTML = `<div class="error">Player stats could not be loaded: ${escapeHtml(error.message)}</div>`;
-      }
     }
 
 
@@ -2417,7 +2243,6 @@
       await loadPendingMatches();
       await loadDbMatches();
       await loadStandings();
-      await loadPlayerStats();
     }
 
     async function syncMatchesToDatabase() {
@@ -2432,7 +2257,6 @@
         await loadDbMatches();
         await loadPendingMatches();
         await loadStandings();
-        await loadPlayerStats();
       } catch (error) {
         dbStatusEl.textContent = 'Sync failed';
         statusEl.textContent = 'Database sync failed.';
@@ -2491,9 +2315,7 @@
     renderStandingsLoading();
     loadMatches();
     loadDbMatches();
-    renderPlayerStatsLoading();
     loadStandings();
-    loadPlayerStats();
   </script>
 </body>
 </html>
