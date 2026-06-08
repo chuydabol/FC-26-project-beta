@@ -1,3 +1,8 @@
 [
-  { "id": "57985", "name": "Bota FC" }
+  { "id": "57985", "name": "Bota FC", "conference": "Eastern" },
+  { "id": "6297844", "name": "Inferign Utd", "conference": "Eastern" },
+  { "id": "1171188", "name": "Egoistas", "conference": "Eastern" },
+  { "id": "4671025", "name": "Versus One", "conference": "Western" },
+  { "id": "654142", "name": "FC Wisconsin", "conference": "Western" },
+  { "id": "129307", "name": "FC Sutton", "conference": "Western" }
 ]
