@@ -297,39 +297,6 @@ test('calculateStandings canonicalizes team aliases before counting league match
   assert.equal(bota.pl, 0);
 });
 
-test('GET /api/player-stats returns approved league player totals', async () => {
-  const db = require('../db');
-  const getStub = mock.method(db, 'getPlayerStats', async () => [
-    {
-      player_name: 'Clinical Finisher',
-      club_name: 'Bota FC',
-      matches_played: 2,
-      goals: 5,
-      assists: 1,
-      passes_attempted: 20,
-      passes_made: 18,
-      pass_percentage: 90,
-      tackles_attempted: 4,
-      tackles_made: 3,
-      tackle_percentage: 75,
-      motm_count: 1,
-    },
-  ]);
-
-  await withServer(async port => {
-    const response = await fetch(`http://localhost:${port}/api/player-stats`);
-    const body = await response.json();
-    assert.equal(response.status, 200);
-    assert.equal(body.players.length, 1);
-    assert.equal(body.players[0].player_name, 'Clinical Finisher');
-    assert.equal(body.players[0].goals, 5);
-    assert.equal(body.players[0].pass_percentage, 90);
-  });
-
-  assert.equal(getStub.mock.callCount(), 1);
-  getStub.mock.restore();
-});
-
 test('GET /api/standings returns calculated standings from saved Postgres matches', async () => {
   const db = require('../db');
   const getStub = mock.method(db, 'getApprovedLeagueMatches', async () => [

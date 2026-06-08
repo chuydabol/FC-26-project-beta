@@ -1,6 +1,5 @@
 let pool;
 let tableReadyPromise;
-let playerStatsTablesReadyPromise;
 
 function getDatabaseUrl() {
   return process.env.DATABASE_URL;
@@ -159,104 +158,6 @@ async function getApprovedLeagueMatches() {
   return response.rows;
 }
 
-async function ensurePlayerStatsTables() {
-  if (!playerStatsTablesReadyPromise) {
-    playerStatsTablesReadyPromise = (async () => {
-      await ensureMatchesTable();
-
-      await query(`
-        CREATE TABLE IF NOT EXISTS players (
-          id serial PRIMARY KEY,
-          ea_player_id text UNIQUE,
-          player_name text NOT NULL,
-          club_id text,
-          club_name text,
-          position text,
-          avatar_url text,
-          active boolean DEFAULT true,
-          created_at timestamp DEFAULT now()
-        )
-      `);
-
-      await query(`
-        CREATE TABLE IF NOT EXISTS player_match_stats (
-          id serial PRIMARY KEY,
-          match_id text NOT NULL,
-          ea_player_id text,
-          player_name text NOT NULL,
-          club_id text,
-          club_name text,
-          goals integer DEFAULT 0,
-          assists integer DEFAULT 0,
-          passes_attempted integer DEFAULT 0,
-          passes_made integer DEFAULT 0,
-          tackles_attempted integer DEFAULT 0,
-          tackles_made integer DEFAULT 0,
-          man_of_the_match boolean DEFAULT false,
-          raw_json jsonb,
-          created_at timestamp DEFAULT now(),
-          UNIQUE(match_id, ea_player_id)
-        )
-      `);
-    })().catch(error => {
-      playerStatsTablesReadyPromise = null;
-      throw error;
-    });
-  }
-
-  return playerStatsTablesReadyPromise;
-}
-
-function normalizePercentage(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : 0;
-}
-
-async function getPlayerStats() {
-  await ensurePlayerStatsTables();
-  const response = await query(`
-    SELECT
-      pms.player_name,
-      MAX(pms.club_name) AS club_name,
-      COUNT(DISTINCT pms.match_id)::integer AS matches_played,
-      COALESCE(SUM(pms.goals), 0)::integer AS goals,
-      COALESCE(SUM(pms.assists), 0)::integer AS assists,
-      COALESCE(SUM(pms.passes_attempted), 0)::integer AS passes_attempted,
-      COALESCE(SUM(pms.passes_made), 0)::integer AS passes_made,
-      CASE
-        WHEN COALESCE(SUM(pms.passes_attempted), 0) = 0 THEN 0
-        ELSE ROUND((SUM(pms.passes_made)::numeric / NULLIF(SUM(pms.passes_attempted), 0)) * 100, 1)
-      END AS pass_percentage,
-      COALESCE(SUM(pms.tackles_attempted), 0)::integer AS tackles_attempted,
-      COALESCE(SUM(pms.tackles_made), 0)::integer AS tackles_made,
-      CASE
-        WHEN COALESCE(SUM(pms.tackles_attempted), 0) = 0 THEN 0
-        ELSE ROUND((SUM(pms.tackles_made)::numeric / NULLIF(SUM(pms.tackles_attempted), 0)) * 100, 1)
-      END AS tackle_percentage,
-      COUNT(*) FILTER (WHERE pms.man_of_the_match)::integer AS motm_count
-    FROM player_match_stats pms
-    INNER JOIN matches m ON m.match_id = pms.match_id
-    WHERE m.status = 'approved'
-      AND m.competition = 'league'
-    GROUP BY COALESCE(pms.ea_player_id, pms.player_name), pms.player_name
-    ORDER BY goals DESC, assists DESC, motm_count DESC, pms.player_name ASC
-  `);
-
-  return response.rows.map(row => ({
-    ...row,
-    matches_played: Number(row.matches_played) || 0,
-    goals: Number(row.goals) || 0,
-    assists: Number(row.assists) || 0,
-    passes_attempted: Number(row.passes_attempted) || 0,
-    passes_made: Number(row.passes_made) || 0,
-    pass_percentage: normalizePercentage(row.pass_percentage),
-    tackles_attempted: Number(row.tackles_attempted) || 0,
-    tackles_made: Number(row.tackles_made) || 0,
-    tackle_percentage: normalizePercentage(row.tackle_percentage),
-    motm_count: Number(row.motm_count) || 0,
-  }));
-}
-
 async function getPendingMatches() {
   await ensureMatchesTable();
   const response = await query(`
@@ -318,10 +219,8 @@ async function rejectMatch(matchId, options = {}) {
 module.exports = {
   approveMatch,
   ensureMatchesTable,
-  ensurePlayerStatsTables,
   getApprovedLeagueMatches,
   getPendingMatches,
-  getPlayerStats,
   getSavedMatches,
   insertMatch,
   normalizeMatchDate,

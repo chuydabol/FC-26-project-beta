@@ -446,20 +446,6 @@ app.get('/api/standings', async (_req, res) => {
   }
 });
 
-app.get('/api/player-stats', async (_req, res) => {
-  try {
-    const players = await db.getPlayerStats();
-    res.json({ players });
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to load player stats from Postgres');
-    res.status(500).json({
-      error: 'Failed to load player stats',
-      details: error.message || 'Database query failed',
-      players: [],
-    });
-  }
-});
-
 if (require.main === module) {
   const port = process.env.PORT || 3000;
   app.listen(port, () => {
