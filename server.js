@@ -23,14 +23,55 @@ const BOTA_FC = {
 };
 const ACTIVE_MATCH_TYPE = 'friendlyMatch';
 
+const NEWS_ITEMS = [
+  {
+    category: 'League Office',
+    time: 'Preseason',
+    headline: 'The UPCL table has been reset for the six confirmed clubs.',
+  },
+  {
+    category: 'East',
+    time: 'Preseason',
+    headline: 'Eastern Conference entries: Bota FC, Inferign United, and True Egoistas.',
+  },
+  {
+    category: 'West',
+    time: 'Preseason',
+    headline: 'Western Conference entries: Versus One, FC Wisconsin, and FC Sutton St.',
+  },
+  {
+    category: 'Tables',
+    time: 'Preseason',
+    headline: 'No fake standings, form, or scorelines are listed before official results arrive.',
+  },
+];
+
 app.use((_req, res, next) => {
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'GET,HEAD,POST,OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, x-admin-password');
   next();
 });
 app.use(express.json({ limit: '1mb' }));
 app.use('/assets', express.static(path.join(PUBLIC_DIR, 'assets')));
+
+function requireAdmin(req, res, next) {
+  const expectedPassword = process.env.ADMIN_PASSWORD;
+  const providedPassword = req.headers?.['x-admin-password'];
+
+  if (!expectedPassword || providedPassword !== expectedPassword) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
+  next();
+}
+
+
+function adminOnly(handler) {
+  return (req, res) => requireAdmin(req, res, () => handler(req, res));
+}
+
 
 function toNumber(value, fallback = 0) {
   const number = Number(value);
@@ -236,6 +277,10 @@ app.get('/api/team', (_req, res) => {
   res.json({ team: BOTA_FC, matchType: ACTIVE_MATCH_TYPE });
 });
 
+app.get('/api/news', (_req, res) => {
+  res.json({ news: NEWS_ITEMS });
+});
+
 async function sendFriendlyMatches(_req, res) {
   try {
     const rawMatches = await eaApi.fetchFriendlyMatches(BOTA_FC.id);
@@ -256,7 +301,7 @@ async function sendFriendlyMatches(_req, res) {
 app.get('/api/matches', sendFriendlyMatches);
 app.get('/api/fixtures', sendFriendlyMatches);
 
-app.post('/api/sync-matches', async (_req, res) => {
+app.post('/api/sync-matches', adminOnly(async (_req, res) => {
   const totals = {
     totalFetched: 0,
     inserted: 0,
@@ -287,7 +332,7 @@ app.post('/api/sync-matches', async (_req, res) => {
       ...totals,
     });
   }
-});
+}));
 
 app.get('/api/db-matches', async (_req, res) => {
   try {
@@ -304,7 +349,7 @@ app.get('/api/db-matches', async (_req, res) => {
 });
 
 
-app.get('/api/pending-matches', async (_req, res) => {
+app.get('/api/pending-matches', adminOnly(async (_req, res) => {
   try {
     const matches = await db.getPendingMatches();
     res.json({ matches });
@@ -316,9 +361,9 @@ app.get('/api/pending-matches', async (_req, res) => {
       matches: [],
     });
   }
-});
+}));
 
-app.post('/api/matches/:matchId/approve', async (req, res) => {
+app.post('/api/matches/:matchId/approve', adminOnly(async (req, res) => {
   try {
     const match = await db.approveMatch(req.params.matchId, {
       competition: req.body?.competition || 'league',
@@ -340,9 +385,9 @@ app.post('/api/matches/:matchId/approve', async (req, res) => {
       details: error.message || 'Database update failed',
     });
   }
-});
+}));
 
-app.post('/api/matches/:matchId/reject', async (req, res) => {
+app.post('/api/matches/:matchId/reject', adminOnly(async (req, res) => {
   try {
     const match = await db.rejectMatch(req.params.matchId, { notes: req.body?.notes });
 
@@ -359,7 +404,31 @@ app.post('/api/matches/:matchId/reject', async (req, res) => {
       details: error.message || 'Database update failed',
     });
   }
-});
+}));
+
+app.post('/api/matches/:matchId/friendly', adminOnly(async (req, res) => {
+  try {
+    const match = await db.approveMatch(req.params.matchId, {
+      competition: 'friendly',
+      matchday: req.body?.matchday,
+      notes: req.body?.notes,
+    });
+
+    if (!match) {
+      res.status(404).json({ error: 'Match not found' });
+      return;
+    }
+
+    res.json({ match });
+  } catch (error) {
+    const status = /competition|matchday/.test(error.message || '') ? 400 : 500;
+    logger.error({ err: error, matchId: req.params.matchId }, 'Failed to mark match as friendly');
+    res.status(status).json({
+      error: 'Failed to mark match as friendly',
+      details: error.message || 'Database update failed',
+    });
+  }
+}));
 
 
 app.get('/api/standings', async (_req, res) => {
@@ -389,8 +458,11 @@ module.exports.normalizeMatch = normalizeMatch;
 module.exports.normalizeTimestamp = normalizeTimestamp;
 module.exports.BOTA_FC = BOTA_FC;
 module.exports.LEAGUE_CLUBS = LEAGUE_CLUBS;
+module.exports.NEWS_ITEMS = NEWS_ITEMS;
 module.exports.TEAM_ALIASES = TEAM_ALIASES;
 module.exports.calculateStandings = calculateStandings;
 module.exports.findLeagueClub = findLeagueClub;
 module.exports.findLeagueClubByName = findLeagueClubByName;
 module.exports.getCanonicalTeamName = getCanonicalTeamName;
+module.exports.requireAdmin = requireAdmin;
+module.exports.adminOnly = adminOnly;

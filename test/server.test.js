@@ -1,8 +1,15 @@
 const { test, mock } = require('node:test');
 const assert = require('node:assert/strict');
 
+const ADMIN_PASSWORD = 'test-admin-password';
+process.env.ADMIN_PASSWORD = ADMIN_PASSWORD;
+
 const eaApi = require('../services/eaApi');
 const app = require('../server');
+
+function adminHeaders(extraHeaders = {}) {
+  return { ...extraHeaders, 'x-admin-password': ADMIN_PASSWORD };
+}
 
 async function withServer(fn) {
   const server = app.listen(0);
@@ -93,7 +100,10 @@ test('POST /api/sync-matches stores recent matches for all league clubs', async 
   });
 
   await withServer(async port => {
-    const response = await fetch(`http://localhost:${port}/api/sync-matches`, { method: 'POST' });
+    const response = await fetch(`http://localhost:${port}/api/sync-matches`, {
+      method: 'POST',
+      headers: adminHeaders(),
+    });
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.deepEqual(body, { totalFetched: 6, inserted: 3, skipped: 3 });
@@ -108,6 +118,32 @@ test('POST /api/sync-matches stores recent matches for all league clubs', async 
   fetchStub.mock.restore();
   ensureStub.mock.restore();
   insertStub.mock.restore();
+});
+
+test('POST /api/sync-matches rejects missing admin password', async () => {
+  const db = require('../db');
+  const ensureStub = mock.method(db, 'ensureMatchesTable', async () => {
+    throw new Error('admin auth should run before sync');
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/sync-matches`, { method: 'POST' });
+    const body = await response.json();
+    assert.equal(response.status, 401);
+    assert.deepEqual(body, { error: 'Unauthorized' });
+  });
+
+  assert.equal(ensureStub.mock.callCount(), 0);
+  ensureStub.mock.restore();
+});
+
+test('GET /api/news returns public news without admin password', async () => {
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/news`);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.news.map(item => item.category), app.NEWS_ITEMS.map(item => item.category));
+  });
 });
 
 test('GET /api/db-matches returns saved Postgres matches', async () => {
@@ -299,7 +335,7 @@ test('GET /api/pending-matches returns synced matches awaiting approval', async 
   ]);
 
   await withServer(async port => {
-    const response = await fetch(`http://localhost:${port}/api/pending-matches`);
+    const response = await fetch(`http://localhost:${port}/api/pending-matches`, { headers: adminHeaders() });
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.deepEqual(body.matches.map(match => match.match_id), ['pending-1']);
@@ -320,13 +356,37 @@ test('POST /api/matches/:matchId/approve approves a league match with optional m
   await withServer(async port => {
     const response = await fetch(`http://localhost:${port}/api/matches/match-123/approve`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ competition: 'league', matchday: 2 }),
     });
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.equal(body.match.status, 'approved');
     assert.equal(body.match.competition, 'league');
+  });
+
+  assert.equal(approveStub.mock.callCount(), 1);
+  approveStub.mock.restore();
+});
+
+test('POST /api/matches/:matchId/friendly marks a match as friendly', async () => {
+  const db = require('../db');
+  const approveStub = mock.method(db, 'approveMatch', async (matchId, options) => {
+    assert.equal(matchId, 'match-789');
+    assert.deepEqual(options, { competition: 'friendly', matchday: undefined, notes: undefined });
+    return { match_id: matchId, status: 'approved', competition: 'friendly' };
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/matches/match-789/friendly`, {
+      method: 'POST',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({}),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.match.status, 'approved');
+    assert.equal(body.match.competition, 'friendly');
   });
 
   assert.equal(approveStub.mock.callCount(), 1);
@@ -341,7 +401,10 @@ test('POST /api/matches/:matchId/reject marks a match rejected', async () => {
   });
 
   await withServer(async port => {
-    const response = await fetch(`http://localhost:${port}/api/matches/match-456/reject`, { method: 'POST' });
+    const response = await fetch(`http://localhost:${port}/api/matches/match-456/reject`, {
+      method: 'POST',
+      headers: adminHeaders(),
+    });
     const body = await response.json();
     assert.equal(response.status, 200);
     assert.equal(body.match.status, 'rejected');
