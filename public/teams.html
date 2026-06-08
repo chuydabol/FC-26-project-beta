@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bota FC Fixtures</title>
+  <title>UPCL League Hub</title>
   <style>
     :root {
       color-scheme: dark;
@@ -17,6 +17,8 @@
       --danger: #fb7185;
       --draw: #fbbf24;
       --border: rgba(148, 163, 184, 0.22);
+      --glow: rgba(52, 211, 153, 0.45);
+      --violet: #a78bfa;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -77,6 +79,8 @@
       gap: 10px;
       margin-top: 26px;
       border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: thin;
     }
 
     .tab {
@@ -85,11 +89,23 @@
       border-bottom: 0;
       border-radius: 16px 16px 0 0;
       padding: 12px 18px;
-      background: var(--panel-strong);
-      color: var(--text);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      cursor: pointer;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      white-space: nowrap;
+      transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .tab:hover,
+    .tab.active {
+      border-color: rgba(52, 211, 153, 0.55);
+      background: linear-gradient(180deg, rgba(52, 211, 153, 0.18), rgba(15, 23, 42, 0.92));
+      color: var(--text);
+      box-shadow: 0 -10px 30px rgba(52, 211, 153, 0.12);
+      transform: translateY(-1px);
     }
 
     main {
@@ -101,7 +117,9 @@
     .toolbar,
     .match-card,
     .empty,
-    .error {
+    .error,
+    .standings-card,
+    .playoff-panel {
       border: 1px solid var(--border);
       border-radius: 22px;
       background: var(--panel);
@@ -136,6 +154,11 @@
     button.refresh:disabled {
       cursor: wait;
       opacity: 0.7;
+    }
+
+    #matches {
+      display: grid;
+      gap: 16px;
     }
 
     .match-card {
@@ -209,9 +232,254 @@
 
     .error { color: #fecdd3; border-color: rgba(251, 113, 133, 0.34); }
 
+    .tab-panel { display: none; }
+
+    .tab-panel.active {
+      display: grid;
+      gap: 16px;
+    }
+
+    .league-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .standings-card {
+      overflow: hidden;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 18px 8px;
+    }
+
+    .section-heading h2,
+    .round h3 {
+      margin: 0;
+      font-size: 1rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .conference-chip,
+    .round-chip {
+      border: 1px solid rgba(56, 189, 248, 0.36);
+      border-radius: 999px;
+      padding: 7px 10px;
+      color: var(--accent-2);
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      padding: 0 14px 16px;
+    }
+
+    table.standings {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .standings th,
+    .standings td {
+      padding: 12px 10px;
+      text-align: center;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .standings th {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .standings td.team-cell {
+      min-width: 180px;
+      text-align: left;
+      font-weight: 900;
+    }
+
+    .standings tbody tr:nth-child(-n+2) {
+      background: linear-gradient(90deg, rgba(52, 211, 153, 0.13), transparent 58%);
+    }
+
+    .standings tbody tr.cutoff td {
+      border-bottom: 2px dashed rgba(52, 211, 153, 0.62);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      border: 1px solid rgba(52, 211, 153, 0.75);
+      border-radius: 999px;
+      padding: 4px 8px;
+      color: #bbf7d0;
+      font-size: 0.68rem;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(52, 211, 153, 0.14);
+      box-shadow: 0 0 18px var(--glow);
+    }
+
+    .form {
+      display: inline-flex;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .form span {
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      color: #03121a;
+      font-size: 0.7rem;
+      font-weight: 950;
+    }
+
+    .form .W { background: var(--accent); }
+    .form .D { background: var(--draw); }
+    .form .L { background: var(--danger); color: #fff1f2; }
+
+    .playoff-panel {
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .playoff-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(52, 211, 153, 0.045) 1px, transparent 1px);
+      background-size: 34px 34px;
+      mask-image: linear-gradient(to bottom, black, transparent 80%);
+    }
+
+    .bracket {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 0.68fr) minmax(0, 1fr);
+      gap: 26px;
+      align-items: center;
+    }
+
+    .conference-bracket {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    .conference-bracket.west { direction: rtl; }
+    .conference-bracket.west > * { direction: ltr; }
+
+    .round {
+      display: grid;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .round-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--text);
+    }
+
+    .matchup-card {
+      position: relative;
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      border-radius: 18px;
+      padding: 14px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.94), rgba(2, 6, 23, 0.86));
+      box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.06), 0 14px 36px rgba(0, 0, 0, 0.3);
+    }
+
+    .matchup-card::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: -19px;
+      width: 18px;
+      border-top: 1px solid rgba(52, 211, 153, 0.5);
+      box-shadow: 0 0 12px var(--glow);
+    }
+
+    .west .matchup-card::after {
+      right: auto;
+      left: -19px;
+    }
+
+    .finals .matchup-card::after { display: none; }
+
+    .team-slot {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 0;
+      font-weight: 900;
+    }
+
+    .team-slot + .team-slot {
+      border-top: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .seed {
+      color: var(--accent);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .finals {
+      text-align: center;
+    }
+
+    .finals .matchup-card {
+      border-color: rgba(167, 139, 250, 0.55);
+      box-shadow: 0 0 34px rgba(167, 139, 250, 0.16), 0 0 24px rgba(52, 211, 153, 0.12);
+    }
+
+    .finals .round-chip { color: var(--violet); border-color: rgba(167, 139, 250, 0.5); background: rgba(167, 139, 250, 0.1); }
+
+
+    @media (max-width: 920px) {
+      .league-grid,
+      .bracket,
+      .conference-bracket { grid-template-columns: 1fr; }
+      .conference-bracket.west { direction: ltr; }
+      .matchup-card::after { display: none; }
+    }
+
     @media (max-width: 720px) {
       .shell { width: min(100% - 20px, 1120px); padding-top: 16px; }
       header { padding: 22px; }
+      .tabs { gap: 6px; }
+      .tab { padding: 10px 12px; font-size: 0.75rem; }
+      .section-heading { align-items: flex-start; flex-direction: column; }
+      .playoff-panel { padding: 12px; }
       .match-card { grid-template-columns: 64px 1fr; }
       .match-id { grid-column: 1 / -1; text-align: left; }
     }
@@ -220,25 +488,39 @@
 <body>
   <div class="shell">
     <header>
-      <p class="eyebrow">EAFC Friendly Match Viewer</p>
-      <h1>Bota FC</h1>
-      <p class="lede">A clean restart of the old project. For now this page only reads Bota FC friendly matches from EA and displays them in the fixtures tab.</p>
+      <p class="eyebrow">UPCL League Hub</p>
+      <h1>UPCL League</h1>
+      <p class="lede">The main UPCL League hub is taking shape with Bota FC fixtures, conference tables, and a playoff bracket preview.</p>
     </header>
 
     <nav class="tabs" aria-label="Primary">
-      <button class="tab" type="button">Fixtures</button>
+      <button class="tab active" data-tab="fixtures" type="button">Fixtures</button>
+      <button class="tab" data-tab="tables" type="button">Tables</button>
+      <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
     </nav>
 
     <main>
-      <section class="toolbar" aria-live="polite">
-        <div>
-          <strong id="teamLabel">Bota FC</strong>
-          <div class="status" id="status">Loading friendly matches…</div>
-        </div>
-        <button class="refresh" id="refresh" type="button">Refresh</button>
+      <section class="tab-panel active" id="fixtures-panel" aria-label="Fixtures">
+        <section class="toolbar" aria-live="polite">
+          <div>
+            <strong id="teamLabel">Bota FC</strong>
+            <div class="status" id="status">Loading friendly matches…</div>
+          </div>
+          <button class="refresh" id="refresh" type="button">Refresh</button>
+        </section>
+
+        <section id="matches" aria-label="Bota FC fixtures"></section>
       </section>
 
-      <section id="matches" aria-label="Bota FC fixtures"></section>
+      <section class="tab-panel" id="tables-panel" aria-label="UPCL conference tables">
+        <div class="league-grid" id="standings"></div>
+      </section>
+
+      <section class="tab-panel" id="playoffs-panel" aria-label="UPCL League Playoffs">
+        <div class="playoff-panel">
+          <div class="bracket" id="playoffBracket"></div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -247,6 +529,52 @@
     const statusEl = document.getElementById('status');
     const teamLabelEl = document.getElementById('teamLabel');
     const refreshButton = document.getElementById('refresh');
+
+    const tabButtons = document.querySelectorAll('.tab');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    const standingsEl = document.getElementById('standings');
+    const playoffBracketEl = document.getElementById('playoffBracket');
+
+    const standingsData = {
+      east: [
+        { seed: 1, team: 'Bota FC', pl: 10, w: 7, d: 2, l: 1, gf: 24, ga: 10, form: ['W', 'W', 'D', 'W', 'W'] },
+        { seed: 2, team: 'Royal Republic', pl: 10, w: 6, d: 2, l: 2, gf: 21, ga: 13, form: ['W', 'D', 'W', 'L', 'W'] },
+        { seed: 3, team: 'Club Frijol', pl: 10, w: 5, d: 2, l: 3, gf: 18, ga: 15, form: ['L', 'W', 'W', 'D', 'W'] },
+        { seed: 4, team: 'AFC Warriors', pl: 10, w: 4, d: 3, l: 3, gf: 17, ga: 16, form: ['D', 'W', 'L', 'W', 'D'] },
+        { seed: 5, team: 'Ethabella FC', pl: 10, w: 3, d: 2, l: 5, gf: 14, ga: 18, form: ['W', 'L', 'D', 'L', 'L'] },
+        { seed: 6, team: 'Rooney Tunes', pl: 10, w: 2, d: 1, l: 7, gf: 11, ga: 23, form: ['L', 'L', 'W', 'L', 'D'] }
+      ],
+      west: [
+        { seed: 1, team: 'Razorblack FC', pl: 10, w: 8, d: 1, l: 1, gf: 27, ga: 11, form: ['W', 'W', 'W', 'D', 'W'] },
+        { seed: 2, team: 'Sporting de la MA', pl: 10, w: 6, d: 3, l: 1, gf: 22, ga: 12, form: ['D', 'W', 'W', 'W', 'D'] },
+        { seed: 3, team: 'Jids Trivela', pl: 10, w: 5, d: 1, l: 4, gf: 19, ga: 17, form: ['W', 'L', 'W', 'L', 'W'] },
+        { seed: 4, team: 'Elite VT', pl: 10, w: 4, d: 2, l: 4, gf: 16, ga: 16, form: ['L', 'W', 'D', 'W', 'L'] },
+        { seed: 5, team: 'FC Dhizz', pl: 10, w: 3, d: 2, l: 5, gf: 15, ga: 20, form: ['D', 'L', 'L', 'W', 'L'] },
+        { seed: 6, team: 'Khalch FC', pl: 10, w: 1, d: 3, l: 6, gf: 10, ga: 24, form: ['L', 'D', 'L', 'D', 'L'] }
+      ]
+    };
+
+    const playoffData = {
+      east: {
+        semifinalLabel: 'Eastern Semifinals',
+        finalLabel: 'Eastern Final',
+        semifinalMatches: [
+          [{ seed: '#1 East', team: 'Bota FC' }, { seed: '#4 East', team: 'AFC Warriors' }],
+          [{ seed: '#2 East', team: 'Royal Republic' }, { seed: '#3 East', team: 'Club Frijol' }]
+        ],
+        finalMatch: [{ seed: 'East SF Winner', team: 'Semifinal Winner' }, { seed: 'East SF Winner', team: 'Semifinal Winner' }]
+      },
+      west: {
+        semifinalLabel: 'Western Semifinals',
+        finalLabel: 'Western Final',
+        semifinalMatches: [
+          [{ seed: '#1 West', team: 'Razorblack FC' }, { seed: '#4 West', team: 'Elite VT' }],
+          [{ seed: '#2 West', team: 'Sporting de la MA' }, { seed: '#3 West', team: 'Jids Trivela' }]
+        ],
+        finalMatch: [{ seed: 'West SF Winner', team: 'Semifinal Winner' }, { seed: 'West SF Winner', team: 'Semifinal Winner' }]
+      },
+      finals: [{ seed: 'East Champion', team: 'East Champion' }, { seed: 'West Champion', team: 'West Champion' }]
+    };
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>'"]/g, char => ({
@@ -293,6 +621,89 @@
       matchesEl.innerHTML = '<div class="empty">No friendly matches were returned by EA yet. Try refreshing again later.</div>';
     }
 
+    function renderForm(form) {
+      return `<span class="form">${form.map(result => `<span class="${escapeHtml(result)}">${escapeHtml(result)}</span>`).join('')}</span>`;
+    }
+
+    function renderStandingsCard(title, chip, rows) {
+      return `
+        <article class="standings-card">
+          <div class="section-heading">
+            <h2>${escapeHtml(title)}</h2>
+            <span class="conference-chip">${escapeHtml(chip)}</span>
+          </div>
+          <div class="table-wrap">
+            <table class="standings">
+              <thead>
+                <tr><th>Seed</th><th>Team</th><th>PL</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>PTS</th><th>Form</th></tr>
+              </thead>
+              <tbody>
+                ${rows.map(row => {
+                  const gd = row.gf - row.ga;
+                  const pts = (row.w * 3) + row.d;
+                  const badge = row.seed <= 2 ? '<span class="badge">Playoff Spot</span>' : '';
+                  return `
+                    <tr class="${row.seed === 2 ? 'cutoff' : ''}">
+                      <td>${row.seed}</td>
+                      <td class="team-cell">${escapeHtml(row.team)}${badge}</td>
+                      <td>${row.pl}</td><td>${row.w}</td><td>${row.d}</td><td>${row.l}</td>
+                      <td>${row.gf}</td><td>${row.ga}</td><td>${gd > 0 ? '+' : ''}${gd}</td><td>${pts}</td>
+                      <td>${renderForm(row.form)}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderTeamSlot(slot) {
+      return `<div class="team-slot"><span>${escapeHtml(slot.team)}</span><span class="seed">${escapeHtml(slot.seed)}</span></div>`;
+    }
+
+    function renderMatchup(slots) {
+      return `<article class="matchup-card">${slots.map(renderTeamSlot).join('')}</article>`;
+    }
+
+    function renderConferenceBracket(key, data) {
+      return `
+        <section class="conference-bracket ${key}">
+          <div class="round">
+            <div class="round-title"><h3>${escapeHtml(data.semifinalLabel)}</h3><span class="round-chip">Best of 1</span></div>
+            ${data.semifinalMatches.map(renderMatchup).join('')}
+          </div>
+          <div class="round">
+            <div class="round-title"><h3>${escapeHtml(data.finalLabel)}</h3><span class="round-chip">Final</span></div>
+            ${renderMatchup(data.finalMatch)}
+          </div>
+        </section>
+      `;
+    }
+
+    function renderStaticLeagueLayers() {
+      standingsEl.innerHTML = [
+        renderStandingsCard('Eastern Conference', 'Top 2 qualify', standingsData.east),
+        renderStandingsCard('Western Conference', 'Top 2 qualify', standingsData.west)
+      ].join('');
+
+      playoffBracketEl.innerHTML = `
+        ${renderConferenceBracket('east', playoffData.east)}
+        <section class="round finals">
+          <div class="round-title"><h3>UPCL Finals</h3><span class="round-chip">Main League</span></div>
+          ${renderMatchup(playoffData.finals)}
+        </section>
+        ${renderConferenceBracket('west', playoffData.west)}
+      `;
+    }
+
+    function activateTab(tabName) {
+      tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabName));
+      tabPanels.forEach(panel => panel.classList.toggle('active', panel.id === `${tabName}-panel`));
+    }
+
+
     async function loadMatches() {
       refreshButton.disabled = true;
       statusEl.textContent = 'Loading friendly matches…';
@@ -313,7 +724,12 @@
       }
     }
 
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => activateTab(button.dataset.tab));
+    });
+
     refreshButton.addEventListener('click', loadMatches);
+    renderStaticLeagueLayers();
     loadMatches();
   </script>
 </body>
