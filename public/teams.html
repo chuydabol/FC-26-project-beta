@@ -156,6 +156,64 @@
       opacity: 0.7;
     }
 
+
+    .admin-login {
+      display: grid;
+      gap: 16px;
+      padding: 20px;
+    }
+
+    .admin-login form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .admin-login label {
+      display: grid;
+      gap: 8px;
+      min-width: min(100%, 320px);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .admin-login input {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 12px 14px;
+      background: var(--panel-strong);
+      color: var(--text);
+      font: inherit;
+    }
+
+    .admin-login input:focus {
+      outline: 2px solid rgba(34, 197, 94, 0.35);
+      outline-offset: 2px;
+    }
+
+    .admin-login button,
+    .admin-logout {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: var(--panel-strong);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .admin-logout:hover,
+    .admin-login button:hover { border-color: var(--success); }
+
+    .admin-dashboard[hidden],
+    .admin-login[hidden] { display: none; }
+
     #matches,
     #dbMatches,
     #pendingMatches {
@@ -1230,12 +1288,33 @@
       </section>
 
       <section class="tab-panel" id="admin-panel" aria-label="Admin pending matches">
-        <section class="standings-card" aria-label="Pending synced matches">
+        <section class="standings-card" id="adminLogin" aria-label="Admin login">
+          <div class="section-heading">
+            <div>
+              <h2>Admin Login</h2>
+              <div class="status">Enter the admin password to manage pending matches.</div>
+            </div>
+            <span class="conference-chip">Protected</span>
+          </div>
+          <div class="admin-login">
+            <form id="adminLoginForm">
+              <label for="adminPasswordInput">
+                Admin Password
+                <input id="adminPasswordInput" name="adminPassword" type="password" autocomplete="current-password" required>
+              </label>
+              <button type="submit">Log In</button>
+            </form>
+            <div class="error" id="adminLoginError" hidden></div>
+          </div>
+        </section>
+
+        <section class="standings-card admin-dashboard" id="adminDashboard" aria-label="Pending synced matches" hidden>
           <div class="section-heading">
             <div>
               <h2>Admin / Pending Matches</h2>
               <div class="status">Approve only official league results; keep friendlies out of the table.</div>
             </div>
+            <button class="admin-logout" id="adminLogout" type="button">Logout</button>
             <span class="conference-chip" id="pendingStatus">Not loaded</span>
           </div>
           <section id="pendingMatches" aria-label="Synced pending matches awaiting approval"></section>
@@ -1265,6 +1344,12 @@
     const dbStatusEl = document.getElementById('dbStatus');
     const pendingMatchesEl = document.getElementById('pendingMatches');
     const pendingStatusEl = document.getElementById('pendingStatus');
+    const adminLoginEl = document.getElementById('adminLogin');
+    const adminDashboardEl = document.getElementById('adminDashboard');
+    const adminLoginForm = document.getElementById('adminLoginForm');
+    const adminPasswordInput = document.getElementById('adminPasswordInput');
+    const adminLoginErrorEl = document.getElementById('adminLoginError');
+    const adminLogoutButton = document.getElementById('adminLogout');
 
     const tabButtons = document.querySelectorAll('.tab');
     const tabPanels = document.querySelectorAll('.tab-panel');
@@ -1553,9 +1638,52 @@
       playoffBracketEl.innerHTML = renderPlayoffBracket();
     }
 
+    function getAdminPassword() {
+      return localStorage.getItem('adminPassword') || '';
+    }
+
+    function setAdminMessage(message) {
+      adminLoginErrorEl.textContent = message;
+      adminLoginErrorEl.hidden = !message;
+    }
+
+    function renderAdminState(message = '') {
+      const loggedIn = Boolean(getAdminPassword());
+      adminLoginEl.hidden = loggedIn;
+      adminDashboardEl.hidden = !loggedIn;
+      setAdminMessage(message);
+
+      if (!loggedIn) {
+        pendingStatusEl.textContent = 'Login required';
+        pendingMatchesEl.innerHTML = '';
+      }
+    }
+
+    function clearAdminSession(message = 'Unauthorized. Please log in again.') {
+      localStorage.removeItem('adminPassword');
+      renderAdminState(message);
+    }
+
+    async function adminFetch(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+      const password = getAdminPassword();
+      if (password) headers.set('x-admin-password', password);
+
+      const response = await fetch(url, { ...options, headers });
+      if (response.status === 401) {
+        clearAdminSession();
+      }
+      return response;
+    }
+
     function activateTab(tabName) {
       tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabName));
       tabPanels.forEach(panel => panel.classList.toggle('active', panel.id === `${tabName}-panel`));
+
+      if (tabName === 'admin') {
+        renderAdminState();
+        if (getAdminPassword()) loadPendingMatches();
+      }
     }
 
 
@@ -1617,7 +1745,7 @@
     async function loadPendingMatches() {
       pendingStatusEl.textContent = 'Loading pending matches…';
       try {
-        const response = await fetch('/api/pending-matches');
+        const response = await adminFetch('/api/pending-matches');
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.details || payload.error || 'Request failed');
         const matches = Array.isArray(payload.matches) ? payload.matches : [];
@@ -1632,14 +1760,15 @@
     }
 
     async function updateMatchApproval(matchId, action) {
-      const isLeagueApproval = action === 'approve-league';
-      const endpointAction = action === 'reject' ? 'reject' : 'approve';
-      const body = action === 'reject'
-        ? {}
-        : { competition: isLeagueApproval ? 'league' : 'friendly' };
+      const endpointAction = action === 'reject'
+        ? 'reject'
+        : action === 'approve-friendly'
+          ? 'friendly'
+          : 'approve';
+      const body = action === 'approve-league' ? { competition: 'league' } : {};
 
       pendingStatusEl.textContent = 'Updating match approval…';
-      const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}/${endpointAction}`, {
+      const response = await adminFetch(`/api/matches/${encodeURIComponent(matchId)}/${endpointAction}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -1655,7 +1784,7 @@
       syncMatchesButton.disabled = true;
       dbStatusEl.textContent = 'Syncing matches…';
       try {
-        const response = await fetch('/api/sync-matches', { method: 'POST' });
+        const response = await adminFetch('/api/sync-matches', { method: 'POST' });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.details || payload.error || 'Sync failed');
         dbStatusEl.textContent = `${payload.inserted} inserted, ${payload.skipped} skipped`;
@@ -1678,6 +1807,19 @@
 
     refreshButton.addEventListener('click', loadMatches);
     syncMatchesButton.addEventListener('click', syncMatchesToDatabase);
+    adminLoginForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const password = adminPasswordInput.value.trim();
+      if (!password) return;
+      localStorage.setItem('adminPassword', password);
+      adminPasswordInput.value = '';
+      renderAdminState();
+      loadPendingMatches();
+    });
+    adminLogoutButton.addEventListener('click', () => {
+      localStorage.removeItem('adminPassword');
+      renderAdminState();
+    });
     pendingMatchesEl.addEventListener('click', async event => {
       const button = event.target.closest('button[data-action][data-match-id]');
       if (!button) return;
@@ -1691,10 +1833,10 @@
         button.disabled = false;
       }
     });
+    renderAdminState();
     renderStandingsLoading();
     loadMatches();
     loadDbMatches();
-    loadPendingMatches();
     loadStandings();
   </script>
 </body>

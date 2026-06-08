@@ -1,9 +1,7 @@
 # FC-26 Project Beta
 
-This repository has been reset into a minimal **Bota FC friendly match viewer**.
-The current goal is intentionally small: show EAFC friendly matches for Bota FC
-without storing matches, player IDs, player cards, rankings, news, admin tools,
-or competition features.
+UPCL League Hub for viewing EAFC friendly fixtures, saved database matches,
+conference tables, playoff previews, and protected admin match approval tools.
 
 ## Current Team
 
@@ -17,31 +15,48 @@ The active team can be overridden for local experiments with:
 BOTA_CLUB_ID=57985 BOTA_CLUB_NAME="Bota FC" node server.js
 ```
 
+## Environment
+
+Admin actions require an `ADMIN_PASSWORD` value. Backend admin middleware checks
+this value against the `x-admin-password` request header and returns
+`{ "error": "Unauthorized" }` with HTTP 401 when the header is missing or does
+not match.
+
+```bash
+ADMIN_PASSWORD="replace-with-a-strong-password" npm start
+```
+
 ## API
 
-### `GET /api/health`
+### Public routes
 
-Returns basic service health and the active EA club configuration.
+These routes do not require the admin password:
 
-### `GET /api/team`
+- `GET /api/health`
+- `GET /api/team`
+- `GET /api/matches`
+- `GET /api/fixtures`
+- `GET /api/db-matches`
+- `GET /api/standings`
+- `GET /api/news`
 
-Returns the active team and match type.
+### Admin routes
 
-### `GET /api/matches`
+These routes require the `x-admin-password` header:
 
-Fetches Bota FC friendly matches directly from EA and returns normalized match
-cards for the website. No match data is written to storage.
-
-### `GET /api/fixtures`
-
-Alias for `GET /api/matches`, kept so the frontend can treat friendly matches as
-fixtures while the project is rebuilt.
+- `GET /api/pending-matches`
+- `POST /api/sync-matches`
+- `POST /api/matches/:matchId/approve`
+- `POST /api/matches/:matchId/reject`
+- `POST /api/matches/:matchId/friendly`
 
 ## Frontend
 
-The root route `/` serves `public/teams.html`, which is now a single fixtures
-view. Removed legacy UI areas include player cards, rankings, news, Champions
-Cup, admin login, and multi-team pages.
+The root route `/` serves `public/teams.html`, which includes Fixtures, Tables,
+League Playoffs, and an Admin tab. The Admin tab shows a login screen until a
+password is saved in `localStorage` as `adminPassword`; admin requests include
+that value in the `x-admin-password` header. Logging out clears the stored
+password.
 
 ## Development
 
