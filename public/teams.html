@@ -157,7 +157,8 @@
     }
 
     #matches,
-    #dbMatches {
+    #dbMatches,
+    #pendingMatches {
       display: grid;
       gap: 16px;
       padding: 16px;
@@ -225,6 +226,43 @@
       color: var(--muted);
       font-size: 0.82rem;
       text-align: right;
+    }
+
+
+    .approval-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+
+    .approval-actions button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 9px 12px;
+      background: var(--panel-strong);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .approval-actions button:hover { border-color: var(--success); }
+    .approval-actions button.reject:hover { border-color: var(--danger); }
+
+    .match-meta {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
 
     .empty,
@@ -1048,6 +1086,7 @@
       <button class="tab" data-tab="fixtures" type="button">Fixtures</button>
       <button class="tab" data-tab="tables" type="button">Tables</button>
       <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
+      <button class="tab" data-tab="admin" type="button">Admin</button>
     </nav>
 
     <main>
@@ -1190,6 +1229,19 @@
         <div class="league-grid" id="standings"></div>
       </section>
 
+      <section class="tab-panel" id="admin-panel" aria-label="Admin pending matches">
+        <section class="standings-card" aria-label="Pending synced matches">
+          <div class="section-heading">
+            <div>
+              <h2>Admin / Pending Matches</h2>
+              <div class="status">Approve only official league results; keep friendlies out of the table.</div>
+            </div>
+            <span class="conference-chip" id="pendingStatus">Not loaded</span>
+          </div>
+          <section id="pendingMatches" aria-label="Synced pending matches awaiting approval"></section>
+        </section>
+      </section>
+
       <section class="tab-panel" id="playoffs-panel" aria-label="UPCL League Playoffs">
         <div class="playoff-panel">
           <div class="playoff-stage-header">
@@ -1211,6 +1263,8 @@
     const syncMatchesButton = document.getElementById('syncMatches');
     const dbMatchesEl = document.getElementById('dbMatches');
     const dbStatusEl = document.getElementById('dbStatus');
+    const pendingMatchesEl = document.getElementById('pendingMatches');
+    const pendingStatusEl = document.getElementById('pendingStatus');
 
     const tabButtons = document.querySelectorAll('.tab');
     const tabPanels = document.querySelectorAll('.tab-panel');
@@ -1329,6 +1383,31 @@
             <div class="team-line"><span>${escapeHtml(match.opponent_name || 'Opponent TBD')}</span><span class="score">${scoreValue(match.opponent_score)}</span></div>
           </div>
           <div class="match-id">DB Match ID<br>${escapeHtml(match.match_id)}</div>
+        </article>
+      `;
+    }
+
+    function renderPendingMatch(match) {
+      return `
+        <article class="match-card">
+          <div>
+            <div class="result ${escapeHtml(match.result || '—')}">${escapeHtml(match.result || '—')}</div>
+            <div class="date">${escapeHtml(formatDate(match.match_date))}</div>
+          </div>
+          <div class="teams">
+            <div class="team-line"><span>${escapeHtml(match.club_name || `Club ${match.source_club_id}`)}</span><span class="score">${scoreValue(match.club_score)}</span></div>
+            <div class="team-line"><span>${escapeHtml(match.opponent_name || 'Opponent TBD')}</span><span class="score">${scoreValue(match.opponent_score)}</span></div>
+            <div class="match-meta">
+              <span>Status: ${escapeHtml(match.status || 'pending')}</span>
+              <span>Competition: ${escapeHtml(match.competition || 'friendly')}</span>
+            </div>
+            <div class="approval-actions">
+              <button type="button" data-action="approve-league" data-match-id="${escapeHtml(match.match_id)}">Approve as League Match</button>
+              <button type="button" data-action="reject" data-match-id="${escapeHtml(match.match_id)}" class="reject">Reject</button>
+              <button type="button" data-action="approve-friendly" data-match-id="${escapeHtml(match.match_id)}">Mark as Friendly</button>
+            </div>
+          </div>
+          <div class="match-id">Match ID<br>${escapeHtml(match.match_id)}</div>
         </article>
       `;
     }
@@ -1534,6 +1613,44 @@
       }
     }
 
+
+    async function loadPendingMatches() {
+      pendingStatusEl.textContent = 'Loading pending matches…';
+      try {
+        const response = await fetch('/api/pending-matches');
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Request failed');
+        const matches = Array.isArray(payload.matches) ? payload.matches : [];
+        pendingStatusEl.textContent = `${matches.length} pending ${matches.length === 1 ? 'match' : 'matches'}`;
+        pendingMatchesEl.innerHTML = matches.length
+          ? matches.map(renderPendingMatch).join('')
+          : '<div class="empty">No pending synced matches need approval. Sync EA matches to import new pending results.</div>';
+      } catch (error) {
+        pendingStatusEl.textContent = 'Admin queue unavailable';
+        pendingMatchesEl.innerHTML = `<div class="error">Pending matches could not be loaded: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function updateMatchApproval(matchId, action) {
+      const isLeagueApproval = action === 'approve-league';
+      const endpointAction = action === 'reject' ? 'reject' : 'approve';
+      const body = action === 'reject'
+        ? {}
+        : { competition: isLeagueApproval ? 'league' : 'friendly' };
+
+      pendingStatusEl.textContent = 'Updating match approval…';
+      const response = await fetch(`/api/matches/${encodeURIComponent(matchId)}/${endpointAction}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.details || payload.error || 'Approval update failed');
+      await loadPendingMatches();
+      await loadDbMatches();
+      await loadStandings();
+    }
+
     async function syncMatchesToDatabase() {
       syncMatchesButton.disabled = true;
       dbStatusEl.textContent = 'Syncing matches…';
@@ -1544,6 +1661,7 @@
         dbStatusEl.textContent = `${payload.inserted} inserted, ${payload.skipped} skipped`;
         statusEl.textContent = `Database sync complete: ${payload.totalFetched} fetched, ${payload.inserted} inserted, ${payload.skipped} skipped.`;
         await loadDbMatches();
+        await loadPendingMatches();
         await loadStandings();
       } catch (error) {
         dbStatusEl.textContent = 'Sync failed';
@@ -1560,9 +1678,23 @@
 
     refreshButton.addEventListener('click', loadMatches);
     syncMatchesButton.addEventListener('click', syncMatchesToDatabase);
+    pendingMatchesEl.addEventListener('click', async event => {
+      const button = event.target.closest('button[data-action][data-match-id]');
+      if (!button) return;
+      button.disabled = true;
+      try {
+        await updateMatchApproval(button.dataset.matchId, button.dataset.action);
+      } catch (error) {
+        pendingStatusEl.textContent = 'Approval update failed';
+        pendingMatchesEl.insertAdjacentHTML('beforebegin', `<div class="error">Match approval could not be updated: ${escapeHtml(error.message)}</div>`);
+      } finally {
+        button.disabled = false;
+      }
+    });
     renderStandingsLoading();
     loadMatches();
     loadDbMatches();
+    loadPendingMatches();
     loadStandings();
   </script>
 </body>
