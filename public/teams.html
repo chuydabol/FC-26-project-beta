@@ -897,6 +897,7 @@
     .leader-card,
     .fixture-row,
     .result-row,
+    .series-card,
     .news-card {
       border: 1px solid var(--border);
       background: var(--surface-subtle);
@@ -941,19 +942,26 @@
     }
 
     .result-list,
-    .fixture-list {
+    .fixture-list,
+    .series-list {
       display: grid;
       gap: 10px;
     }
 
     .result-row,
-    .fixture-row {
+    .fixture-row,
+    .series-card {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
       align-items: center;
       gap: 12px;
       padding: 13px 14px;
       border-radius: 16px;
+    }
+
+    .series-card {
+      grid-template-columns: minmax(0, 1fr) minmax(118px, auto) minmax(0, 1fr);
+      min-height: 92px;
     }
 
     .overview-team {
@@ -965,6 +973,10 @@
     }
 
     .overview-team:last-child { justify-content: flex-end; text-align: right; }
+
+    .series-card .overview-team {
+      align-self: stretch;
+    }
 
     .overview-team img {
       flex: 0 0 auto;
@@ -1001,6 +1013,50 @@
       font-weight: 850;
       letter-spacing: 0.1em;
       text-transform: uppercase;
+    }
+
+    .series-score {
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      min-width: 118px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .series-score strong {
+      color: var(--text);
+      font-size: clamp(1.25rem, 2.4vw, 1.8rem);
+      font-weight: 950;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .series-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 4px 8px;
+      color: var(--success);
+      background: var(--panel-strong);
+      font-size: 0.58rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      line-height: 1;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .series-subtext {
+      grid-column: 1 / -1;
+      margin-top: -4px;
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-align: center;
     }
 
     .news-center {
@@ -1083,10 +1139,13 @@
       .snapshot-grid,
       .leader-grid { grid-template-columns: 1fr 1fr; }
       .result-row,
-      .fixture-row { grid-template-columns: 1fr; text-align: left; }
+      .fixture-row,
+      .series-card { grid-template-columns: 1fr; text-align: left; }
       .overview-team:last-child { justify-content: flex-start; text-align: left; }
       .overview-score,
-      .fixture-date { justify-items: start; text-align: left; }
+      .fixture-date,
+      .series-score { justify-items: start; text-align: left; }
+      .series-subtext { text-align: left; }
       .news-center { max-height: 460px; }
       .playoff-panel {
         width: calc(100vw - 20px);
@@ -1183,48 +1242,36 @@
 
             <article class="overview-card" aria-labelledby="recentResultsTitle">
               <div class="section-heading">
-                <h2 id="recentResultsTitle">Recent Results</h2>
-                <span class="conference-chip">No official scorelines</span>
+                <h2 id="recentResultsTitle">Live / Recent Series</h2>
+                <span class="conference-chip">BO3 format</span>
               </div>
-              <div class="overview-card-body result-list">
-                <div class="result-row">
+              <div class="overview-card-body series-list">
+                <div class="series-card">
                   <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>Bota FC</span></div>
-                  <div class="overview-score">—<small>No result</small></div>
-                  <div class="overview-team"><span>Inferign United</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
-                </div>
-                <div class="result-row">
-                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>Versus One</span></div>
-                  <div class="overview-score">—<small>No result</small></div>
+                  <div class="series-score"><strong>2 - 0</strong><span class="series-status">LIVE SERIES</span></div>
                   <div class="overview-team"><span>FC Wisconsin</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
+                  <div class="series-subtext">BO3 Series · Game 3 Pending</div>
                 </div>
-                <div class="result-row">
-                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>True Egoistas</span></div>
-                  <div class="overview-score">—<small>No result</small></div>
-                  <div class="overview-team"><span>FC Sutton St</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
+                <div class="series-card">
+                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>Versus One</span></div>
+                  <div class="series-score"><strong>2 - 1</strong><span class="series-status">SERIES FINAL</span></div>
+                  <div class="overview-team"><span>Inferign United</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
+                  <div class="series-subtext">Versus One wins series 2-1</div>
                 </div>
               </div>
             </article>
 
-            <article class="overview-card" aria-labelledby="upcomingFixturesTitle">
+            <article class="overview-card" aria-labelledby="upcomingSeriesTitle">
               <div class="section-heading">
-                <h2 id="upcomingFixturesTitle">Upcoming Fixtures</h2>
+                <h2 id="upcomingSeriesTitle">Upcoming Series</h2>
                 <span class="conference-chip">Schedule TBD</span>
               </div>
-              <div class="overview-card-body fixture-list">
-                <div class="fixture-row">
-                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>Bota FC</span></div>
-                  <div class="fixture-date">TBD<small>Preseason</small></div>
-                  <div class="overview-team"><span>True Egoistas</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
-                </div>
-                <div class="fixture-row">
-                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>Inferign United</span></div>
-                  <div class="fixture-date">TBD<small>Preseason</small></div>
-                  <div class="overview-team"><span>Versus One</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
-                </div>
-                <div class="fixture-row">
-                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>FC Wisconsin</span></div>
-                  <div class="fixture-date">TBD<small>Preseason</small></div>
+              <div class="overview-card-body series-list">
+                <div class="series-card">
+                  <div class="overview-team"><img src="/assets/logos/league-crest.png" alt="" loading="lazy"><span>True Egoistas</span></div>
+                  <div class="series-score"><strong>TBD</strong><span class="series-status">SCHEDULED</span></div>
                   <div class="overview-team"><span>FC Sutton St</span><img src="/assets/logos/league-crest.png" alt="" loading="lazy"></div>
+                  <div class="series-subtext">BO3 Series</div>
                 </div>
               </div>
             </article>
