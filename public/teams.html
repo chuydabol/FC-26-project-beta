@@ -360,15 +360,15 @@
       position: relative;
       width: calc(100vw - 32px);
       margin-left: calc(50% - 50vw + 16px);
-      min-height: 660px;
+      min-height: 700px;
       padding: clamp(22px, 4vw, 46px);
       overflow: hidden;
       border-color: rgba(0, 255, 102, 0.24);
-      border-radius: 34px;
+      border-radius: 18px;
       background:
-        radial-gradient(circle at 50% 10%, rgba(0, 255, 102, 0.16), transparent 28rem),
-        radial-gradient(circle at 16% 42%, rgba(0, 194, 255, 0.16), transparent 24rem),
-        radial-gradient(circle at 84% 48%, rgba(0, 255, 102, 0.12), transparent 24rem),
+        radial-gradient(circle at 50% 10%, rgba(0, 255, 102, 0.14), transparent 28rem),
+        radial-gradient(circle at 16% 42%, rgba(0, 194, 255, 0.15), transparent 24rem),
+        radial-gradient(circle at 84% 48%, rgba(255, 61, 242, 0.1), transparent 24rem),
         linear-gradient(135deg, #010207 0%, #03111c 48%, #020409 100%);
       box-shadow:
         inset 0 0 90px rgba(0, 194, 255, 0.08),
@@ -446,7 +446,7 @@
       display: grid;
       justify-items: center;
       gap: 8px;
-      margin-bottom: clamp(22px, 4vw, 38px);
+      margin-bottom: clamp(24px, 4vw, 44px);
       text-align: center;
     }
 
@@ -494,37 +494,37 @@
     .bracket {
       position: relative;
       z-index: 2;
-      display: grid;
-      grid-template-columns: minmax(320px, 1fr) minmax(270px, 0.62fr) minmax(320px, 1fr);
-      gap: clamp(22px, 3vw, 48px);
-      align-items: center;
+      overflow-x: auto;
+      padding-bottom: 10px;
+      scrollbar-width: thin;
     }
 
-    .bracket::before,
-    .bracket::after {
+    .bracket-desktop {
+      display: grid;
+      grid-template-columns: minmax(210px, 1fr) minmax(210px, 0.9fr) minmax(360px, 1.7fr) minmax(210px, 0.9fr) minmax(210px, 1fr);
+      gap: clamp(12px, 1.5vw, 26px);
+      align-items: center;
+      min-width: 1180px;
+    }
+
+    .bracket-desktop::before,
+    .bracket-desktop::after {
       content: '';
       position: absolute;
-      top: 50%;
-      width: calc(50% - 150px);
-      height: 2px;
-      background: linear-gradient(90deg, rgba(0, 255, 102, 0), rgba(0, 255, 102, 0.9), rgba(0, 194, 255, 0.95));
-      box-shadow: 0 0 18px rgba(0, 255, 102, 0.72), 0 0 30px rgba(0, 194, 255, 0.42);
+      top: calc(50% + 28px);
+      width: calc(50% - 210px);
+      height: 4px;
+      background: linear-gradient(90deg, transparent, rgba(0, 255, 102, 0.92) 38%, rgba(0, 194, 255, 0.96));
+      box-shadow: 0 0 16px rgba(0, 255, 102, 0.78), 0 0 30px rgba(0, 194, 255, 0.44);
       transform: translateY(-50%);
       z-index: -1;
+      animation: connectorPulse 2.8s ease-in-out infinite;
     }
 
-    .bracket::before { left: calc(25% + 28px); }
-    .bracket::after { right: calc(25% + 28px); transform: translateY(-50%) scaleX(-1); }
+    .bracket-desktop::before { left: 8%; }
+    .bracket-desktop::after { right: 8%; transform: translateY(-50%) scaleX(-1); animation-delay: 1.1s; }
 
-    .conference-bracket {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 0.88fr);
-      gap: clamp(14px, 1.8vw, 26px);
-      align-items: center;
-    }
-
-    .conference-bracket.west { direction: rtl; }
-    .conference-bracket.west > * { direction: ltr; }
+    .bracket-mobile { display: none; }
 
     .round {
       display: grid;
@@ -533,20 +533,18 @@
       min-width: 0;
     }
 
-    .round.semifinals { transform: scale(0.94); transform-origin: center; }
-    .round.conference-final { transform: scale(1.02); transform-origin: center; }
-
     .round-title {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
+      min-height: 36px;
       color: var(--text);
     }
 
     .round-title h3 {
       margin: 0;
-      font-size: clamp(0.78rem, 1.2vw, 0.98rem);
+      font-size: clamp(0.72rem, 1vw, 0.92rem);
       letter-spacing: 0.17em;
       text-transform: uppercase;
       text-shadow: 0 0 18px rgba(0, 194, 255, 0.24);
@@ -554,33 +552,35 @@
 
     .round-chip {
       border: 1px solid rgba(0, 194, 255, 0.42);
-      border-radius: 999px;
+      border-radius: 2px;
       padding: 7px 10px;
       color: #8be9ff;
-      font-size: 0.66rem;
+      font-size: 0.62rem;
       font-weight: 950;
       letter-spacing: 0.13em;
       text-transform: uppercase;
       background: rgba(0, 194, 255, 0.09);
       box-shadow: inset 0 0 18px rgba(0, 194, 255, 0.08), 0 0 16px rgba(0, 194, 255, 0.12);
       white-space: nowrap;
+      clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
     }
 
     .matchup-card {
       position: relative;
       display: grid;
       gap: 8px;
-      min-height: 118px;
-      border: 1px solid rgba(0, 194, 255, 0.34);
-      border-radius: 999px;
-      padding: 10px 12px;
+      min-height: 132px;
+      border: 1px solid rgba(0, 194, 255, 0.38);
+      border-radius: 3px;
+      padding: 12px;
       background:
-        linear-gradient(90deg, rgba(0, 255, 102, 0.12), transparent 22%, rgba(0, 194, 255, 0.1)),
-        linear-gradient(145deg, rgba(8, 14, 26, 0.96), rgba(1, 4, 12, 0.9));
+        linear-gradient(90deg, rgba(0, 255, 102, 0.12), transparent 24%, rgba(0, 194, 255, 0.1)),
+        linear-gradient(145deg, rgba(8, 14, 26, 0.98), rgba(1, 4, 12, 0.92));
       box-shadow:
         inset 0 0 0 1px rgba(255, 255, 255, 0.035),
         inset 0 0 34px rgba(0, 194, 255, 0.06),
         0 18px 44px rgba(0, 0, 0, 0.34);
+      clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
       transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
     }
 
@@ -597,93 +597,121 @@
     .matchup-card::before {
       content: '';
       position: absolute;
-      inset: -1px;
-      border-radius: inherit;
-      padding: 1px;
-      background: linear-gradient(120deg, rgba(0, 255, 102, 0.72), rgba(0, 194, 255, 0), rgba(255, 61, 242, 0.38));
-      mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-      mask-composite: exclude;
-      opacity: 0.52;
+      inset: 0;
+      background:
+        linear-gradient(120deg, rgba(0, 255, 102, 0.72), rgba(0, 194, 255, 0), rgba(255, 61, 242, 0.38)) border-box;
+      opacity: 0.32;
       pointer-events: none;
+      clip-path: inherit;
     }
 
     .matchup-card::after {
       content: '';
       position: absolute;
       top: 50%;
-      right: -28px;
-      width: 28px;
-      border-top: 2px solid rgba(0, 255, 102, 0.72);
+      right: -30px;
+      width: 30px;
+      height: 4px;
+      background: linear-gradient(90deg, rgba(0, 255, 102, 0.95), rgba(0, 194, 255, 0.95));
       box-shadow: 0 0 16px rgba(0, 255, 102, 0.82), 0 0 20px rgba(0, 194, 255, 0.5);
+      animation: connectorPulse 2.4s ease-in-out infinite;
     }
 
-    .west .matchup-card::after {
+    .west-final .matchup-card::after,
+    .west-semis .matchup-card::after {
       right: auto;
-      left: -28px;
+      left: -30px;
+      transform: scaleX(-1);
     }
 
     .finals .matchup-card::after { display: none; }
 
     .team-slot {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      grid-template-areas:
+        "logo name seed"
+        "logo meta seed";
       align-items: center;
-      gap: 10px;
-      min-height: 44px;
-      padding: 7px 12px 7px 7px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.035);
+      gap: 2px 12px;
+      min-height: 54px;
+      padding: 8px 10px 8px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 2px;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015)),
+        rgba(255, 255, 255, 0.025);
       font-weight: 950;
-    }
-
-    .team-slot + .team-slot {
-      border-top: 0;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
     }
 
     .team-logo {
+      grid-area: logo;
       display: grid;
       place-items: center;
-      width: 36px;
-      height: 36px;
+      width: 48px;
+      height: 38px;
       border: 1px solid rgba(0, 255, 102, 0.48);
-      border-radius: 50%;
+      border-radius: 2px;
       color: #071017;
       font-size: 0.72rem;
       font-weight: 1000;
       letter-spacing: -0.05em;
       background:
-        radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.1) 22%, transparent 24%),
+        linear-gradient(135deg, rgba(255,255,255,0.86) 0 12%, transparent 12% 22%, rgba(255,255,255,0.24) 22% 34%, transparent 34%),
         linear-gradient(145deg, #00ff66, #00c2ff 70%);
       box-shadow: 0 0 16px rgba(0, 255, 102, 0.34);
-      flex: 0 0 auto;
     }
 
     .team-name {
+      grid-area: name;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       color: #f8fbff;
+      font-size: 0.9rem;
+      letter-spacing: 0.01em;
+    }
+
+    .team-meta {
+      grid-area: meta;
+      display: flex;
+      gap: 8px;
+      min-width: 0;
+      color: #8ea3bb;
+      font-size: 0.68rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .team-city {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .seed {
+      grid-area: seed;
       display: inline-grid;
       place-items: center;
-      min-width: 40px;
+      min-width: 42px;
       border: 1px solid rgba(0, 255, 102, 0.64);
-      border-radius: 999px;
-      padding: 5px 8px;
+      border-radius: 2px;
+      padding: 7px 8px;
       color: #baffcf;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       background: rgba(0, 255, 102, 0.13);
       box-shadow: 0 0 16px rgba(0, 255, 102, 0.18);
       white-space: nowrap;
+      clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
     }
 
     .series-label {
-      justify-self: center;
+      justify-self: end;
       margin-top: -2px;
       color: #00ff66;
       font-size: 0.62rem;
@@ -702,17 +730,18 @@
     .finals-emblem {
       display: grid;
       place-items: center;
-      width: 86px;
-      height: 86px;
+      width: 84px;
+      height: 72px;
       margin: 0 auto 12px;
       border: 1px solid rgba(0, 255, 102, 0.62);
-      border-radius: 28px;
+      border-radius: 2px;
       color: #00ff66;
-      font-size: 2.5rem;
+      font-size: 2.35rem;
       background:
-        radial-gradient(circle, rgba(0, 255, 102, 0.2), transparent 58%),
-        linear-gradient(145deg, rgba(0, 194, 255, 0.2), rgba(255, 61, 242, 0.1));
+        radial-gradient(circle, rgba(0, 255, 102, 0.22), transparent 58%),
+        linear-gradient(145deg, rgba(0, 194, 255, 0.2), rgba(255, 61, 242, 0.12));
       box-shadow: 0 0 34px rgba(0, 255, 102, 0.26), inset 0 0 30px rgba(0, 194, 255, 0.14);
+      clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
     }
 
     .finals .round-title {
@@ -723,16 +752,15 @@
     }
 
     .finals .round-title h3 {
-      font-size: clamp(1.05rem, 1.7vw, 1.35rem);
       color: white;
+      font-size: clamp(1.18rem, 1.9vw, 1.55rem);
     }
 
     .finals .matchup-card {
-      width: min(100%, 360px);
-      min-height: 170px;
-      border-radius: 30px;
-      border-color: rgba(255, 61, 242, 0.48);
-      padding: 16px;
+      width: min(100%, 520px);
+      min-height: 264px;
+      border-color: rgba(255, 61, 242, 0.54);
+      padding: 20px;
       background:
         radial-gradient(circle at 50% 0%, rgba(0, 255, 102, 0.2), transparent 42%),
         linear-gradient(145deg, rgba(8, 20, 32, 0.98), rgba(1, 4, 12, 0.96));
@@ -742,8 +770,15 @@
         inset 0 0 46px rgba(255, 61, 242, 0.06);
     }
 
-    .finals .team-slot { min-height: 54px; }
-    .finals .team-logo { width: 42px; height: 42px; }
+    .finals .team-slot {
+      min-height: 82px;
+      grid-template-columns: 70px minmax(0, 1fr) auto;
+      padding: 11px;
+    }
+
+    .finals .team-logo { width: 70px; height: 56px; font-size: 0.86rem; }
+    .finals .team-name { font-size: 1.12rem; }
+    .finals .team-meta { font-size: 0.75rem; }
     .finals .round-chip { color: #ffb8fb; border-color: rgba(255, 61, 242, 0.46); background: rgba(255, 61, 242, 0.1); }
 
     @keyframes particleFloat {
@@ -763,23 +798,9 @@
       to { background-position: 42px 42px, 42px 42px; }
     }
 
-
-    @media (max-width: 1080px) {
-      .bracket {
-        grid-template-columns: 1fr;
-        max-width: 720px;
-        margin: 0 auto;
-      }
-      .bracket::before,
-      .bracket::after,
-      .matchup-card::after { display: none; }
-      .conference-bracket,
-      .conference-bracket.west { grid-template-columns: 1fr; direction: ltr; }
-      .round.semifinals,
-      .round.conference-final { transform: none; }
-      .finals { order: 2; }
-      .conference-bracket.east { order: 1; }
-      .conference-bracket.west { order: 3; }
+    @keyframes connectorPulse {
+      0%, 100% { opacity: 0.42; filter: saturate(0.8); }
+      50% { opacity: 1; filter: saturate(1.45); }
     }
 
     @media (max-width: 920px) {
@@ -797,12 +818,41 @@
         margin-left: calc(50% - 50vw + 10px);
         min-height: auto;
         padding: 18px 12px 24px;
-        border-radius: 24px;
+        border-radius: 12px;
       }
+      .playoff-stage-header { margin-bottom: 22px; }
       .playoff-kicker::before,
       .playoff-kicker::after { width: 24px; }
-      .team-slot { grid-template-columns: auto minmax(0, 1fr); }
-      .seed { grid-column: 2; justify-self: start; }
+      .bracket-desktop { display: none; }
+      .bracket { overflow: visible; padding-bottom: 0; }
+      .bracket-mobile {
+        display: grid;
+        gap: 18px;
+      }
+      .timeline-round {
+        position: relative;
+        display: grid;
+        gap: 12px;
+      }
+      .timeline-round:not(:last-child)::after {
+        content: '';
+        justify-self: center;
+        width: 4px;
+        height: 32px;
+        margin: 0 0 -6px;
+        background: linear-gradient(180deg, rgba(0, 255, 102, 0.95), rgba(0, 194, 255, 0.95));
+        box-shadow: 0 0 16px rgba(0, 255, 102, 0.8), 0 0 24px rgba(0, 194, 255, 0.5);
+        animation: connectorPulse 2.2s ease-in-out infinite;
+      }
+      .bracket-mobile .round-title { justify-content: center; text-align: center; }
+      .bracket-mobile .round-chip { display: none; }
+      .bracket-mobile .matchup-card::after { display: none; }
+      .bracket-mobile .matchup-card { min-height: 126px; }
+      .bracket-mobile .finals .matchup-card { min-height: 236px; padding: 16px; }
+      .bracket-mobile .finals .team-slot { min-height: 76px; grid-template-columns: 62px minmax(0, 1fr) auto; }
+      .bracket-mobile .finals .team-logo { width: 62px; height: 50px; }
+      .team-slot { grid-template-columns: 46px minmax(0, 1fr) auto; }
+      .team-meta { flex-wrap: wrap; row-gap: 2px; white-space: normal; }
       .match-card { grid-template-columns: 64px 1fr; }
       .match-id { grid-column: 1 / -1; text-align: left; }
     }
@@ -886,26 +936,49 @@
       ]
     };
 
+    const teamCities = {
+      'Bota FC': 'Bota',
+      'Royal Republic': 'Capital District',
+      'Club Frijol': 'Bean City',
+      'AFC Warriors': 'Warrior Grounds',
+      'Razorblack FC': 'Razorblack',
+      'Sporting de la MA': 'MA Coast',
+      'Jids Trivela': 'Trivela Park',
+      'Elite VT': 'VT Arena'
+    };
+
     const playoffData = {
-      east: {
-        semifinalLabel: 'Eastern Semifinals',
-        finalLabel: 'East Conference Finals',
-        semifinalMatches: [
+      eastSemifinals: {
+        title: 'Eastern Semifinals',
+        className: 'east-semis',
+        matchups: [
           [{ seed: '#1', team: 'Bota FC' }, { seed: '#4', team: 'AFC Warriors' }],
           [{ seed: '#2', team: 'Royal Republic' }, { seed: '#3', team: 'Club Frijol' }]
-        ],
-        finalMatch: [{ seed: 'SF', team: 'Semifinal Winner' }, { seed: 'SF', team: 'Semifinal Winner' }]
+        ]
       },
-      west: {
-        semifinalLabel: 'Western Semifinals',
-        finalLabel: 'West Conference Finals',
-        semifinalMatches: [
+      eastFinals: {
+        title: 'East Finals',
+        className: 'east-final',
+        matchups: [[{ seed: 'SF', team: 'Semifinal Winner', record: 'TBD' }, { seed: 'SF', team: 'Semifinal Winner', record: 'TBD' }]]
+      },
+      finals: {
+        title: 'UPCL Finals',
+        className: 'finals',
+        matchups: [[{ seed: 'EAST', team: 'East Champion', record: 'TBD' }, { seed: 'WEST', team: 'West Champion', record: 'TBD' }]]
+      },
+      westFinals: {
+        title: 'West Finals',
+        className: 'west-final',
+        matchups: [[{ seed: 'SF', team: 'Semifinal Winner', record: 'TBD' }, { seed: 'SF', team: 'Semifinal Winner', record: 'TBD' }]]
+      },
+      westSemifinals: {
+        title: 'Western Semifinals',
+        className: 'west-semis',
+        matchups: [
           [{ seed: '#1', team: 'Razorblack FC' }, { seed: '#4', team: 'Elite VT' }],
-          [{ seed: '#2', team: 'Sporting de la MA' }, { seed: '#3', team: 'Jids Tavela' }]
-        ],
-        finalMatch: [{ seed: 'SF', team: 'Semifinal Winner' }, { seed: 'SF', team: 'Semifinal Winner' }]
-      },
-      finals: [{ seed: 'East Champion', team: 'East Champion' }, { seed: 'West Champion', team: 'West Champion' }]
+          [{ seed: '#2', team: 'Sporting de la MA' }, { seed: '#3', team: 'Jids Trivela' }]
+        ]
+      }
     };
 
     function escapeHtml(value) {
@@ -1001,12 +1074,29 @@
         .toUpperCase();
     }
 
+    function getTeamRecord(team) {
+      const standingsRows = [...standingsData.east, ...standingsData.west];
+      const row = standingsRows.find(entry => entry.team === team);
+      return row ? `${row.w}-${row.d}-${row.l}` : 'TBD';
+    }
+
+    function enrichPlayoffSlot(slot) {
+      return {
+        ...slot,
+        record: slot.record || getTeamRecord(slot.team),
+        city: slot.city || teamCities[slot.team] || ''
+      };
+    }
+
     function renderTeamSlot(slot) {
+      const enrichedSlot = enrichPlayoffSlot(slot);
+      const cityMarkup = enrichedSlot.city ? `<span class="team-city">${escapeHtml(enrichedSlot.city)}</span>` : '';
       return `
         <div class="team-slot">
-          <span class="team-logo" aria-hidden="true">${escapeHtml(getTeamInitials(slot.team))}</span>
-          <span class="team-name">${escapeHtml(slot.team)}</span>
-          <span class="seed">${escapeHtml(slot.seed)}</span>
+          <span class="team-logo" aria-hidden="true">${escapeHtml(getTeamInitials(enrichedSlot.team))}</span>
+          <span class="team-name">${escapeHtml(enrichedSlot.team)}</span>
+          <span class="team-meta"><span>${escapeHtml(enrichedSlot.record)}</span>${cityMarkup}</span>
+          <span class="seed">${escapeHtml(enrichedSlot.seed)}</span>
         </div>
       `;
     }
@@ -1015,18 +1105,43 @@
       return `<article class="matchup-card">${slots.map(renderTeamSlot).join('')}<span class="series-label">BO3 SERIES</span></article>`;
     }
 
-    function renderConferenceBracket(key, data) {
+    function renderRound(data, extraClass = '') {
       return `
-        <section class="conference-bracket ${key}">
-          <div class="round semifinals">
-            <div class="round-title"><h3>${escapeHtml(data.semifinalLabel)}</h3><span class="round-chip">BO3 SERIES</span></div>
-            ${data.semifinalMatches.map(renderMatchup).join('')}
-          </div>
-          <div class="round conference-final">
-            <div class="round-title"><h3>${escapeHtml(data.finalLabel)}</h3><span class="round-chip">BO3 SERIES</span></div>
-            ${renderMatchup(data.finalMatch)}
-          </div>
+        <section class="round ${escapeHtml(data.className)} ${escapeHtml(extraClass)}">
+          ${data.className === 'finals' ? '<div class="finals-emblem" aria-hidden="true">♜</div>' : ''}
+          <div class="round-title"><h3>${escapeHtml(data.title)}</h3><span class="round-chip">BO3 SERIES</span></div>
+          ${data.matchups.map(renderMatchup).join('')}
         </section>
+      `;
+    }
+
+    function renderMobileTimelineRound(data) {
+      return `<section class="timeline-round">${renderRound(data)}</section>`;
+    }
+
+    function renderPlayoffBracket() {
+      const desktopRounds = [
+        playoffData.eastSemifinals,
+        playoffData.eastFinals,
+        playoffData.finals,
+        playoffData.westFinals,
+        playoffData.westSemifinals
+      ];
+      const mobileRounds = [
+        playoffData.eastSemifinals,
+        playoffData.eastFinals,
+        playoffData.finals,
+        playoffData.westFinals,
+        playoffData.westSemifinals
+      ];
+
+      return `
+        <div class="bracket-desktop" aria-label="Desktop playoff bracket">
+          ${desktopRounds.map(renderRound).join('')}
+        </div>
+        <div class="bracket-mobile" aria-label="Mobile playoff timeline">
+          ${mobileRounds.map(renderMobileTimelineRound).join('')}
+        </div>
       `;
     }
 
@@ -1036,15 +1151,7 @@
         renderStandingsCard('Western Conference', 'Top 2 qualify', standingsData.west)
       ].join('');
 
-      playoffBracketEl.innerHTML = `
-        ${renderConferenceBracket('east', playoffData.east)}
-        <section class="round finals">
-          <div class="finals-emblem" aria-hidden="true">♛</div>
-          <div class="round-title"><h3>UPCL Finals</h3><span class="round-chip">BO3 SERIES</span></div>
-          ${renderMatchup(playoffData.finals)}
-        </section>
-        ${renderConferenceBracket('west', playoffData.west)}
-      `;
+      playoffBracketEl.innerHTML = renderPlayoffBracket();
     }
 
     function activateTab(tabName) {
