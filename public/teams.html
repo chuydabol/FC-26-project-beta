@@ -1382,11 +1382,71 @@
 
     .schedule-view[hidden] { display: none; }
 
+
+    #playerStats {
+      display: grid;
+      gap: 16px;
+      padding: 16px;
+    }
+
+    .player-stat-admin {
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    .player-stat-form {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+      gap: 10px;
+      align-items: end;
+      padding: 16px;
+    }
+
+    .player-stat-form label {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .player-stat-form input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 12px 14px;
+      background: var(--panel-strong);
+      color: var(--text);
+      font: inherit;
+    }
+
+    .player-stat-form button {
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 12px 18px;
+      background: var(--panel-strong);
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .player-stat-form button:hover { border-color: var(--success); }
+    .player-stat-form button:disabled { cursor: wait; opacity: 0.7; }
+
+    .player-stat-admin > .status {
+      padding: 0 16px 16px;
+    }
+
     @media (max-width: 920px) {
       .league-grid { grid-template-columns: 1fr; }
       .overview-layout { grid-template-columns: 1fr; }
       .schedule-day-row { grid-template-columns: 96px minmax(0, 1fr); }
       .news-center { position: static; max-height: 520px; }
+      .player-stat-form { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 720px) {
@@ -1473,6 +1533,7 @@
       <button class="tab" data-tab="fixtures" type="button">Fixtures</button>
       <button class="tab" data-tab="schedule" type="button">Schedule</button>
       <button class="tab" data-tab="tables" type="button">Tables</button>
+      <button class="tab" data-tab="player-stats" type="button">Player Stats</button>
       <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
       <button class="tab" data-tab="admin" type="button">Admin</button>
     </nav>
@@ -1634,6 +1695,17 @@
         <div class="league-grid" id="standings"></div>
       </section>
 
+
+      <section class="tab-panel" id="player-stats-panel" aria-label="UPCL player stats">
+        <section class="standings-card" aria-label="Player goals and assists leaderboard">
+          <div class="section-heading">
+            <h2>Player Stats</h2>
+            <span class="conference-chip" id="playerStatsStatus">Not loaded</span>
+          </div>
+          <section id="playerStats" aria-label="Saved Postgres player stats"></section>
+        </section>
+      </section>
+
       <section class="tab-panel" id="admin-panel" aria-label="Admin pending matches">
         <section class="standings-card" id="adminLogin" aria-label="Admin login">
           <div class="section-heading">
@@ -1664,6 +1736,34 @@
             <button class="admin-logout" id="adminLogout" type="button">Logout</button>
             <span class="conference-chip" id="pendingStatus">Not loaded</span>
           </div>
+
+          <section class="player-stat-admin" aria-label="Add player stat line">
+            <div class="section-heading">
+              <h2>Add Player Stats</h2>
+              <span class="conference-chip">Goals + assists</span>
+            </div>
+            <form id="playerStatForm" class="player-stat-form">
+              <label>
+                Player Name
+                <input id="playerNameInput" name="playerName" type="text" placeholder="Player name" required>
+              </label>
+              <label>
+                Club
+                <input id="playerClubInput" name="clubName" type="text" placeholder="Club name">
+              </label>
+              <label>
+                Goals
+                <input id="playerGoalsInput" name="goals" type="number" min="0" step="1" value="0" required>
+              </label>
+              <label>
+                Assists
+                <input id="playerAssistsInput" name="assists" type="number" min="0" step="1" value="0" required>
+              </label>
+              <button type="submit">Save Player Stats</button>
+            </form>
+            <div class="status" id="playerStatAdminStatus">Saved rows appear in the Player Stats tab.</div>
+          </section>
+
           <section id="pendingMatches" aria-label="Synced pending matches awaiting approval"></section>
         </section>
       </section>
@@ -1691,6 +1791,10 @@
     const dbStatusEl = document.getElementById('dbStatus');
     const pendingMatchesEl = document.getElementById('pendingMatches');
     const pendingStatusEl = document.getElementById('pendingStatus');
+    const playerStatsEl = document.getElementById('playerStats');
+    const playerStatsStatusEl = document.getElementById('playerStatsStatus');
+    const playerStatForm = document.getElementById('playerStatForm');
+    const playerStatAdminStatusEl = document.getElementById('playerStatAdminStatus');
     const adminLoginEl = document.getElementById('adminLogin');
     const adminDashboardEl = document.getElementById('adminDashboard');
     const adminLoginForm = document.getElementById('adminLoginForm');
@@ -1863,6 +1967,42 @@
             </div>
           </div>
           <div class="match-id">Match ID<br>${escapeHtml(match.match_id)}</div>
+        </article>
+      `;
+    }
+
+
+    function renderPlayerStatsTable(playerStats) {
+      if (!playerStats.length) {
+        return '<div class="empty">No player stats have been saved yet. Admins can add goals and assists from the Admin tab.</div>';
+      }
+
+      return `
+        <article class="standings-card">
+          <div class="table-wrap">
+            <table class="standings">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Player</th>
+                  <th>Club</th>
+                  <th>Goals</th>
+                  <th>Assists</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${playerStats.map((stat, index) => `
+                  <tr>
+                    <td class="seed-cell">${index + 1}</td>
+                    <td class="team-cell">${escapeHtml(stat.player_name)}</td>
+                    <td>${escapeHtml(stat.club_name || 'Free Agent')}</td>
+                    <td class="points-cell">${scoreValue(stat.goals)}</td>
+                    <td class="points-cell">${scoreValue(stat.assists)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         </article>
       `;
     }
@@ -2145,6 +2285,8 @@
       tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabName));
       tabPanels.forEach(panel => panel.classList.toggle('active', panel.id === `${tabName}-panel`));
 
+      if (tabName === 'player-stats') loadPlayerStats();
+
       if (tabName === 'admin') {
         renderAdminState();
         if (getAdminPassword()) loadPendingMatches();
@@ -2186,6 +2328,55 @@
         matchesEl.innerHTML = `<div class="error">EA friendly matches could not be loaded: ${escapeHtml(error.message)}</div>`;
       } finally {
         refreshButton.disabled = false;
+      }
+    }
+
+
+    async function loadPlayerStats() {
+      playerStatsStatusEl.textContent = 'Loading player stats…';
+      try {
+        const response = await fetch('/api/player-stats');
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Request failed');
+        const playerStats = Array.isArray(payload.playerStats) ? payload.playerStats : [];
+        playerStatsStatusEl.textContent = `${playerStats.length} saved ${playerStats.length === 1 ? 'player' : 'players'}`;
+        playerStatsEl.innerHTML = renderPlayerStatsTable(playerStats);
+      } catch (error) {
+        playerStatsStatusEl.textContent = 'Stats unavailable';
+        playerStatsEl.innerHTML = `<div class="error">Player stats could not be loaded: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+    async function savePlayerStats(event) {
+      event.preventDefault();
+      const formData = new FormData(playerStatForm);
+      const payload = {
+        playerName: formData.get('playerName'),
+        clubName: formData.get('clubName'),
+        goals: formData.get('goals'),
+        assists: formData.get('assists')
+      };
+
+      const submitButton = playerStatForm.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      playerStatAdminStatusEl.textContent = 'Saving player stats…';
+      try {
+        const response = await adminFetch('/api/player-stats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.details || body.error || 'Save failed');
+        playerStatForm.reset();
+        playerStatForm.elements.goals.value = 0;
+        playerStatForm.elements.assists.value = 0;
+        playerStatAdminStatusEl.textContent = `Saved ${body.playerStat?.player_name || 'player'} to Postgres.`;
+        await loadPlayerStats();
+      } catch (error) {
+        playerStatAdminStatusEl.textContent = `Player stats could not be saved: ${error.message}`;
+      } finally {
+        submitButton.disabled = false;
       }
     }
 
@@ -2293,6 +2484,7 @@
       renderAdminState();
       loadPendingMatches();
     });
+    playerStatForm.addEventListener('submit', savePlayerStats);
     adminLogoutButton.addEventListener('click', () => {
       localStorage.removeItem('adminPassword');
       renderAdminState();
@@ -2316,6 +2508,7 @@
     loadMatches();
     loadDbMatches();
     loadStandings();
+    loadPlayerStats();
   </script>
 </body>
 </html>
