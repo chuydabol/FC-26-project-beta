@@ -137,6 +137,41 @@ test('POST /api/sync-matches rejects missing admin password', async () => {
   ensureStub.mock.restore();
 });
 
+test('POST /api/admin/reset-approved-matches resets approved matches with admin auth', async () => {
+  const db = require('../db');
+  const resetStub = mock.method(db, 'resetApprovedMatches', async () => 4);
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/admin/reset-approved-matches`, {
+      method: 'POST',
+      headers: adminHeaders(),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body, { reset: 4 });
+  });
+
+  assert.equal(resetStub.mock.callCount(), 1);
+  resetStub.mock.restore();
+});
+
+test('POST /api/admin/reset-approved-matches rejects missing admin password', async () => {
+  const db = require('../db');
+  const resetStub = mock.method(db, 'resetApprovedMatches', async () => {
+    throw new Error('admin auth should run before reset');
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/admin/reset-approved-matches`, { method: 'POST' });
+    const body = await response.json();
+    assert.equal(response.status, 401);
+    assert.deepEqual(body, { error: 'Unauthorized' });
+  });
+
+  assert.equal(resetStub.mock.callCount(), 0);
+  resetStub.mock.restore();
+});
+
 test('GET /api/news returns public news without admin password', async () => {
   await withServer(async port => {
     const response = await fetch(`http://localhost:${port}/api/news`);
