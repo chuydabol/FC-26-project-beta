@@ -38,6 +38,46 @@ test('normalizes Bota FC friendly matches', () => {
   assert.equal(match.result, 'W');
 });
 
+test('normalizes supplied Club Alucin DNF match using club score instead of player aggregates', () => {
+  const match = app.normalizeMatch({
+    matchId: '716874327810264',
+    timestamp: 1_780_962_508,
+    clubs: {
+      72600: {
+        goals: '3',
+        score: '3',
+        winnerByDnf: '1',
+        details: { name: 'apolllo fc' },
+      },
+      2924517: {
+        goals: '0',
+        score: '0',
+        winnerByDnf: '0',
+        details: { name: 'Club Alucin' },
+      },
+    },
+    players: {
+      72600: {
+        1742721482: { playername: 'Aztek_Warrior714', goals: '3' },
+        1004825985059: { playername: 'RelatableSenpai', goals: '1' },
+      },
+      2924517: {
+        1009074278715: { playername: 'Carlosfrmzz8', goals: '1' },
+      },
+    },
+    aggregate: {
+      72600: { goals: 4 },
+      2924517: { goals: 1 },
+    },
+  }, 0, { id: '2924517', name: 'Club Alucin' });
+
+  assert.equal(match.id, '716874327810264');
+  assert.equal(match.team.name, 'Club Alucin');
+  assert.equal(match.opponent.name, 'apolllo fc');
+  assert.deepEqual(match.score, { for: 0, against: 3 });
+  assert.equal(match.result, 'L');
+});
+
 test('GET /api/matches returns friendly matches for Bota FC', async () => {
   const fetchStub = mock.method(eaApi, 'fetchFriendlyMatches', async clubId => {
     assert.equal(clubId, '57985');

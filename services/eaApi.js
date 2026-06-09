@@ -24,11 +24,59 @@ function normalizeClubId(clubId) {
   return id;
 }
 
+function isMatchPayload(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value) && (
+    value.matchId !== undefined ||
+    value.matchid !== undefined ||
+    value.id !== undefined ||
+    value.clubs !== undefined ||
+    value.players !== undefined
+  ));
+}
+
+function getMatchPayloadId(match) {
+  const id = match?.matchId ?? match?.matchid ?? match?.id;
+  return id === undefined || id === null || id === '' ? null : String(id);
+}
+
+function appendUniqueMatch(matches, seenIds, match) {
+  const id = getMatchPayloadId(match);
+  if (id) {
+    if (seenIds.has(id)) return;
+    seenIds.add(id);
+  }
+  matches.push(match);
+}
+
+function collectMatchesPayload(value, clubId, matches, seenIds) {
+  if (!value) return;
+
+  if (Array.isArray(value)) {
+    for (const item of value) collectMatchesPayload(item, clubId, matches, seenIds);
+    return;
+  }
+
+  if (isMatchPayload(value)) {
+    appendUniqueMatch(matches, seenIds, value);
+    return;
+  }
+
+  if (typeof value !== 'object') return;
+
+  if (value[clubId] !== undefined) {
+    collectMatchesPayload(value[clubId], clubId, matches, seenIds);
+    return;
+  }
+
+  if (value.matches !== undefined) {
+    collectMatchesPayload(value.matches, clubId, matches, seenIds);
+  }
+}
+
 function readMatchesPayload(body, clubId) {
-  if (Array.isArray(body)) return body;
-  if (Array.isArray(body?.matches)) return body.matches;
-  if (Array.isArray(body?.[clubId])) return body[clubId];
-  return [];
+  const matches = [];
+  collectMatchesPayload(body, String(clubId), matches, new Set());
+  return matches;
 }
 
 async function eaFetchJson(url, { retries = 2 } = {}) {
