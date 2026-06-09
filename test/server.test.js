@@ -212,6 +212,45 @@ test('POST /api/admin/reset-approved-matches rejects missing admin password', as
   resetStub.mock.restore();
 });
 
+
+test('POST /api/admin/backfill-player-stats backfills existing match raw JSON with admin auth', async () => {
+  const db = require('../db');
+  const backfillStub = mock.method(db, 'backfillPlayerStats', async () => ({
+    processedMatches: 2,
+    savedPlayerStats: 6,
+  }));
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/admin/backfill-player-stats`, {
+      method: 'POST',
+      headers: adminHeaders(),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body, { backfill: { processedMatches: 2, savedPlayerStats: 6 } });
+  });
+
+  assert.equal(backfillStub.mock.callCount(), 1);
+  backfillStub.mock.restore();
+});
+
+test('POST /api/admin/backfill-player-stats rejects missing admin password', async () => {
+  const db = require('../db');
+  const backfillStub = mock.method(db, 'backfillPlayerStats', async () => {
+    throw new Error('admin auth should run before backfill');
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/admin/backfill-player-stats`, { method: 'POST' });
+    const body = await response.json();
+    assert.equal(response.status, 401);
+    assert.deepEqual(body, { error: 'Unauthorized' });
+  });
+
+  assert.equal(backfillStub.mock.callCount(), 0);
+  backfillStub.mock.restore();
+});
+
 test('GET /api/news returns public news without admin password', async () => {
   await withServer(async port => {
     const response = await fetch(`http://localhost:${port}/api/news`);
