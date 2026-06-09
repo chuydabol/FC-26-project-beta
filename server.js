@@ -431,6 +431,21 @@ app.post('/api/matches/:matchId/friendly', adminOnly(async (req, res) => {
 }));
 
 
+
+app.get('/api/player-stats', async (_req, res) => {
+  try {
+    const players = await db.getPlayerStats();
+    res.json({ players });
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to load approved league player stats');
+    res.status(500).json({
+      error: 'Failed to load player stats',
+      details: error.message || 'Database query failed',
+      players: [],
+    });
+  }
+});
+
 app.get('/api/standings', async (_req, res) => {
   try {
     const matches = await db.getApprovedLeagueMatches();

@@ -413,3 +413,36 @@ test('POST /api/matches/:matchId/reject marks a match rejected', async () => {
   assert.equal(rejectStub.mock.callCount(), 1);
   rejectStub.mock.restore();
 });
+
+test('GET /api/player-stats returns approved league player stat totals', async () => {
+  const db = require('../db');
+  const getStub = mock.method(db, 'getPlayerStats', async () => [
+    {
+      player_name: 'Striker One',
+      club_name: 'Bota FC',
+      matches_played: 2,
+      goals: 4,
+      assists: 1,
+      passes_attempted: 20,
+      passes_made: 18,
+      pass_percentage: 90,
+      tackles_attempted: 5,
+      tackles_made: 3,
+      tackle_percentage: 60,
+      motm_count: 1,
+    },
+  ]);
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/player-stats`);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.players.length, 1);
+    assert.equal(body.players[0].player_name, 'Striker One');
+    assert.equal(body.players[0].goals, 4);
+    assert.equal(body.players[0].pass_percentage, 90);
+  });
+
+  assert.equal(getStub.mock.callCount(), 1);
+  getStub.mock.restore();
+});

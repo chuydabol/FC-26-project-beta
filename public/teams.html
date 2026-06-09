@@ -112,6 +112,7 @@
     .empty,
     .error,
     .standings-card,
+    .player-stats-card,
     .playoff-panel {
       border: 1px solid var(--border);
       border-radius: 22px;
@@ -1382,10 +1383,45 @@
 
     .schedule-view[hidden] { display: none; }
 
+
+    .player-stats-shell {
+      display: grid;
+      gap: 16px;
+    }
+
+    .player-leader-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      padding: 16px;
+    }
+
+    .player-stats-card {
+      overflow: hidden;
+    }
+
+    .player-stats-table td.player-cell,
+    .player-stats-table td.club-cell-text {
+      min-width: 180px;
+      text-align: left;
+      font-weight: 900;
+    }
+
+    .player-stats-table td.club-cell-text {
+      color: #cbd5e1;
+      font-weight: 800;
+    }
+
+    .percentage-cell {
+      color: #eef4fa;
+      font-weight: 900;
+    }
+
     @media (max-width: 920px) {
       .league-grid { grid-template-columns: 1fr; }
       .overview-layout { grid-template-columns: 1fr; }
       .schedule-day-row { grid-template-columns: 96px minmax(0, 1fr); }
+      .player-leader-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .news-center { position: static; max-height: 520px; }
     }
 
@@ -1396,7 +1432,8 @@
       .tab { padding: 10px 12px; font-size: 0.75rem; }
       .section-heading { align-items: flex-start; flex-direction: column; }
       .snapshot-grid,
-      .leader-grid { grid-template-columns: 1fr 1fr; }
+      .leader-grid,
+      .player-leader-grid { grid-template-columns: 1fr 1fr; }
       .result-row,
       .fixture-row,
       .series-card { grid-template-columns: 1fr; text-align: left; }
@@ -1473,6 +1510,7 @@
       <button class="tab" data-tab="fixtures" type="button">Fixtures</button>
       <button class="tab" data-tab="schedule" type="button">Schedule</button>
       <button class="tab" data-tab="tables" type="button">Tables</button>
+      <button class="tab" data-tab="player-stats" type="button">Player Stats</button>
       <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
       <button class="tab" data-tab="admin" type="button">Admin</button>
     </nav>
@@ -1634,6 +1672,29 @@
         <div class="league-grid" id="standings"></div>
       </section>
 
+      <section class="tab-panel" id="player-stats-panel" aria-label="UPCL player stats">
+        <div class="player-stats-shell">
+          <section class="player-stats-card" aria-labelledby="playerStatsLeadersTitle">
+            <div class="section-heading">
+              <div>
+                <h2 id="playerStatsLeadersTitle">Player Stat Leaders</h2>
+                <div class="status">Approved league matches only.</div>
+              </div>
+              <span class="conference-chip" id="playerStatsStatus">Not loaded</span>
+            </div>
+            <div class="player-leader-grid" id="playerStatsLeaders"></div>
+          </section>
+
+          <section class="player-stats-card" aria-labelledby="playerStatsTableTitle">
+            <div class="section-heading">
+              <h2 id="playerStatsTableTitle">Full Player Table</h2>
+              <span class="conference-chip">League totals</span>
+            </div>
+            <div id="playerStatsTable"></div>
+          </section>
+        </div>
+      </section>
+
       <section class="tab-panel" id="admin-panel" aria-label="Admin pending matches">
         <section class="standings-card" id="adminLogin" aria-label="Admin login">
           <div class="section-heading">
@@ -1705,9 +1766,13 @@
     const tabButtons = document.querySelectorAll('.tab');
     const tabPanels = document.querySelectorAll('.tab-panel');
     const standingsEl = document.getElementById('standings');
+    const playerStatsStatusEl = document.getElementById('playerStatsStatus');
+    const playerStatsLeadersEl = document.getElementById('playerStatsLeaders');
+    const playerStatsTableEl = document.getElementById('playerStatsTable');
     const playoffBracketEl = document.getElementById('playoffBracket');
 
     let standingsData = { east: [], west: [] };
+    let playerStatsData = [];
     let activeScheduleFilter = 'all';
 
 
@@ -2009,6 +2074,78 @@
     }
 
 
+    function formatPercentage(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return '0%';
+      return `${number.toFixed(number % 1 === 0 ? 0 : 1)}%`;
+    }
+
+    function getLeader(players, metric) {
+      return players
+        .filter(player => Number(player[metric]) > 0)
+        .sort((a, b) => Number(b[metric]) - Number(a[metric]) || String(a.player_name).localeCompare(String(b.player_name)))[0] || null;
+    }
+
+    function renderPlayerLeaderCard(label, player, valueFormatter) {
+      const value = player ? valueFormatter(player) : '—';
+      const note = player ? `${player.player_name}${player.club_name ? ` · ${player.club_name}` : ''}` : 'No approved player stats yet.';
+      return `<div class="leader-card"><span class="leader-label">${escapeHtml(label)}</span><span class="leader-value">${escapeHtml(value)}</span><span class="leader-note">${escapeHtml(note)}</span></div>`;
+    }
+
+    function renderPlayerStatsLeaders(players) {
+      const leaders = [
+        ['Top Scorer', getLeader(players, 'goals'), player => String(player.goals)],
+        ['Top Assister', getLeader(players, 'assists'), player => String(player.assists)],
+        ['Best Passer', getLeader(players, 'pass_percentage'), player => formatPercentage(player.pass_percentage)],
+        ['Best Tackler', getLeader(players, 'tackle_percentage'), player => formatPercentage(player.tackle_percentage)],
+        ['Most MOTM', getLeader(players, 'motm_count'), player => String(player.motm_count)]
+      ];
+      playerStatsLeadersEl.innerHTML = leaders.map(([label, player, formatter]) => renderPlayerLeaderCard(label, player, formatter)).join('');
+    }
+
+    function renderPlayerStatsTable(players) {
+      if (!players.length) {
+        playerStatsTableEl.innerHTML = '<div class="empty">No approved player stats yet.</div>';
+        return;
+      }
+
+      playerStatsTableEl.innerHTML = `
+        <div class="table-wrap">
+          <table class="standings player-stats-table">
+            <thead>
+              <tr><th>Player</th><th>Club</th><th>MP</th><th>G</th><th>A</th><th>Pass %</th><th>Tackle %</th><th>MOTM</th></tr>
+            </thead>
+            <tbody>
+              ${players.map(player => `
+                <tr>
+                  <td class="player-cell">${escapeHtml(player.player_name)}</td>
+                  <td class="club-cell-text">${escapeHtml(player.club_name || '—')}</td>
+                  <td>${Number(player.matches_played) || 0}</td>
+                  <td>${Number(player.goals) || 0}</td>
+                  <td>${Number(player.assists) || 0}</td>
+                  <td class="percentage-cell">${escapeHtml(formatPercentage(player.pass_percentage))}</td>
+                  <td class="percentage-cell">${escapeHtml(formatPercentage(player.tackle_percentage))}</td>
+                  <td>${Number(player.motm_count) || 0}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderPlayerStats(players) {
+      renderPlayerStatsLeaders(players);
+      renderPlayerStatsTable(players);
+    }
+
+    function renderPlayerStatsLoading(message = 'Loading approved league player stats…') {
+      playerStatsStatusEl.textContent = 'Loading';
+      playerStatsLeadersEl.innerHTML = '';
+      playerStatsTableEl.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+    }
+
+
     function getSeriesHosts(series) {
       return [
         { label: 'Game 1 host', host: series.home },
@@ -2149,6 +2286,10 @@
         renderAdminState();
         if (getAdminPassword()) loadPendingMatches();
       }
+
+      if (tabName === 'player-stats' && !playerStatsData.length) {
+        loadPlayerStats();
+      }
     }
 
 
@@ -2168,6 +2309,23 @@
         playoffBracketEl.innerHTML = renderPlayoffBracket();
       }
     }
+
+    async function loadPlayerStats() {
+      renderPlayerStatsLoading();
+      try {
+        const response = await fetch('/api/player-stats');
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Request failed');
+        playerStatsData = Array.isArray(payload.players) ? payload.players : [];
+        playerStatsStatusEl.textContent = `${playerStatsData.length} ${playerStatsData.length === 1 ? 'player' : 'players'}`;
+        renderPlayerStats(playerStatsData);
+      } catch (error) {
+        playerStatsStatusEl.textContent = 'Unavailable';
+        playerStatsLeadersEl.innerHTML = '';
+        playerStatsTableEl.innerHTML = `<div class="error">Player stats could not be loaded: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
 
     async function loadMatches() {
       refreshButton.disabled = true;
@@ -2243,6 +2401,7 @@
       await loadPendingMatches();
       await loadDbMatches();
       await loadStandings();
+      await loadPlayerStats();
     }
 
     async function syncMatchesToDatabase() {
@@ -2257,6 +2416,7 @@
         await loadDbMatches();
         await loadPendingMatches();
         await loadStandings();
+        await loadPlayerStats();
       } catch (error) {
         dbStatusEl.textContent = 'Sync failed';
         statusEl.textContent = 'Database sync failed.';
@@ -2313,9 +2473,11 @@
     renderScheduleWeekView();
     renderAdminState();
     renderStandingsLoading();
+    renderPlayerStatsLoading();
     loadMatches();
     loadDbMatches();
     loadStandings();
+    loadPlayerStats();
   </script>
 </body>
 </html>
