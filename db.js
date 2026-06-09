@@ -1,5 +1,6 @@
 let pool;
 let tableReadyPromise;
+let playerStatsTableReadyPromise;
 
 function getDatabaseUrl() {
   return process.env.DATABASE_URL;
@@ -158,6 +159,90 @@ async function getApprovedLeagueMatches() {
   return response.rows;
 }
 
+async function ensurePlayerStatsTable() {
+  if (!playerStatsTableReadyPromise) {
+    playerStatsTableReadyPromise = (async () => {
+      await query(`
+        CREATE TABLE IF NOT EXISTS player_stats (
+          id serial PRIMARY KEY,
+          player_name text NOT NULL,
+          club_name text,
+          goals integer NOT NULL DEFAULT 0,
+          assists integer NOT NULL DEFAULT 0,
+          created_at timestamp DEFAULT now(),
+          updated_at timestamp DEFAULT now()
+        )
+      `);
+
+      await query(`
+        ALTER TABLE player_stats
+          ADD COLUMN IF NOT EXISTS club_name text,
+          ADD COLUMN IF NOT EXISTS goals integer NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS assists integer NOT NULL DEFAULT 0,
+          ADD COLUMN IF NOT EXISTS updated_at timestamp DEFAULT now()
+      `);
+    })().catch(error => {
+      playerStatsTableReadyPromise = null;
+      throw error;
+    });
+  }
+
+  return playerStatsTableReadyPromise;
+}
+
+function normalizePlayerStatText(value, fieldName, required = false) {
+  const text = String(value || '').trim();
+  if (required && !text) throw new Error(`${fieldName} is required`);
+  return text || null;
+}
+
+function normalizePlayerStatNumber(value, fieldName) {
+  const number = Number(value ?? 0);
+  if (!Number.isInteger(number) || number < 0) {
+    throw new Error(`${fieldName} must be a non-negative integer`);
+  }
+  return number;
+}
+
+function mapPlayerStatRowColumns() {
+  return `
+    id,
+    player_name,
+    club_name,
+    goals,
+    assists,
+    created_at,
+    updated_at
+  `;
+}
+
+async function getPlayerStats() {
+  await ensurePlayerStatsTable();
+  const response = await query(`
+    SELECT ${mapPlayerStatRowColumns()}
+    FROM player_stats
+    ORDER BY goals DESC, assists DESC, player_name ASC, id ASC
+  `);
+  return response.rows;
+}
+
+async function savePlayerStat(stat) {
+  await ensurePlayerStatsTable();
+  const playerName = normalizePlayerStatText(stat.playerName ?? stat.player_name, 'playerName', true);
+  const clubName = normalizePlayerStatText(stat.clubName ?? stat.club_name, 'clubName');
+  const goals = normalizePlayerStatNumber(stat.goals, 'goals');
+  const assists = normalizePlayerStatNumber(stat.assists, 'assists');
+
+  const response = await query(
+    `INSERT INTO player_stats (player_name, club_name, goals, assists, updated_at)
+     VALUES ($1, $2, $3, $4, now())
+     RETURNING ${mapPlayerStatRowColumns()}`,
+    [playerName, clubName, goals, assists]
+  );
+
+  return response.rows[0];
+}
+
 async function getPendingMatches() {
   await ensureMatchesTable();
   const response = await query(`
@@ -219,10 +304,13 @@ async function rejectMatch(matchId, options = {}) {
 module.exports = {
   approveMatch,
   ensureMatchesTable,
+  ensurePlayerStatsTable,
   getApprovedLeagueMatches,
   getPendingMatches,
+  getPlayerStats,
   getSavedMatches,
   insertMatch,
+  savePlayerStat,
   normalizeMatchDate,
   rejectMatch,
 };

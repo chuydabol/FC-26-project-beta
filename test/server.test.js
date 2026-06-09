@@ -413,3 +413,73 @@ test('POST /api/matches/:matchId/reject marks a match rejected', async () => {
   assert.equal(rejectStub.mock.callCount(), 1);
   rejectStub.mock.restore();
 });
+
+test('GET /api/player-stats returns saved player goals and assists', async () => {
+  const db = require('../db');
+  const getStub = mock.method(db, 'getPlayerStats', async () => [
+    { id: 1, player_name: 'Ace Striker', club_name: 'Bota FC', goals: 7, assists: 4 },
+    { id: 2, player_name: 'Setup Pro', club_name: 'Inferign United', goals: 2, assists: 8 },
+  ]);
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/player-stats`);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.playerStats.map(stat => stat.player_name), ['Ace Striker', 'Setup Pro']);
+    assert.equal(body.playerStats[0].goals, 7);
+    assert.equal(body.playerStats[1].assists, 8);
+  });
+
+  assert.equal(getStub.mock.callCount(), 1);
+  getStub.mock.restore();
+});
+
+test('POST /api/player-stats saves player goals and assists for admins', async () => {
+  const db = require('../db');
+  const saveStub = mock.method(db, 'savePlayerStat', async stat => {
+    assert.deepEqual(stat, {
+      playerName: 'Ace Striker',
+      clubName: 'Bota FC',
+      goals: 7,
+      assists: 4,
+    });
+    return { id: 1, player_name: 'Ace Striker', club_name: 'Bota FC', goals: 7, assists: 4 };
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/player-stats`, {
+      method: 'POST',
+      headers: adminHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ playerName: 'Ace Striker', clubName: 'Bota FC', goals: 7, assists: 4 }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 201);
+    assert.equal(body.playerStat.player_name, 'Ace Striker');
+    assert.equal(body.playerStat.goals, 7);
+    assert.equal(body.playerStat.assists, 4);
+  });
+
+  assert.equal(saveStub.mock.callCount(), 1);
+  saveStub.mock.restore();
+});
+
+test('POST /api/player-stats rejects missing admin password', async () => {
+  const db = require('../db');
+  const saveStub = mock.method(db, 'savePlayerStat', async () => {
+    throw new Error('admin auth should run before saving player stats');
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/player-stats`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ playerName: 'Ace Striker', goals: 1, assists: 1 }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 401);
+    assert.deepEqual(body, { error: 'Unauthorized' });
+  });
+
+  assert.equal(saveStub.mock.callCount(), 0);
+  saveStub.mock.restore();
+});

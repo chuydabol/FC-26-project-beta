@@ -349,6 +349,35 @@ app.get('/api/db-matches', async (_req, res) => {
 });
 
 
+
+app.get('/api/player-stats', async (_req, res) => {
+  try {
+    const playerStats = await db.getPlayerStats();
+    res.json({ playerStats });
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to load player stats from Postgres');
+    res.status(500).json({
+      error: 'Failed to load player stats from Postgres',
+      details: error.message || 'Database query failed',
+      playerStats: [],
+    });
+  }
+});
+
+app.post('/api/player-stats', adminOnly(async (req, res) => {
+  try {
+    const playerStat = await db.savePlayerStat(req.body || {});
+    res.status(201).json({ playerStat });
+  } catch (error) {
+    const status = /required|non-negative integer/.test(error.message || '') ? 400 : 500;
+    logger.error({ err: error }, 'Failed to save player stat to Postgres');
+    res.status(status).json({
+      error: 'Failed to save player stat to Postgres',
+      details: error.message || 'Database insert failed',
+    });
+  }
+}));
+
 app.get('/api/pending-matches', adminOnly(async (_req, res) => {
   try {
     const matches = await db.getPendingMatches();
