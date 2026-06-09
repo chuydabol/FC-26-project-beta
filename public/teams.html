@@ -2102,8 +2102,8 @@
     function renderPlayerStatsLeaders(players) {
       const leaders = [
         ['Top Scorer', getLeader(players, 'goals'), player => String(player.goals)],
-        ['Top Assister', getLeader(players, 'assists'), player => String(player.assists)],
-        ['Best Passer', getLeader(players, 'pass_percentage'), player => formatPercentage(player.pass_percentage)],
+        ['Top Playmaker', getLeader(players, 'assists'), player => String(player.assists)],
+        ['Best Pass %', getLeader(players, 'pass_percentage'), player => formatPercentage(player.pass_percentage)],
         ['Best Tackler', getLeader(players, 'tackle_percentage'), player => formatPercentage(player.tackle_percentage)],
         ['Most MOTM', getLeader(players, 'motm_count'), player => String(player.motm_count)]
       ];
@@ -2120,14 +2120,14 @@
         <div class="table-wrap">
           <table class="standings player-stats-table">
             <thead>
-              <tr><th>Player</th><th>Club</th><th>MP</th><th>G</th><th>A</th><th>Pass %</th><th>Tackle %</th><th>MOTM</th></tr>
+              <tr><th>Player</th><th>Club</th><th>League Matches</th><th>Goals</th><th>Assists</th><th>Pass %</th><th>Tackle %</th><th>MOTM</th></tr>
             </thead>
             <tbody>
               ${players.map(player => `
                 <tr>
                   <td class="player-cell">${escapeHtml(player.player_name)}</td>
                   <td class="club-cell-text">${escapeHtml(player.club_name || '—')}</td>
-                  <td>${Number(player.matches_played) || 0}</td>
+                  <td>${Number(player.league_matches ?? player.matches_played) || 0}</td>
                   <td>${Number(player.goals) || 0}</td>
                   <td>${Number(player.assists) || 0}</td>
                   <td class="percentage-cell">${escapeHtml(formatPercentage(player.pass_percentage))}</td>

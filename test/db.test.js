@@ -115,3 +115,25 @@ test('normalizePlayerMatchStats uses EA nested player and club keys instead of m
   assert.equal(stats[0].tackles_made, 2);
   assert.equal(stats[0].man_of_the_match, false);
 });
+
+test('league club aliases include only registered UPCL teams for player stat filtering', () => {
+  const { getLeagueClubAliasRows, normalizeLeagueClubName } = require('../db');
+  const aliases = getLeagueClubAliasRows();
+  const normalizedAliases = aliases.map(row => row.alias);
+
+  assert.deepEqual(new Set(aliases.map(row => row.club_name)), new Set([
+    'Bota FC',
+    'Inferign United',
+    'True Egoistas',
+    'Versus One',
+    'FC Wisconsin',
+    'FC Sutton St',
+  ]));
+  assert.ok(normalizedAliases.includes(normalizeLeagueClubName('Bota')));
+  assert.ok(normalizedAliases.includes(normalizeLeagueClubName('Inferign Utd')));
+  assert.ok(normalizedAliases.includes(normalizeLeagueClubName('FC Sutton')));
+  assert.equal(normalizedAliases.includes(normalizeLeagueClubName('Unreal Madrid3')), false);
+  assert.equal(normalizedAliases.includes(normalizeLeagueClubName('CLT EA')), false);
+  assert.equal(normalizedAliases.includes(normalizeLeagueClubName('Da Bears FC')), false);
+  assert.equal(normalizedAliases.includes(normalizeLeagueClubName('Dont Mata FC')), false);
+});

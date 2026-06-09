@@ -2,6 +2,47 @@ let pool;
 let tableReadyPromise;
 let playerStatsReadyPromise;
 
+const LEAGUE_CLUBS = [
+  { id: '57985', name: 'Bota FC', aliases: ['Bota FC', 'Bota'] },
+  { id: '6297844', name: 'Inferign United', aliases: ['Inferign United', 'Inferign Utd'] },
+  { id: '1171188', name: 'True Egoistas', aliases: ['True Egoistas', 'Egoistas'] },
+  { id: '4671025', name: 'Versus One', aliases: ['Versus One'] },
+  { id: '654142', name: 'FC Wisconsin', aliases: ['FC Wisconsin', 'FC Wisconson'] },
+  { id: '129307', name: 'FC Sutton St', aliases: ['FC Sutton St', 'FC Sutton'] },
+];
+
+function normalizeLeagueClubName(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\butd\b/g, 'united')
+    .replace(/\bst\b/g, 'st')
+    .replace(/\s+/g, ' ');
+}
+
+function getLeagueClubAliasRows() {
+  return LEAGUE_CLUBS.flatMap(club => club.aliases.map(alias => ({
+    club_id: club.id,
+    club_name: club.name,
+    alias: normalizeLeagueClubName(alias),
+  })));
+}
+
+function getLeagueClubAliasSql() {
+  return getLeagueClubAliasRows()
+    .map((_, index) => `($${index * 3 + 1}, $${index * 3 + 2}, $${index * 3 + 3})`)
+    .join(', ');
+}
+
+function getLeagueClubAliasParams() {
+  return getLeagueClubAliasRows().flatMap(row => [row.club_id, row.club_name, row.alias]);
+}
+
+function getSqlNormalizedName(column) {
+  return `regexp_replace(lower(trim(COALESCE(${column}, ''))), '\\s+', ' ', 'g')`;
+}
+
+
 function getDatabaseUrl() {
   return process.env.DATABASE_URL;
 }
@@ -126,10 +167,25 @@ async function ensurePlayerStatsTables() {
 
 async function getPlayerStats() {
   await ensurePlayerStatsTables();
+  const aliasParams = getLeagueClubAliasParams();
   const response = await query(`
+    WITH league_club_aliases(club_id, club_name, normalized_alias) AS (
+      VALUES ${getLeagueClubAliasSql()}
+    ), official_league_matches AS (
+      SELECT m.match_id
+      FROM matches m
+      INNER JOIN league_club_aliases home_club
+        ON ${getSqlNormalizedName('m.club_name')} = home_club.normalized_alias
+      INNER JOIN league_club_aliases away_club
+        ON ${getSqlNormalizedName('m.opponent_name')} = away_club.normalized_alias
+      WHERE m.status = 'approved'
+        AND m.competition = 'league'
+        AND home_club.club_id <> away_club.club_id
+    )
     SELECT
       pms.player_name,
       COALESCE(MAX(NULLIF(pms.club_name, '')), '') AS club_name,
+      COUNT(DISTINCT pms.match_id)::integer AS league_matches,
       COUNT(DISTINCT pms.match_id)::integer AS matches_played,
       COALESCE(SUM(pms.goals), 0)::integer AS goals,
       COALESCE(SUM(pms.assists), 0)::integer AS assists,
@@ -147,12 +203,10 @@ async function getPlayerStats() {
       END::float AS tackle_percentage,
       COALESCE(SUM(CASE WHEN pms.man_of_the_match THEN 1 ELSE 0 END), 0)::integer AS motm_count
     FROM player_match_stats pms
-    INNER JOIN matches m ON m.match_id = pms.match_id
-    WHERE m.status = 'approved'
-      AND m.competition = 'league'
+    INNER JOIN official_league_matches olm ON olm.match_id = pms.match_id
     GROUP BY COALESCE(pms.ea_player_id, pms.player_name), pms.player_name
     ORDER BY goals DESC, assists DESC, motm_count DESC, pms.player_name ASC
-  `);
+  `, aliasParams);
   return response.rows;
 }
 
@@ -554,6 +608,8 @@ module.exports = {
   insertMatch,
   normalizeMatchDate,
   normalizePlayerMatchStats,
+  normalizeLeagueClubName,
+  getLeagueClubAliasRows,
   resetApprovedMatches,
   rejectMatch,
 };
