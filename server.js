@@ -44,6 +44,25 @@ const NEWS_ITEMS = [
     time: 'Preseason',
     headline: 'No fake standings, form, or scorelines are listed before official results arrive.',
   },
+  {
+    category: 'standings',
+    time: 'News Engine',
+    headline: 'Standings movement dashboard is ready for table-change stories.',
+    graphic: {
+      type: 'standingsMovement',
+      playoffCutoffRank: 4,
+      rows: [
+        { rank: 1, previousRank: 3, team: 'Bota FC', pts: 23, gd: '+14', form: ['W', 'W', 'D', 'W', 'W'] },
+        { rank: 2, previousRank: 1, team: 'Versus One', pts: 21, gd: '+10', form: ['W', 'D', 'W', 'W', 'L'] },
+        { rank: 3, previousRank: 2, team: 'FC Wisconsin', pts: 18, gd: '+6', form: ['L', 'W', 'W', 'D', 'W'] },
+        { rank: 4, previousRank: 6, team: 'True Egoistas', pts: 16, gd: '+3', form: ['W', 'L', 'W', 'D', 'D'] },
+        { rank: 5, previousRank: 4, team: 'Inferign United', pts: 14, gd: '0', form: ['D', 'W', 'L', 'L', 'W'] },
+        { rank: 6, previousRank: 5, team: 'FC Sutton St', pts: 12, gd: '-2', form: ['L', 'D', 'W', 'L', 'D'] },
+        { rank: 7, previousRank: 7, team: 'Royal Republic', pts: 10, gd: '-7', form: ['D', 'L', 'L', 'W', 'L'] },
+        { rank: 8, previousRank: 8, team: 'Sporting de la MA', pts: 8, gd: '-11', form: ['L', 'L', 'D', 'L', 'W'] },
+      ],
+    },
+  },
 ];
 
 app.use((_req, res, next) => {
