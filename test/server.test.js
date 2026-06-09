@@ -216,8 +216,11 @@ test('POST /api/admin/reset-approved-matches rejects missing admin password', as
 test('POST /api/admin/backfill-player-stats backfills existing match raw JSON with admin auth', async () => {
   const db = require('../db');
   const backfillStub = mock.method(db, 'backfillPlayerStats', async () => ({
-    processedMatches: 2,
-    savedPlayerStats: 6,
+    matchesChecked: 2,
+    playersFound: 6,
+    playerRowsInserted: 6,
+    playerMatchRowsInserted: 6,
+    errors: [],
   }));
 
   await withServer(async port => {
@@ -227,7 +230,13 @@ test('POST /api/admin/backfill-player-stats backfills existing match raw JSON wi
     });
     const body = await response.json();
     assert.equal(response.status, 200);
-    assert.deepEqual(body, { backfill: { processedMatches: 2, savedPlayerStats: 6 } });
+    assert.deepEqual(body, {
+      matchesChecked: 2,
+      playersFound: 6,
+      playerRowsInserted: 6,
+      playerMatchRowsInserted: 6,
+      errors: [],
+    });
   });
 
   assert.equal(backfillStub.mock.callCount(), 1);

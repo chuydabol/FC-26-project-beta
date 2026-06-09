@@ -367,7 +367,7 @@ app.post('/api/admin/reset-approved-matches', adminOnly(async (_req, res) => {
 app.post('/api/admin/backfill-player-stats', adminOnly(async (_req, res) => {
   try {
     const backfill = await db.backfillPlayerStats();
-    res.json({ backfill });
+    res.json(backfill);
   } catch (error) {
     logger.error({ err: error }, 'Failed to backfill player stats');
     res.status(500).json({
