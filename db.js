@@ -173,52 +173,39 @@ function toBoolean(value) {
   return ['1', 'true', 'yes', 'y'].includes(normalized);
 }
 
-function getPlayerName(player, playerId) {
-  return firstDefined(
-    player.player_name,
-    player.playerName,
-    player.playername,
-    player.name,
-    player.proName,
-    player.proNameLocalized,
-    player.personaName,
-    playerId
-  );
+function getPlayerName(player) {
+  return firstDefined(player.playername);
 }
 
-function normalizePlayerMatchStats(match, sourceClub = {}) {
-  const rawMatch = match?.raw || match || {};
+function normalizePlayerMatchStats(match) {
+  const rawMatch = match?.raw || match?.raw_json || match || {};
   const rawPlayers = rawMatch.players;
   if (!rawPlayers || typeof rawPlayers !== 'object' || Array.isArray(rawPlayers)) return [];
 
   const rows = [];
   for (const [clubId, playersForClub] of Object.entries(rawPlayers)) {
     if (!playersForClub || typeof playersForClub !== 'object') continue;
-    const clubDetails = rawMatch.clubs?.[clubId]?.details || rawMatch.clubs?.[clubId] || {};
-    const clubName = firstDefined(clubDetails.name, clubDetails.clubName, sourceClub.id === clubId ? sourceClub.name : null);
-    const entries = Array.isArray(playersForClub)
-      ? playersForClub.map((player, index) => [firstDefined(player.ea_player_id, player.playerId, player.playerid, player.id, index), player])
-      : Object.entries(playersForClub);
+    const clubName = rawMatch.clubs?.[clubId]?.details?.name;
 
-    for (const [playerId, player] of entries) {
+    for (const [playerId, player] of Object.entries(playersForClub)) {
       if (!player || typeof player !== 'object') continue;
-      const playerName = getPlayerName(player, playerId);
+      const playerName = getPlayerName(player);
       if (!playerName) continue;
 
       rows.push({
-        match_id: match.id || rawMatch.matchId || rawMatch.matchid || rawMatch.id,
-        ea_player_id: String(firstDefined(player.ea_player_id, player.playerId, player.playerid, player.id, playerId)),
+        match_id: match.match_id || match.id || rawMatch.matchId || rawMatch.matchid || rawMatch.id,
+        ea_player_id: String(playerId),
         player_name: String(playerName),
-        club_id: String(firstDefined(player.club_id, player.clubId, player.clubid, clubId)),
+        club_id: String(clubId),
         club_name: clubName ? String(clubName) : null,
-        position: firstDefined(player.position, player.pos, player.proPos, null),
-        goals: toInteger(firstDefined(player.goals, player.goal), 0),
-        assists: toInteger(firstDefined(player.assists, player.assist), 0),
-        passes_attempted: toInteger(firstDefined(player.passes_attempted, player.passattempts, player.passesAttempted), 0),
-        passes_made: toInteger(firstDefined(player.passes_made, player.passesmade, player.passesMade), 0),
-        tackles_attempted: toInteger(firstDefined(player.tackles_attempted, player.tackleattempts, player.tacklesAttempted), 0),
-        tackles_made: toInteger(firstDefined(player.tackles_made, player.tacklesmade, player.tacklesMade), 0),
-        man_of_the_match: toBoolean(firstDefined(player.man_of_the_match, player.mom, player.motm, player.manOfTheMatch)),
+        position: firstDefined(player.pos, null),
+        goals: toInteger(player.goals || 0),
+        assists: toInteger(player.assists || 0),
+        passes_attempted: toInteger(player.passattempts || 0),
+        passes_made: toInteger(player.passesmade || 0),
+        tackles_attempted: toInteger(player.tackleattempts || 0),
+        tackles_made: toInteger(player.tacklesmade || 0),
+        man_of_the_match: player.mom === '1',
         raw_json: player,
       });
     }
@@ -234,68 +221,83 @@ async function insertPlayerMatchStats(match, sourceClub) {
   await ensurePlayerStatsTables();
   let saved = 0;
   for (const stat of stats) {
-    await query(
-      `INSERT INTO players (
-        ea_player_id,
-        player_name,
-        club_id,
-        club_name,
-        position
-      ) VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (ea_player_id) DO UPDATE
-      SET player_name = EXCLUDED.player_name,
-          club_id = EXCLUDED.club_id,
-          club_name = EXCLUDED.club_name,
-          position = COALESCE(EXCLUDED.position, players.position),
-          active = true`,
-      [stat.ea_player_id, stat.player_name, stat.club_id, stat.club_name, stat.position]
-    );
+    const logContext = {
+      matchId: stat.match_id,
+      clubId: stat.club_id,
+      clubName: stat.club_name,
+      playerId: stat.ea_player_id,
+      playername: stat.player_name,
+    };
+    console.log({ ...logContext }, 'Saving player match stats');
 
-    const response = await query(
-      `INSERT INTO player_match_stats (
-        match_id,
-        ea_player_id,
-        player_name,
-        club_id,
-        club_name,
-        goals,
-        assists,
-        passes_attempted,
-        passes_made,
-        tackles_attempted,
-        tackles_made,
-        man_of_the_match,
-        raw_json
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-      ON CONFLICT (match_id, ea_player_id) DO UPDATE
-      SET player_name = EXCLUDED.player_name,
-          club_id = EXCLUDED.club_id,
-          club_name = EXCLUDED.club_name,
-          goals = EXCLUDED.goals,
-          assists = EXCLUDED.assists,
-          passes_attempted = EXCLUDED.passes_attempted,
-          passes_made = EXCLUDED.passes_made,
-          tackles_attempted = EXCLUDED.tackles_attempted,
-          tackles_made = EXCLUDED.tackles_made,
-          man_of_the_match = EXCLUDED.man_of_the_match,
-          raw_json = EXCLUDED.raw_json`,
-      [
-        stat.match_id,
-        stat.ea_player_id,
-        stat.player_name,
-        stat.club_id,
-        stat.club_name,
-        stat.goals,
-        stat.assists,
-        stat.passes_attempted,
-        stat.passes_made,
-        stat.tackles_attempted,
-        stat.tackles_made,
-        stat.man_of_the_match,
-        JSON.stringify(stat.raw_json),
-      ]
-    );
-    saved += response.rowCount || 0;
+    try {
+      await query(
+        `INSERT INTO players (
+          ea_player_id,
+          player_name,
+          club_id,
+          club_name,
+          position
+        ) VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (ea_player_id) DO UPDATE
+        SET player_name = EXCLUDED.player_name,
+            club_id = EXCLUDED.club_id,
+            club_name = EXCLUDED.club_name,
+            position = COALESCE(EXCLUDED.position, players.position),
+            active = true`,
+        [stat.ea_player_id, stat.player_name, stat.club_id, stat.club_name, stat.position]
+      );
+
+      const response = await query(
+        `INSERT INTO player_match_stats (
+          match_id,
+          ea_player_id,
+          player_name,
+          club_id,
+          club_name,
+          goals,
+          assists,
+          passes_attempted,
+          passes_made,
+          tackles_attempted,
+          tackles_made,
+          man_of_the_match,
+          raw_json
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        ON CONFLICT (match_id, ea_player_id) DO UPDATE
+        SET player_name = EXCLUDED.player_name,
+            club_id = EXCLUDED.club_id,
+            club_name = EXCLUDED.club_name,
+            goals = EXCLUDED.goals,
+            assists = EXCLUDED.assists,
+            passes_attempted = EXCLUDED.passes_attempted,
+            passes_made = EXCLUDED.passes_made,
+            tackles_attempted = EXCLUDED.tackles_attempted,
+            tackles_made = EXCLUDED.tackles_made,
+            man_of_the_match = EXCLUDED.man_of_the_match,
+            raw_json = EXCLUDED.raw_json`,
+        [
+          stat.match_id,
+          stat.ea_player_id,
+          stat.player_name,
+          stat.club_id,
+          stat.club_name,
+          stat.goals,
+          stat.assists,
+          stat.passes_attempted,
+          stat.passes_made,
+          stat.tackles_attempted,
+          stat.tackles_made,
+          stat.man_of_the_match,
+          JSON.stringify(stat.raw_json),
+        ]
+      );
+      saved += response.rowCount || 0;
+      console.log({ ...logContext }, 'Player match stats insert success');
+    } catch (error) {
+      console.error({ ...logContext, err: error }, 'Player match stats insert failure');
+      throw error;
+    }
   }
 
   return saved;
@@ -362,6 +364,33 @@ async function insertMatch(match, sourceClub) {
   await insertPlayerMatchStats(match, sourceClub);
 
   return response.rowCount === 1;
+}
+
+
+async function backfillPlayerStats() {
+  await ensurePlayerStatsTables();
+  const response = await query(`
+    SELECT match_id, source_club_id, club_name, raw_json
+    FROM matches
+    WHERE raw_json IS NOT NULL
+    ORDER BY match_date ASC NULLS LAST, id ASC
+  `);
+
+  let processedMatches = 0;
+  let savedPlayerStats = 0;
+  for (const row of response.rows) {
+    const saved = await insertPlayerMatchStats({
+      match_id: row.match_id,
+      raw_json: row.raw_json,
+    });
+    processedMatches += 1;
+    savedPlayerStats += saved;
+  }
+
+  return {
+    processedMatches,
+    savedPlayerStats,
+  };
 }
 
 async function getSavedMatches() {
@@ -460,6 +489,7 @@ async function rejectMatch(matchId, options = {}) {
 
 module.exports = {
   approveMatch,
+  backfillPlayerStats,
   ensureMatchesTable,
   ensurePlayerStatsTables,
   getApprovedLeagueMatches,

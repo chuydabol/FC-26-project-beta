@@ -72,3 +72,46 @@ test('normalizePlayerMatchStats extracts EA player stats from a match payload', 
 test('normalizePlayerMatchStats returns no rows when EA player data is absent', () => {
   assert.deepEqual(normalizePlayerMatchStats({ id: 'match-without-players', raw: {} }), []);
 });
+
+
+test('normalizePlayerMatchStats uses EA nested player and club keys instead of missing player fields', () => {
+  const stats = normalizePlayerMatchStats({
+    match_id: 'row-match-1',
+    raw_json: {
+      clubs: {
+        57985: { details: { name: 'Bota FC' } },
+      },
+      players: {
+        57985: {
+          111: {
+            ea_player_id: 'wrong-player-field',
+            club_id: 'wrong-club-field',
+            club_name: 'Wrong Club Name',
+            playername: 'Nested Key Player',
+            pos: 'midfielder',
+            goals: '1',
+            assists: '2',
+            passattempts: '9',
+            passesmade: '7',
+            tackleattempts: '3',
+            tacklesmade: '2',
+            mom: '0',
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(stats.length, 1);
+  assert.equal(stats[0].match_id, 'row-match-1');
+  assert.equal(stats[0].ea_player_id, '111');
+  assert.equal(stats[0].club_id, '57985');
+  assert.equal(stats[0].club_name, 'Bota FC');
+  assert.equal(stats[0].player_name, 'Nested Key Player');
+  assert.equal(stats[0].position, 'midfielder');
+  assert.equal(stats[0].passes_attempted, 9);
+  assert.equal(stats[0].passes_made, 7);
+  assert.equal(stats[0].tackles_attempted, 3);
+  assert.equal(stats[0].tackles_made, 2);
+  assert.equal(stats[0].man_of_the_match, false);
+});
