@@ -156,6 +156,151 @@ async function getPlayerStats() {
   return response.rows;
 }
 
+
+function firstDefined(...values) {
+  return values.find(value => value !== undefined && value !== null && value !== '');
+}
+
+function toInteger(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.trunc(number) : fallback;
+}
+
+function toBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return ['1', 'true', 'yes', 'y'].includes(normalized);
+}
+
+function getPlayerName(player, playerId) {
+  return firstDefined(
+    player.player_name,
+    player.playerName,
+    player.playername,
+    player.name,
+    player.proName,
+    player.proNameLocalized,
+    player.personaName,
+    playerId
+  );
+}
+
+function normalizePlayerMatchStats(match, sourceClub = {}) {
+  const rawMatch = match?.raw || match || {};
+  const rawPlayers = rawMatch.players;
+  if (!rawPlayers || typeof rawPlayers !== 'object' || Array.isArray(rawPlayers)) return [];
+
+  const rows = [];
+  for (const [clubId, playersForClub] of Object.entries(rawPlayers)) {
+    if (!playersForClub || typeof playersForClub !== 'object') continue;
+    const clubDetails = rawMatch.clubs?.[clubId]?.details || rawMatch.clubs?.[clubId] || {};
+    const clubName = firstDefined(clubDetails.name, clubDetails.clubName, sourceClub.id === clubId ? sourceClub.name : null);
+    const entries = Array.isArray(playersForClub)
+      ? playersForClub.map((player, index) => [firstDefined(player.ea_player_id, player.playerId, player.playerid, player.id, index), player])
+      : Object.entries(playersForClub);
+
+    for (const [playerId, player] of entries) {
+      if (!player || typeof player !== 'object') continue;
+      const playerName = getPlayerName(player, playerId);
+      if (!playerName) continue;
+
+      rows.push({
+        match_id: match.id || rawMatch.matchId || rawMatch.matchid || rawMatch.id,
+        ea_player_id: String(firstDefined(player.ea_player_id, player.playerId, player.playerid, player.id, playerId)),
+        player_name: String(playerName),
+        club_id: String(firstDefined(player.club_id, player.clubId, player.clubid, clubId)),
+        club_name: clubName ? String(clubName) : null,
+        position: firstDefined(player.position, player.pos, player.proPos, null),
+        goals: toInteger(firstDefined(player.goals, player.goal), 0),
+        assists: toInteger(firstDefined(player.assists, player.assist), 0),
+        passes_attempted: toInteger(firstDefined(player.passes_attempted, player.passattempts, player.passesAttempted), 0),
+        passes_made: toInteger(firstDefined(player.passes_made, player.passesmade, player.passesMade), 0),
+        tackles_attempted: toInteger(firstDefined(player.tackles_attempted, player.tackleattempts, player.tacklesAttempted), 0),
+        tackles_made: toInteger(firstDefined(player.tackles_made, player.tacklesmade, player.tacklesMade), 0),
+        man_of_the_match: toBoolean(firstDefined(player.man_of_the_match, player.mom, player.motm, player.manOfTheMatch)),
+        raw_json: player,
+      });
+    }
+  }
+
+  return rows.filter(row => row.match_id && row.ea_player_id && row.player_name);
+}
+
+async function insertPlayerMatchStats(match, sourceClub) {
+  const stats = normalizePlayerMatchStats(match, sourceClub);
+  if (!stats.length) return 0;
+
+  await ensurePlayerStatsTables();
+  let saved = 0;
+  for (const stat of stats) {
+    await query(
+      `INSERT INTO players (
+        ea_player_id,
+        player_name,
+        club_id,
+        club_name,
+        position
+      ) VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (ea_player_id) DO UPDATE
+      SET player_name = EXCLUDED.player_name,
+          club_id = EXCLUDED.club_id,
+          club_name = EXCLUDED.club_name,
+          position = COALESCE(EXCLUDED.position, players.position),
+          active = true`,
+      [stat.ea_player_id, stat.player_name, stat.club_id, stat.club_name, stat.position]
+    );
+
+    const response = await query(
+      `INSERT INTO player_match_stats (
+        match_id,
+        ea_player_id,
+        player_name,
+        club_id,
+        club_name,
+        goals,
+        assists,
+        passes_attempted,
+        passes_made,
+        tackles_attempted,
+        tackles_made,
+        man_of_the_match,
+        raw_json
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (match_id, ea_player_id) DO UPDATE
+      SET player_name = EXCLUDED.player_name,
+          club_id = EXCLUDED.club_id,
+          club_name = EXCLUDED.club_name,
+          goals = EXCLUDED.goals,
+          assists = EXCLUDED.assists,
+          passes_attempted = EXCLUDED.passes_attempted,
+          passes_made = EXCLUDED.passes_made,
+          tackles_attempted = EXCLUDED.tackles_attempted,
+          tackles_made = EXCLUDED.tackles_made,
+          man_of_the_match = EXCLUDED.man_of_the_match,
+          raw_json = EXCLUDED.raw_json`,
+      [
+        stat.match_id,
+        stat.ea_player_id,
+        stat.player_name,
+        stat.club_id,
+        stat.club_name,
+        stat.goals,
+        stat.assists,
+        stat.passes_attempted,
+        stat.passes_made,
+        stat.tackles_attempted,
+        stat.tackles_made,
+        stat.man_of_the_match,
+        JSON.stringify(stat.raw_json),
+      ]
+    );
+    saved += response.rowCount || 0;
+  }
+
+  return saved;
+}
+
 function normalizeMatchDate(timestamp) {
   if (!timestamp) return null;
   const date = new Date(timestamp);
@@ -184,7 +329,7 @@ function mapMatchRowColumns() {
 }
 
 async function insertMatch(match, sourceClub) {
-  await ensureMatchesTable();
+  await ensurePlayerStatsTables();
   const response = await query(
     `INSERT INTO matches (
       match_id,
@@ -213,6 +358,8 @@ async function insertMatch(match, sourceClub) {
       JSON.stringify(match.raw || match),
     ]
   );
+
+  await insertPlayerMatchStats(match, sourceClub);
 
   return response.rowCount === 1;
 }
@@ -318,9 +465,11 @@ module.exports = {
   getApprovedLeagueMatches,
   getPendingMatches,
   getPlayerStats,
+  insertPlayerMatchStats,
   getSavedMatches,
   insertMatch,
   normalizeMatchDate,
+  normalizePlayerMatchStats,
   resetApprovedMatches,
   rejectMatch,
 };
