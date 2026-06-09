@@ -1387,6 +1387,327 @@
     .schedule-view[hidden] { display: none; }
 
 
+    .standings-movement-graphic {
+      position: relative;
+      display: grid;
+      gap: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(72, 211, 255, 0.24);
+      border-radius: 18px;
+      padding: 14px;
+      background:
+        radial-gradient(circle at 18% 0%, rgba(34, 211, 238, 0.18), transparent 32%),
+        radial-gradient(circle at 92% 18%, rgba(34, 197, 94, 0.14), transparent 28%),
+        linear-gradient(135deg, rgba(5, 10, 22, 0.96), rgba(13, 20, 35, 0.98));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 44px rgba(0, 0, 0, 0.32);
+      isolation: isolate;
+    }
+
+    .standings-movement-graphic::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(rgba(148, 163, 184, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+      background-size: 24px 24px;
+      mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent 78%);
+    }
+
+    .standings-movement-header,
+    .standings-movement-row,
+    .movement-mini-panels {
+      position: relative;
+      z-index: 1;
+    }
+
+    .standings-movement-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    .standings-movement-kicker,
+    .standings-movement-live,
+    .movement-column-label,
+    .movement-mini-label {
+      color: #67e8f9;
+      font-size: 0.56rem;
+      font-weight: 950;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .standings-movement-title {
+      margin: 3px 0 0;
+      color: #f8fafc;
+      font-size: clamp(1rem, 3vw, 1.38rem);
+      font-weight: 950;
+      letter-spacing: -0.05em;
+      line-height: 1;
+    }
+
+    .standings-movement-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(103, 232, 249, 0.24);
+      border-radius: 999px;
+      padding: 6px 9px;
+      color: #d9f99d;
+      background: rgba(2, 6, 23, 0.62);
+      white-space: nowrap;
+    }
+
+    .standings-movement-live::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.86);
+    }
+
+    .standings-movement-table {
+      display: grid;
+      gap: 6px;
+    }
+
+    .standings-movement-columns,
+    .standings-movement-row {
+      display: grid;
+      grid-template-columns: 32px minmax(120px, 1fr) 44px 48px minmax(72px, 0.75fr) 64px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .standings-movement-columns {
+      padding: 0 9px;
+    }
+
+    .movement-column-label { color: #7dd3fc; opacity: 0.72; }
+    .movement-column-label:nth-child(n+3) { text-align: center; }
+
+    .standings-movement-row {
+      min-height: 42px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 12px;
+      padding: 7px 9px;
+      background: rgba(15, 23, 42, 0.72);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    }
+
+    .standings-movement-row.is-first {
+      border-color: rgba(250, 204, 21, 0.52);
+      background:
+        linear-gradient(90deg, rgba(250, 204, 21, 0.20), rgba(15, 23, 42, 0.72) 42%),
+        rgba(15, 23, 42, 0.88);
+      box-shadow: inset 3px 0 0 #facc15, 0 0 26px rgba(250, 204, 21, 0.11);
+    }
+
+    .movement-rank {
+      color: #e2e8f0;
+      font-size: 0.92rem;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .movement-team {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .movement-logo-placeholder {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 26px;
+      height: 26px;
+      border: 1px solid rgba(103, 232, 249, 0.22);
+      border-radius: 8px;
+      color: #cffafe;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.22), rgba(34, 197, 94, 0.12));
+      font-size: 0.58rem;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .movement-team-name {
+      overflow: hidden;
+      color: #f8fafc;
+      font-size: 0.82rem;
+      font-weight: 950;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .movement-points,
+    .movement-gd,
+    .movement-delta {
+      color: #f8fafc;
+      font-size: 0.8rem;
+      font-weight: 950;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .movement-form {
+      display: inline-flex;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .movement-form-pill {
+      display: grid;
+      place-items: center;
+      width: 17px;
+      height: 17px;
+      border-radius: 5px;
+      color: #03121a;
+      background: #64748b;
+      font-size: 0.52rem;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .movement-form-pill.W { background: #22c55e; }
+    .movement-form-pill.D { background: #eab308; }
+    .movement-form-pill.L { background: #ef4444; color: #fff1f2; }
+
+    .movement-delta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      justify-self: end;
+      min-width: 56px;
+      border-radius: 999px;
+      padding: 5px 7px;
+      background: rgba(100, 116, 139, 0.18);
+      color: #cbd5e1;
+    }
+
+    .movement-delta.up { background: rgba(34, 197, 94, 0.15); color: #86efac; }
+    .movement-delta.down { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+    .standings-movement-cutoff {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 2px 0;
+      color: #67e8f9;
+      font-size: 0.56rem;
+      font-weight: 950;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .standings-movement-cutoff::before,
+    .standings-movement-cutoff::after {
+      content: '';
+      flex: 1 1 auto;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(103, 232, 249, 0.76), transparent);
+    }
+
+    .movement-mini-panels {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .movement-mini-panel {
+      display: grid;
+      align-content: space-between;
+      min-height: 76px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.13);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(2, 6, 23, 0.45);
+    }
+
+    .movement-form-chart,
+    .movement-region-map,
+    .movement-bar-chart {
+      height: 34px;
+      opacity: 0.86;
+    }
+
+    .movement-form-chart {
+      background:
+        linear-gradient(135deg, transparent 8%, rgba(34, 197, 94, 0.88) 9% 12%, transparent 13% 34%, rgba(234, 179, 8, 0.9) 35% 38%, transparent 39% 60%, rgba(34, 197, 94, 0.9) 61% 64%, transparent 65%),
+        linear-gradient(to top, rgba(103, 232, 249, 0.14), transparent);
+    }
+
+    .movement-region-map {
+      border-radius: 10px;
+      background:
+        radial-gradient(circle at 28% 42%, rgba(34, 197, 94, 0.88) 0 3px, transparent 4px),
+        radial-gradient(circle at 68% 54%, rgba(103, 232, 249, 0.9) 0 3px, transparent 4px),
+        radial-gradient(circle at 48% 30%, rgba(250, 204, 21, 0.85) 0 2px, transparent 3px),
+        linear-gradient(135deg, transparent 18%, rgba(103, 232, 249, 0.20) 19% 21%, transparent 22% 54%, rgba(34, 197, 94, 0.17) 55% 57%, transparent 58%),
+        rgba(15, 23, 42, 0.68);
+    }
+
+    .movement-bar-chart {
+      background: linear-gradient(to top, #22c55e 68%, transparent 69%) 0 100% / 13% 100% no-repeat,
+        linear-gradient(to top, #67e8f9 46%, transparent 47%) 24% 100% / 13% 100% no-repeat,
+        linear-gradient(to top, #eab308 82%, transparent 83%) 48% 100% / 13% 100% no-repeat,
+        linear-gradient(to top, #ef4444 34%, transparent 35%) 72% 100% / 13% 100% no-repeat,
+        linear-gradient(to top, #a78bfa 58%, transparent 59%) 96% 100% / 13% 100% no-repeat;
+    }
+
+
+    .news-card.has-graphic {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .news-card.has-graphic .news-icon {
+      display: none;
+    }
+
+    .news-card.has-graphic .standings-movement-columns {
+      display: none;
+    }
+
+    .news-card.has-graphic .standings-movement-row {
+      grid-template-columns: 28px minmax(0, 1fr) 58px;
+      grid-template-areas:
+        "rank team move"
+        "rank details form";
+      row-gap: 6px;
+    }
+
+    .news-card.has-graphic .movement-rank { grid-area: rank; }
+    .news-card.has-graphic .movement-team { grid-area: team; }
+    .news-card.has-graphic .movement-points { grid-area: details; text-align: left; }
+    .news-card.has-graphic .movement-gd { grid-area: details; margin-left: 48px; text-align: left; }
+    .news-card.has-graphic .movement-form { grid-area: form; justify-self: end; }
+    .news-card.has-graphic .movement-delta { grid-area: move; }
+
+    .news-card.has-graphic .movement-points::before,
+    .news-card.has-graphic .movement-gd::before {
+      color: #7dd3fc;
+      font-size: 0.52rem;
+      letter-spacing: 0.12em;
+      margin-right: 4px;
+    }
+
+    .news-card.has-graphic .movement-points::before { content: 'PTS'; }
+    .news-card.has-graphic .movement-gd::before { content: 'GD'; }
+
+    .news-card.has-graphic .movement-mini-panels {
+      grid-template-columns: 1fr;
+    }
+
+
     .player-stats-shell {
       display: grid;
       gap: 16px;
@@ -1608,7 +1929,7 @@
                 <h2>UPCL News Center</h2>
                 <span class="conference-chip">Preseason notes</span>
               </div>
-              <div class="news-feed" aria-label="UPCL preseason notes feed">
+              <div class="news-feed" id="newsFeed" aria-label="UPCL preseason notes feed">
                 <article class="news-card"><span class="news-icon" aria-hidden="true">📋</span><div class="news-content"><p class="news-headline">The UPCL table has been reset for the six confirmed clubs.</p><div class="news-meta"><span class="news-category">League Office</span><span class="news-time">Preseason</span></div></div></article>
                 <article class="news-card"><span class="news-icon" aria-hidden="true">🌅</span><div class="news-content"><p class="news-headline">Eastern Conference entries: Bota FC, Inferign United, and True Egoistas.</p><div class="news-meta"><span class="news-category">East</span><span class="news-time">Preseason</span></div></div></article>
                 <article class="news-card"><span class="news-icon" aria-hidden="true">🌄</span><div class="news-content"><p class="news-headline">Western Conference entries: Versus One, FC Wisconsin, and FC Sutton St.</p><div class="news-meta"><span class="news-category">West</span><span class="news-time">Preseason</span></div></div></article>
@@ -1777,6 +2098,7 @@
     const playerStatsLeadersEl = document.getElementById('playerStatsLeaders');
     const playerStatsTableEl = document.getElementById('playerStatsTable');
     const playoffBracketEl = document.getElementById('playoffBracket');
+    const newsFeedEl = document.getElementById('newsFeed');
 
     let standingsData = { east: [], west: [] };
     let playerStatsData = [];
@@ -1945,6 +2267,138 @@
 
     function getTeamLogoPath(team) {
       return teamLogos[team] || '/assets/logos/league-crest.png';
+    }
+
+    function getMovement(row) {
+      const rank = Number(row.rank);
+      const previousRank = Number(row.previousRank);
+      if (!Number.isFinite(rank) || !Number.isFinite(previousRank) || previousRank === rank) {
+        return { className: 'none', arrow: '—', label: '0' };
+      }
+      if (previousRank > rank) {
+        return { className: 'up', arrow: '▲', label: `+${previousRank - rank}` };
+      }
+      return { className: 'down', arrow: '▼', label: `-${rank - previousRank}` };
+    }
+
+    function getTeamInitials(team) {
+      return String(team || 'TBD')
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(word => word[0])
+        .join('')
+        .toUpperCase() || 'FC';
+    }
+
+    function normalizeMovementRows(rows = []) {
+      const safeRows = Array.isArray(rows) ? rows.slice(0, 8) : [];
+      while (safeRows.length < 8) {
+        const rank = safeRows.length + 1;
+        safeRows.push({ rank, previousRank: rank, team: 'Club TBD', pts: 0, gd: '0', form: [] });
+      }
+      return safeRows;
+    }
+
+    function renderMovementForm(form = []) {
+      const safeForm = Array.isArray(form) ? form.slice(0, 5) : [];
+      while (safeForm.length < 5) safeForm.push('—');
+      return `
+        <span class="movement-form" aria-label="Recent form">
+          ${safeForm.map(result => `<span class="movement-form-pill ${escapeHtml(result)}">${escapeHtml(result)}</span>`).join('')}
+        </span>
+      `;
+    }
+
+    function StandingsMovementGraphic({ rows = [], playoffCutoffRank = 4, title = 'Standings Movement' } = {}) {
+      const movementRows = normalizeMovementRows(rows);
+      return `
+        <section class="standings-movement-graphic" aria-label="${escapeHtml(title)} graphic">
+          <div class="standings-movement-header">
+            <div>
+              <span class="standings-movement-kicker">Standings Pulse</span>
+              <h3 class="standings-movement-title">${escapeHtml(title)}</h3>
+            </div>
+            <span class="standings-movement-live">Live table</span>
+          </div>
+          <div class="standings-movement-table">
+            <div class="standings-movement-columns" aria-hidden="true">
+              <span class="movement-column-label">RK</span>
+              <span class="movement-column-label">Club</span>
+              <span class="movement-column-label">PTS</span>
+              <span class="movement-column-label">GD</span>
+              <span class="movement-column-label">Form</span>
+              <span class="movement-column-label">Move</span>
+            </div>
+            ${movementRows.map((row, index) => {
+              const movement = getMovement(row);
+              const rank = Number.isFinite(Number(row.rank)) ? Number(row.rank) : index + 1;
+              const cutoff = Number(playoffCutoffRank) === rank ? '<div class="standings-movement-cutoff"><span>Playoff cutoff</span></div>' : '';
+              return `
+                <div class="standings-movement-row ${rank === 1 ? 'is-first' : ''}">
+                  <span class="movement-rank">${rank}</span>
+                  <span class="movement-team">
+                    <span class="movement-logo-placeholder" aria-hidden="true">${escapeHtml(getTeamInitials(row.team))}</span>
+                    <span class="movement-team-name">${escapeHtml(row.team || 'Club TBD')}</span>
+                  </span>
+                  <span class="movement-points">${escapeHtml(row.pts ?? 0)}</span>
+                  <span class="movement-gd">${escapeHtml(row.gd ?? '0')}</span>
+                  ${renderMovementForm(row.form)}
+                  <span class="movement-delta ${movement.className}" aria-label="Movement ${movement.label}"><span aria-hidden="true">${movement.arrow}</span>${movement.label}</span>
+                </div>
+                ${cutoff}
+              `;
+            }).join('')}
+          </div>
+          <div class="movement-mini-panels" aria-label="Supporting standings data panels">
+            <div class="movement-mini-panel"><span class="movement-mini-label">Form chart</span><span class="movement-form-chart" aria-hidden="true"></span></div>
+            <div class="movement-mini-panel"><span class="movement-mini-label">Region map</span><span class="movement-region-map" aria-hidden="true"></span></div>
+            <div class="movement-mini-panel"><span class="movement-mini-label">Points bars</span><span class="movement-bar-chart" aria-hidden="true"></span></div>
+          </div>
+        </section>
+      `;
+    }
+
+    function getNewsIcon(category) {
+      const normalized = String(category || '').toLowerCase();
+      if (normalized === 'standings') return '📈';
+      if (normalized === 'east') return '🌅';
+      if (normalized === 'west') return '🌄';
+      if (normalized === 'tables') return '🧾';
+      return '📋';
+    }
+
+    function renderNewsCard(item) {
+      const normalizedCategory = String(item.category || '').toLowerCase();
+      const graphic = normalizedCategory === 'standings' && item.graphic?.type === 'standingsMovement'
+        ? StandingsMovementGraphic({
+            rows: item.graphic.rows,
+            playoffCutoffRank: item.graphic.playoffCutoffRank,
+            title: 'Top 8 Movement',
+          })
+        : '';
+      return `
+        <article class="news-card ${graphic ? 'has-graphic' : ''}">
+          <span class="news-icon" aria-hidden="true">${getNewsIcon(item.category)}</span>
+          <div class="news-content">
+            <p class="news-headline">${escapeHtml(item.headline || '')}</p>
+            <div class="news-meta"><span class="news-category">${escapeHtml(item.category || 'League')}</span><span class="news-time">${escapeHtml(item.time || 'Now')}</span></div>
+            ${graphic}
+          </div>
+        </article>
+      `;
+    }
+
+    async function loadNews() {
+      try {
+        const response = await fetch('/api/news');
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Request failed');
+        const newsItems = Array.isArray(payload.news) ? payload.news : [];
+        if (newsItems.length) newsFeedEl.innerHTML = newsItems.map(renderNewsCard).join('');
+      } catch (error) {
+        newsFeedEl.insertAdjacentHTML('afterbegin', `<div class="error">News could not be loaded: ${escapeHtml(error.message)}</div>`);
+      }
     }
 
     function renderForm(form) {
@@ -2523,6 +2977,7 @@
     renderAdminState();
     renderStandingsLoading();
     renderPlayerStatsLoading();
+    loadNews();
     loadMatches();
     loadDbMatches();
     loadStandings();
