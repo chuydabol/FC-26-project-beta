@@ -72,7 +72,48 @@ app.use((_req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '1mb' }));
-app.use('/assets', express.static(path.join(PUBLIC_DIR, 'assets')));
+app.use((req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method) || !req.url.startsWith('/assets/')) {
+    next();
+    return;
+  }
+
+  let assetPath;
+  try {
+    assetPath = decodeURIComponent(req.url.split('?')[0]);
+  } catch (_error) {
+    res.status(400).end();
+    return;
+  }
+
+  const resolvedPath = path.normalize(path.join(PUBLIC_DIR, assetPath));
+  const relativePath = path.relative(PUBLIC_DIR, resolvedPath);
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    res.status(403).end();
+    return;
+  }
+
+  fs.stat(resolvedPath, (statError, stats) => {
+    if (statError || !stats.isFile()) {
+      next();
+      return;
+    }
+
+    const extension = path.extname(resolvedPath).toLowerCase();
+    const contentTypes = {
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.svg': 'image/svg+xml; charset=utf-8',
+    };
+    res.set('Content-Type', contentTypes[extension] || 'application/octet-stream');
+    if (req.method === 'HEAD') {
+      res.end();
+      return;
+    }
+    fs.createReadStream(resolvedPath).pipe(res);
+  });
+});
 
 function requireAdmin(req, res, next) {
   const expectedPassword = process.env.ADMIN_PASSWORD;
