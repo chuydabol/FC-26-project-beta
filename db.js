@@ -284,6 +284,20 @@ async function approveMatch(matchId, options = {}) {
   return response.rows[0] || null;
 }
 
+
+async function resetApprovedMatches() {
+  await ensureMatchesTable();
+  const response = await query(`
+    UPDATE matches
+    SET status = 'pending',
+        competition = 'friendly',
+        matchday = NULL,
+        series_id = NULL
+    WHERE status = 'approved'
+  `);
+  return response.rowCount || 0;
+}
+
 async function rejectMatch(matchId, options = {}) {
   await ensureMatchesTable();
   const response = await query(
@@ -307,5 +321,6 @@ module.exports = {
   getSavedMatches,
   insertMatch,
   normalizeMatchDate,
+  resetApprovedMatches,
   rejectMatch,
 };

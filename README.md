@@ -49,6 +49,7 @@ These routes require the `x-admin-password` header:
 - `POST /api/matches/:matchId/approve`
 - `POST /api/matches/:matchId/reject`
 - `POST /api/matches/:matchId/friendly`
+- `POST /api/admin/reset-approved-matches`
 
 ## Frontend
 

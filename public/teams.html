@@ -197,7 +197,8 @@
     }
 
     .admin-login button,
-    .admin-logout {
+    .admin-logout,
+    .admin-reset {
       border: 1px solid var(--border);
       border-radius: 999px;
       padding: 12px 18px;
@@ -211,6 +212,8 @@
 
     .admin-logout:hover,
     .admin-login button:hover { border-color: var(--success); }
+    .admin-reset:hover { border-color: var(--danger); }
+    .admin-reset:disabled { cursor: wait; opacity: 0.7; }
 
     .admin-dashboard[hidden],
     .admin-login[hidden] { display: none; }
@@ -1722,6 +1725,7 @@
               <h2>Admin / Pending Matches</h2>
               <div class="status">Approve only official league results; keep friendlies out of the table.</div>
             </div>
+            <button class="admin-reset" id="resetApprovedMatches" type="button">Reset Approved Matches</button>
             <button class="admin-logout" id="adminLogout" type="button">Logout</button>
             <span class="conference-chip" id="pendingStatus">Not loaded</span>
           </div>
@@ -1758,6 +1762,7 @@
     const adminPasswordInput = document.getElementById('adminPasswordInput');
     const adminLoginErrorEl = document.getElementById('adminLoginError');
     const adminLogoutButton = document.getElementById('adminLogout');
+    const resetApprovedMatchesButton = document.getElementById('resetApprovedMatches');
     const scheduleViewButtons = document.querySelectorAll('.schedule-view-button');
     const scheduleFilterButtons = document.querySelectorAll('.schedule-filter-pill');
     const scheduleWeekViewEl = document.getElementById('scheduleWeekView');
@@ -2404,6 +2409,28 @@
       await loadPlayerStats();
     }
 
+    async function resetApprovedMatches() {
+      const confirmed = window.confirm('This will remove approved matches from standings and move them back to pending. Continue?');
+      if (!confirmed) return;
+
+      resetApprovedMatchesButton.disabled = true;
+      pendingStatusEl.textContent = 'Resetting approved matches…';
+      try {
+        const response = await adminFetch('/api/admin/reset-approved-matches', { method: 'POST' });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Reset failed');
+        pendingStatusEl.textContent = `${payload.reset} approved ${payload.reset === 1 ? 'match' : 'matches'} reset`;
+        await loadPendingMatches();
+        await loadStandings();
+        await loadPlayerStats();
+      } catch (error) {
+        pendingStatusEl.textContent = 'Reset failed';
+        pendingMatchesEl.insertAdjacentHTML('beforebegin', `<div class="error">Approved matches could not be reset: ${escapeHtml(error.message)}</div>`);
+      } finally {
+        resetApprovedMatchesButton.disabled = false;
+      }
+    }
+
     async function syncMatchesToDatabase() {
       syncMatchesButton.disabled = true;
       dbStatusEl.textContent = 'Syncing matches…';
@@ -2444,6 +2471,7 @@
 
     refreshButton.addEventListener('click', loadMatches);
     syncMatchesButton.addEventListener('click', syncMatchesToDatabase);
+    resetApprovedMatchesButton.addEventListener('click', resetApprovedMatches);
     adminLoginForm.addEventListener('submit', event => {
       event.preventDefault();
       const password = adminPasswordInput.value.trim();

@@ -349,6 +349,20 @@ app.get('/api/db-matches', async (_req, res) => {
 });
 
 
+
+app.post('/api/admin/reset-approved-matches', adminOnly(async (_req, res) => {
+  try {
+    const reset = await db.resetApprovedMatches();
+    res.json({ reset });
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to reset approved matches');
+    res.status(500).json({
+      error: 'Failed to reset approved matches',
+      details: error.message || 'Database update failed',
+    });
+  }
+}));
+
 app.get('/api/pending-matches', adminOnly(async (_req, res) => {
   try {
     const matches = await db.getPendingMatches();
