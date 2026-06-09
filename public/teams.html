@@ -1919,21 +1919,185 @@
       overflow: hidden;
     }
 
-    .player-stats-table td.player-cell,
-    .player-stats-table td.club-cell-text {
-      min-width: 180px;
-      text-align: left;
-      font-weight: 900;
+    .player-leaderboard-panel {
+      position: relative;
+      overflow: hidden;
+      padding: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        repeating-linear-gradient(116deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 16px),
+        radial-gradient(circle at 12% 0%, rgba(192, 0, 0, 0.28), transparent 32%),
+        linear-gradient(135deg, rgba(6, 6, 6, 0.98), rgba(16, 0, 0, 0.96));
     }
 
-    .player-stats-table td.club-cell-text {
-      color: #cbd5e1;
-      font-weight: 800;
+    .player-leaderboard-panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(105deg, transparent 0 18%, rgba(255, 255, 255, 0.07) 18.4% 20.6%, transparent 21% 100%),
+        linear-gradient(90deg, rgba(192, 0, 0, 0.18), transparent 42%);
+      mix-blend-mode: screen;
     }
 
-    .percentage-cell {
-      color: #eef4fa;
-      font-weight: 900;
+    .player-stat-filters {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .player-stat-filter {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      padding: 9px 13px;
+      cursor: pointer;
+      color: #d7dde7;
+      background: linear-gradient(180deg, #252525, #111111);
+      font-size: 0.72rem;
+      font-weight: 950;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    }
+
+    .player-stat-filter:hover,
+    .player-stat-filter.active {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.32);
+      color: #ffffff;
+      background: linear-gradient(180deg, #f01818, var(--upcl-red-dark));
+      box-shadow: 0 10px 24px rgba(192, 0, 0, 0.24);
+    }
+
+    .player-leaderboard-header,
+    .player-leaderboard-list {
+      position: relative;
+      z-index: 1;
+    }
+
+    .player-leaderboard-header {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr) minmax(72px, auto);
+      gap: 12px;
+      padding: 0 14px 8px;
+      color: #aeb7c5;
+      font-size: 0.62rem;
+      font-weight: 950;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .player-leaderboard-header span:last-child {
+      justify-self: end;
+    }
+
+    .player-leaderboard-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .player-leaderboard-row {
+      position: relative;
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr) minmax(72px, auto);
+      gap: 12px;
+      align-items: center;
+      min-height: 76px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: linear-gradient(90deg, rgba(19, 19, 19, 0.95), rgba(8, 8, 8, 0.88));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .player-leaderboard-row::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: var(--bar-width, 0%);
+      background:
+        linear-gradient(90deg, rgba(255, 42, 42, 0.78), rgba(192, 0, 0, 0.54) 58%, rgba(122, 0, 0, 0.28)),
+        repeating-linear-gradient(116deg, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 12px);
+      box-shadow: inset -12px 0 26px rgba(255, 255, 255, 0.08), 0 0 24px rgba(192, 0, 0, 0.24);
+    }
+
+    .player-leaderboard-row::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0.28), transparent 45%, rgba(0, 0, 0, 0.34));
+    }
+
+    .player-leaderboard-rank,
+    .player-leaderboard-player,
+    .player-leaderboard-stat {
+      position: relative;
+      z-index: 1;
+    }
+
+    .player-leaderboard-rank {
+      color: #ffffff;
+      font-size: 1.2rem;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.42);
+    }
+
+    .player-leaderboard-rank::before {
+      content: '#';
+      color: var(--upcl-red);
+      font-size: 0.68rem;
+      margin-right: 2px;
+    }
+
+    .player-leaderboard-name {
+      color: #ffffff;
+      font-size: clamp(0.98rem, 2vw, 1.18rem);
+      font-weight: 950;
+      line-height: 1.05;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.48);
+    }
+
+    .player-leaderboard-club {
+      margin-top: 5px;
+      color: #d7dde7;
+      font-size: 0.74rem;
+      font-weight: 850;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .player-leaderboard-stat {
+      justify-self: end;
+      min-width: 70px;
+      text-align: right;
+    }
+
+    .player-leaderboard-stat-value {
+      display: block;
+      color: #ffffff;
+      font-size: clamp(1.3rem, 3vw, 2rem);
+      font-weight: 950;
+      letter-spacing: -0.05em;
+      line-height: 1;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.52);
+    }
+
+    .player-leaderboard-stat-label {
+      display: block;
+      margin-top: 4px;
+      color: #ffb3b3;
+      font-size: 0.62rem;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
     }
 
 
@@ -2058,6 +2222,16 @@
       .schedule-filter-pill { flex: 0 0 auto; }
       .schedule-day-row { grid-template-columns: 1fr; }
       .schedule-day-label { min-height: auto; padding: 9px 11px; }
+      .player-leaderboard-panel { padding: 12px; }
+      .player-stat-filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+      .player-stat-filter { flex: 0 0 auto; }
+      .player-leaderboard-header,
+      .player-leaderboard-row {
+        grid-template-columns: 38px minmax(0, 1fr) minmax(58px, auto);
+        gap: 8px;
+      }
+      .player-leaderboard-header { padding: 0 11px 8px; }
+      .player-leaderboard-row { padding: 11px; }
       .series-card-teams { align-items: stretch; flex-direction: column; gap: 8px; }
       .series-team,
       .series-team:last-child { justify-content: flex-start; text-align: left; }
@@ -2313,7 +2487,7 @@
 
           <section class="player-stats-card" aria-labelledby="playerStatsTableTitle">
             <div class="section-heading">
-              <h2 id="playerStatsTableTitle">Full Player Table</h2>
+              <h2 id="playerStatsTableTitle">Player Leaderboard</h2>
               <span class="conference-chip">League totals</span>
             </div>
             <div id="playerStatsTable"></div>
@@ -2404,7 +2578,17 @@
 
     let standingsData = { east: [], west: [] };
     let playerStatsData = [];
+    let activePlayerStat = 'goals';
     let activeScheduleFilter = 'all';
+
+    const playerStatOptions = [
+      { key: 'goals', label: 'Goals', metric: 'goals', valueLabel: 'Goals', format: value => String(value) },
+      { key: 'assists', label: 'Assists', metric: 'assists', valueLabel: 'Assists', format: value => String(value) },
+      { key: 'pass_percentage', label: 'Pass %', metric: 'pass_percentage', valueLabel: 'Pass %', format: value => formatPercentage(value) },
+      { key: 'tackle_percentage', label: 'Tackle %', metric: 'tackle_percentage', valueLabel: 'Tackle %', format: value => formatPercentage(value) },
+      { key: 'motm_count', label: 'MOTM', metric: 'motm_count', valueLabel: 'MOTM', format: value => String(value) },
+      { key: 'league_matches', label: 'League Matches', metric: 'league_matches', fallbackMetric: 'matches_played', valueLabel: 'Matches', format: value => String(value) }
+    ];
 
 
     const teamLogos = {
@@ -2866,33 +3050,60 @@
       playerStatsLeadersEl.innerHTML = leaders.map(([label, player, formatter]) => renderPlayerLeaderCard(label, player, formatter)).join('');
     }
 
+    function getPlayerStatOption(key) {
+      return playerStatOptions.find(option => option.key === key) || playerStatOptions[0];
+    }
+
+    function getPlayerStatValue(player, option) {
+      const rawValue = player[option.metric] ?? (option.fallbackMetric ? player[option.fallbackMetric] : 0);
+      const number = Number(rawValue);
+      return Number.isFinite(number) ? number : 0;
+    }
+
     function renderPlayerStatsTable(players) {
       if (!players.length) {
         playerStatsTableEl.innerHTML = '<div class="empty">No approved player stats yet.</div>';
         return;
       }
 
+      const selectedOption = getPlayerStatOption(activePlayerStat);
+      const rankedPlayers = [...players].sort((a, b) => (
+        getPlayerStatValue(b, selectedOption) - getPlayerStatValue(a, selectedOption) ||
+        String(a.player_name || '').localeCompare(String(b.player_name || ''))
+      ));
+      const topValue = rankedPlayers.reduce((max, player) => Math.max(max, getPlayerStatValue(player, selectedOption)), 0);
+
       playerStatsTableEl.innerHTML = `
-        <div class="table-wrap">
-          <table class="standings player-stats-table">
-            <thead>
-              <tr><th>Player</th><th>Club</th><th>League Matches</th><th>Goals</th><th>Assists</th><th>Pass %</th><th>Tackle %</th><th>MOTM</th></tr>
-            </thead>
-            <tbody>
-              ${players.map(player => `
-                <tr>
-                  <td class="player-cell">${escapeHtml(player.player_name)}</td>
-                  <td class="club-cell-text">${escapeHtml(player.club_name || '—')}</td>
-                  <td>${Number(player.league_matches ?? player.matches_played) || 0}</td>
-                  <td>${Number(player.goals) || 0}</td>
-                  <td>${Number(player.assists) || 0}</td>
-                  <td class="percentage-cell">${escapeHtml(formatPercentage(player.pass_percentage))}</td>
-                  <td class="percentage-cell">${escapeHtml(formatPercentage(player.tackle_percentage))}</td>
-                  <td>${Number(player.motm_count) || 0}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+        <div class="player-leaderboard-panel">
+          <div class="player-stat-filters" aria-label="Player leaderboard stat filter">
+            ${playerStatOptions.map(option => `
+              <button class="player-stat-filter ${option.key === selectedOption.key ? 'active' : ''}" type="button" data-player-stat="${escapeHtml(option.key)}" aria-pressed="${option.key === selectedOption.key}">
+                ${escapeHtml(option.label)}
+              </button>
+            `).join('')}
+          </div>
+          <div class="player-leaderboard-header" aria-hidden="true">
+            <span>Rank</span><span>Player / Club</span><span>Stat</span>
+          </div>
+          <div class="player-leaderboard-list" role="table" aria-label="Player leaderboard sorted by ${escapeHtml(selectedOption.label)}">
+            ${rankedPlayers.map((player, index) => {
+              const value = getPlayerStatValue(player, selectedOption);
+              const barWidth = topValue > 0 ? Math.max(0, Math.min(100, (value / topValue) * 100)) : 0;
+              return `
+                <article class="player-leaderboard-row" role="row" style="--bar-width: ${barWidth.toFixed(2)}%;">
+                  <div class="player-leaderboard-rank" role="cell">${index + 1}</div>
+                  <div class="player-leaderboard-player" role="cell">
+                    <div class="player-leaderboard-name">${escapeHtml(player.player_name || 'Unknown Player')}</div>
+                    <div class="player-leaderboard-club">${escapeHtml(player.club_name || 'Free Agent')}</div>
+                  </div>
+                  <div class="player-leaderboard-stat" role="cell">
+                    <span class="player-leaderboard-stat-value">${escapeHtml(selectedOption.format(value))}</span>
+                    <span class="player-leaderboard-stat-label">${escapeHtml(selectedOption.valueLabel)}</span>
+                  </div>
+                </article>
+              `;
+            }).join('')}
+          </div>
         </div>
       `;
     }
@@ -3243,6 +3454,13 @@
         scheduleFilterButtons.forEach(filterButton => filterButton.classList.toggle('active', filterButton === button));
         renderScheduleWeekView();
       });
+    });
+
+    playerStatsTableEl.addEventListener('click', event => {
+      const button = event.target.closest('button[data-player-stat]');
+      if (!button) return;
+      activePlayerStat = button.dataset.playerStat;
+      renderPlayerStatsTable(playerStatsData);
     });
 
     refreshButton.addEventListener('click', loadMatches);
