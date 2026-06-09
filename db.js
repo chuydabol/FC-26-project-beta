@@ -214,6 +214,78 @@ function normalizePlayerMatchStats(match) {
   return rows.filter(row => row.match_id && row.ea_player_id && row.player_name);
 }
 
+async function upsertPlayerStat(stat) {
+  const playerResponse = await query(
+    `INSERT INTO players (
+      ea_player_id,
+      player_name,
+      club_id,
+      club_name,
+      position
+    ) VALUES ($1, $2, $3, $4, $5)
+    ON CONFLICT (ea_player_id) DO UPDATE
+    SET player_name = EXCLUDED.player_name,
+        club_id = EXCLUDED.club_id,
+        club_name = EXCLUDED.club_name,
+        position = COALESCE(EXCLUDED.position, players.position),
+        active = true
+    RETURNING (xmax = 0) AS inserted`,
+    [stat.ea_player_id, stat.player_name, stat.club_id, stat.club_name, stat.position]
+  );
+
+  const playerMatchResponse = await query(
+    `INSERT INTO player_match_stats (
+      match_id,
+      ea_player_id,
+      player_name,
+      club_id,
+      club_name,
+      goals,
+      assists,
+      passes_attempted,
+      passes_made,
+      tackles_attempted,
+      tackles_made,
+      man_of_the_match,
+      raw_json
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    ON CONFLICT (match_id, ea_player_id) DO UPDATE
+    SET player_name = EXCLUDED.player_name,
+        club_id = EXCLUDED.club_id,
+        club_name = EXCLUDED.club_name,
+        goals = EXCLUDED.goals,
+        assists = EXCLUDED.assists,
+        passes_attempted = EXCLUDED.passes_attempted,
+        passes_made = EXCLUDED.passes_made,
+        tackles_attempted = EXCLUDED.tackles_attempted,
+        tackles_made = EXCLUDED.tackles_made,
+        man_of_the_match = EXCLUDED.man_of_the_match,
+        raw_json = EXCLUDED.raw_json
+    RETURNING (xmax = 0) AS inserted`,
+    [
+      stat.match_id,
+      stat.ea_player_id,
+      stat.player_name,
+      stat.club_id,
+      stat.club_name,
+      stat.goals,
+      stat.assists,
+      stat.passes_attempted,
+      stat.passes_made,
+      stat.tackles_attempted,
+      stat.tackles_made,
+      stat.man_of_the_match,
+      JSON.stringify(stat.raw_json),
+    ]
+  );
+
+  return {
+    playerInserted: Boolean(playerResponse.rows[0]?.inserted),
+    playerMatchInserted: Boolean(playerMatchResponse.rows[0]?.inserted),
+    playerMatchSaved: playerMatchResponse.rowCount || 0,
+  };
+}
+
 async function insertPlayerMatchStats(match, sourceClub) {
   const stats = normalizePlayerMatchStats(match, sourceClub);
   if (!stats.length) return 0;
@@ -231,71 +303,11 @@ async function insertPlayerMatchStats(match, sourceClub) {
     console.log({ ...logContext }, 'Saving player match stats');
 
     try {
-      await query(
-        `INSERT INTO players (
-          ea_player_id,
-          player_name,
-          club_id,
-          club_name,
-          position
-        ) VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (ea_player_id) DO UPDATE
-        SET player_name = EXCLUDED.player_name,
-            club_id = EXCLUDED.club_id,
-            club_name = EXCLUDED.club_name,
-            position = COALESCE(EXCLUDED.position, players.position),
-            active = true`,
-        [stat.ea_player_id, stat.player_name, stat.club_id, stat.club_name, stat.position]
-      );
-
-      const response = await query(
-        `INSERT INTO player_match_stats (
-          match_id,
-          ea_player_id,
-          player_name,
-          club_id,
-          club_name,
-          goals,
-          assists,
-          passes_attempted,
-          passes_made,
-          tackles_attempted,
-          tackles_made,
-          man_of_the_match,
-          raw_json
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-        ON CONFLICT (match_id, ea_player_id) DO UPDATE
-        SET player_name = EXCLUDED.player_name,
-            club_id = EXCLUDED.club_id,
-            club_name = EXCLUDED.club_name,
-            goals = EXCLUDED.goals,
-            assists = EXCLUDED.assists,
-            passes_attempted = EXCLUDED.passes_attempted,
-            passes_made = EXCLUDED.passes_made,
-            tackles_attempted = EXCLUDED.tackles_attempted,
-            tackles_made = EXCLUDED.tackles_made,
-            man_of_the_match = EXCLUDED.man_of_the_match,
-            raw_json = EXCLUDED.raw_json`,
-        [
-          stat.match_id,
-          stat.ea_player_id,
-          stat.player_name,
-          stat.club_id,
-          stat.club_name,
-          stat.goals,
-          stat.assists,
-          stat.passes_attempted,
-          stat.passes_made,
-          stat.tackles_attempted,
-          stat.tackles_made,
-          stat.man_of_the_match,
-          JSON.stringify(stat.raw_json),
-        ]
-      );
-      saved += response.rowCount || 0;
-      console.log({ ...logContext }, 'Player match stats insert success');
+      const result = await upsertPlayerStat(stat);
+      saved += result.playerMatchSaved;
+      console.log({ ...logContext, result }, 'Player match stats upsert success');
     } catch (error) {
-      console.error({ ...logContext, err: error }, 'Player match stats insert failure');
+      console.error({ ...logContext, err: error }, 'Player match stats upsert failure');
       throw error;
     }
   }
@@ -370,27 +382,69 @@ async function insertMatch(match, sourceClub) {
 async function backfillPlayerStats() {
   await ensurePlayerStatsTables();
   const response = await query(`
-    SELECT match_id, source_club_id, club_name, raw_json
+    SELECT id, match_id, source_club_id, club_name, raw_json
     FROM matches
-    WHERE raw_json IS NOT NULL
     ORDER BY match_date ASC NULLS LAST, id ASC
   `);
 
-  let processedMatches = 0;
-  let savedPlayerStats = 0;
+  const result = {
+    matchesChecked: 0,
+    playersFound: 0,
+    playerRowsInserted: 0,
+    playerMatchRowsInserted: 0,
+    errors: [],
+  };
+
   for (const row of response.rows) {
-    const saved = await insertPlayerMatchStats({
+    result.matchesChecked += 1;
+    let rawMatch;
+    try {
+      rawMatch = typeof row.raw_json === 'string' ? JSON.parse(row.raw_json) : row.raw_json;
+    } catch (error) {
+      const message = error.message || 'raw_json could not be parsed';
+      result.errors.push({ matchId: row.match_id, error: message });
+      console.error({ matchId: row.match_id, err: error }, 'Backfill player stats: raw_json parse failure');
+      continue;
+    }
+    const hasPlayers = Boolean(rawMatch?.players && typeof rawMatch.players === 'object' && !Array.isArray(rawMatch.players));
+    const clubIds = hasPlayers ? Object.keys(rawMatch.players) : [];
+    console.log({
+      matchId: row.match_id,
+      hasRawJson: Boolean(rawMatch),
+      hasPlayers,
+      clubIds,
+    }, 'Backfill player stats: checked raw_json.players');
+
+    if (!hasPlayers) continue;
+
+    const stats = normalizePlayerMatchStats({
       match_id: row.match_id,
-      raw_json: row.raw_json,
+      raw_json: rawMatch,
     });
-    processedMatches += 1;
-    savedPlayerStats += saved;
+    result.playersFound += stats.length;
+
+    for (const stat of stats) {
+      const logContext = {
+        matchId: stat.match_id,
+        clubId: stat.club_id,
+        clubName: stat.club_name,
+        playerId: stat.ea_player_id,
+        playername: stat.player_name,
+      };
+      try {
+        const upsertResult = await upsertPlayerStat(stat);
+        if (upsertResult.playerInserted) result.playerRowsInserted += 1;
+        if (upsertResult.playerMatchInserted) result.playerMatchRowsInserted += 1;
+        console.log({ ...logContext, upsertResult }, 'Backfill player stats: upsert success');
+      } catch (error) {
+        const message = error.message || 'Player stat upsert failed';
+        result.errors.push({ ...logContext, error: message });
+        console.error({ ...logContext, err: error }, 'Backfill player stats: upsert failure');
+      }
+    }
   }
 
-  return {
-    processedMatches,
-    savedPlayerStats,
-  };
+  return result;
 }
 
 async function getSavedMatches() {

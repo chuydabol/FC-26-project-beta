@@ -1725,6 +1725,7 @@
               <h2>Admin / Pending Matches</h2>
               <div class="status">Approve only official league results; keep friendlies out of the table.</div>
             </div>
+            <button class="admin-reset" id="backfillPlayerStats" type="button">Backfill Player Stats</button>
             <button class="admin-reset" id="resetApprovedMatches" type="button">Reset Approved Matches</button>
             <button class="admin-logout" id="adminLogout" type="button">Logout</button>
             <span class="conference-chip" id="pendingStatus">Not loaded</span>
@@ -1762,6 +1763,7 @@
     const adminPasswordInput = document.getElementById('adminPasswordInput');
     const adminLoginErrorEl = document.getElementById('adminLoginError');
     const adminLogoutButton = document.getElementById('adminLogout');
+    const backfillPlayerStatsButton = document.getElementById('backfillPlayerStats');
     const resetApprovedMatchesButton = document.getElementById('resetApprovedMatches');
     const scheduleViewButtons = document.querySelectorAll('.schedule-view-button');
     const scheduleFilterButtons = document.querySelectorAll('.schedule-filter-pill');
@@ -2431,6 +2433,24 @@
       }
     }
 
+    async function backfillPlayerStats() {
+      backfillPlayerStatsButton.disabled = true;
+      pendingStatusEl.textContent = 'Backfilling player stats…';
+      try {
+        const response = await adminFetch('/api/admin/backfill-player-stats', { method: 'POST' });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.details || payload.error || 'Backfill failed');
+        const errorCount = Array.isArray(payload.errors) ? payload.errors.length : 0;
+        pendingStatusEl.textContent = `${Number(payload.playersFound) || 0} players found, ${Number(payload.playerRowsInserted) || 0} player rows inserted, ${Number(payload.playerMatchRowsInserted) || 0} match stat rows inserted${errorCount ? `, ${errorCount} errors` : ''}`;
+        await loadPlayerStats();
+      } catch (error) {
+        pendingStatusEl.textContent = 'Backfill failed';
+        pendingMatchesEl.insertAdjacentHTML('beforebegin', `<div class="error">Player stats could not be backfilled: ${escapeHtml(error.message)}</div>`);
+      } finally {
+        backfillPlayerStatsButton.disabled = false;
+      }
+    }
+
     async function syncMatchesToDatabase() {
       syncMatchesButton.disabled = true;
       dbStatusEl.textContent = 'Syncing matches…';
@@ -2471,6 +2491,7 @@
 
     refreshButton.addEventListener('click', loadMatches);
     syncMatchesButton.addEventListener('click', syncMatchesToDatabase);
+    backfillPlayerStatsButton.addEventListener('click', backfillPlayerStats);
     resetApprovedMatchesButton.addEventListener('click', resetApprovedMatches);
     adminLoginForm.addEventListener('submit', event => {
       event.preventDefault();
