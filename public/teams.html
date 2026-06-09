@@ -35,39 +35,198 @@
       padding: 32px 0 56px;
     }
 
-    header {
+    .league-hero {
+      position: relative;
+      isolation: isolate;
       display: grid;
-      gap: 18px;
-      padding: 28px;
-      border: 1px solid var(--border);
-      border-radius: 28px;
-      background: var(--panel-strong);
-      box-shadow: none;
+      grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.58fr);
+      gap: clamp(20px, 4vw, 56px);
+      align-items: stretch;
+      width: 100vw;
+      min-height: clamp(390px, 54vw, 610px);
+      margin-left: calc(50% - 50vw);
+      padding: clamp(28px, 5vw, 66px) max(24px, calc((100vw - 1120px) / 2 + 28px));
+      border-block: 1px solid rgba(255, 255, 255, 0.16);
+      overflow: hidden;
+      background:
+        linear-gradient(112deg, rgba(4, 4, 6, 0.96) 0%, rgba(15, 0, 0, 0.88) 27%, rgba(106, 4, 10, 0.9) 53%, rgba(206, 12, 24, 0.95) 100%),
+        radial-gradient(circle at 82% 18%, rgba(255, 210, 210, 0.36), transparent 32%),
+        radial-gradient(circle at 18% 88%, rgba(126, 0, 0, 0.9), transparent 46%);
+      box-shadow: 0 26px 80px rgba(0, 0, 0, 0.42);
     }
 
-    .eyebrow {
+    .league-hero::before,
+    .league-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .league-hero::before {
+      z-index: 0;
+      background:
+        repeating-linear-gradient(116deg, transparent 0 26px, rgba(255, 255, 255, 0.055) 26px 29px, transparent 29px 54px),
+        linear-gradient(126deg, transparent 0 11%, rgba(255, 255, 255, 0.08) 11.2% 13.4%, transparent 13.7% 32%, rgba(0, 0, 0, 0.58) 32.3% 47%, transparent 47.4% 61%, rgba(255, 49, 49, 0.45) 61.3% 75%, transparent 75.3%),
+        linear-gradient(76deg, transparent 0 46%, rgba(255, 255, 255, 0.12) 46.4% 47.7%, transparent 48.1%);
+      mix-blend-mode: screen;
+    }
+
+    .league-hero::after {
+      z-index: 0;
+      opacity: 0.58;
+      background-image:
+        radial-gradient(circle, rgba(255, 255, 255, 0.24) 1.25px, transparent 1.35px),
+        linear-gradient(101deg, transparent 0 54%, rgba(0, 0, 0, 0.68) 54.2% 68%, transparent 68.3%),
+        linear-gradient(155deg, rgba(0, 0, 0, 0.66) 0 21%, transparent 21.3% 100%);
+      background-size: 12px 12px, 100% 100%, 100% 100%;
+      background-position: right top, center, center;
+      mask-image: linear-gradient(90deg, transparent 0%, black 38%, black 100%);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 26px;
+      min-width: 0;
+    }
+
+    .hero-kicker-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .eyebrow,
+    .hero-bug,
+    .hero-meta span {
       margin: 0;
-      color: var(--muted);
-      font-size: 0.8rem;
-      font-weight: 800;
+      color: #fff;
+      font-size: 0.76rem;
+      font-weight: 950;
       letter-spacing: 0.18em;
+      line-height: 1;
       text-transform: uppercase;
+      text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+    }
+
+    .hero-bug,
+    .hero-meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 31px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      background: rgba(0, 0, 0, 0.42);
+      clip-path: polygon(9px 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: 18px;
+      max-width: 780px;
     }
 
     h1 {
       margin: 0;
-      font-size: clamp(2.35rem, 8vw, 5.25rem);
-      line-height: 0.95;
-      letter-spacing: -0.07em;
+      color: #fff;
+      font-size: clamp(3.4rem, 10.8vw, 8.8rem);
+      font-weight: 1000;
+      line-height: 0.78;
+      letter-spacing: -0.095em;
+      text-transform: uppercase;
+      text-shadow: 0 9px 0 rgba(0, 0, 0, 0.25), 0 26px 58px rgba(0, 0, 0, 0.58);
+    }
+
+    h1 .hero-title-accent {
+      display: block;
+      color: transparent;
+      -webkit-text-stroke: 2px rgba(255, 255, 255, 0.94);
+      text-shadow: none;
     }
 
     .lede {
-      max-width: 760px;
+      max-width: 690px;
       margin: 0;
-      color: var(--muted);
-      font-size: clamp(1rem, 2vw, 1.2rem);
-      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: clamp(1rem, 2vw, 1.22rem);
+      font-weight: 750;
+      line-height: 1.55;
+      text-shadow: 0 3px 16px rgba(0, 0, 0, 0.62);
     }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .hero-visual {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      min-height: 280px;
+    }
+
+    .hero-visual::before,
+    .hero-visual::after {
+      content: "";
+      position: absolute;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(0, 0, 0, 0.22));
+      transform: skewX(-14deg);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.34);
+    }
+
+    .hero-visual::before {
+      inset: 10% 3% 22% 19%;
+    }
+
+    .hero-visual::after {
+      inset: 28% 17% 8% 0;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.42), rgba(255, 23, 37, 0.2));
+    }
+
+    .hero-crest-card {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      width: min(82%, 360px);
+      aspect-ratio: 1;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.02)),
+        linear-gradient(116deg, rgba(0, 0, 0, 0.76), rgba(91, 0, 6, 0.78));
+      clip-path: polygon(16% 0, 100% 0, 84% 100%, 0 100%);
+      box-shadow: 0 34px 80px rgba(0, 0, 0, 0.54), inset 0 0 42px rgba(255, 255, 255, 0.08);
+    }
+
+    .hero-crest-card img {
+      width: 66%;
+      height: 66%;
+      object-fit: contain;
+      filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.62));
+    }
+
+    .hero-crest-card::before,
+    .hero-crest-card::after {
+      content: "UPCL";
+      position: absolute;
+      color: rgba(255, 255, 255, 0.11);
+      font-size: clamp(3rem, 7vw, 5.6rem);
+      font-weight: 1000;
+      letter-spacing: -0.08em;
+      transform: rotate(-90deg);
+    }
+
+    .hero-crest-card::before { left: -44px; top: 44%; }
+    .hero-crest-card::after { right: -48px; top: 44%; color: rgba(255, 255, 255, 0.07); }
 
     .tabs {
       display: flex;
@@ -1742,6 +1901,12 @@
     }
 
     @media (max-width: 920px) {
+      .league-hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+      }
+      .hero-visual { min-height: 220px; }
+      .hero-crest-card { width: min(68vw, 300px); }
       .league-grid { grid-template-columns: 1fr; }
       .overview-layout { grid-template-columns: 1fr; }
       .schedule-day-row { grid-template-columns: 96px minmax(0, 1fr); }
@@ -1752,6 +1917,14 @@
     @media (max-width: 720px) {
       .shell { width: min(100% - 20px, 1120px); padding-top: 16px; }
       header { padding: 22px; }
+      .league-hero { padding: 26px max(16px, calc((100vw - 1120px) / 2 + 18px)); }
+      .hero-content { gap: 22px; }
+      .hero-kicker-row,
+      .hero-meta { gap: 7px; }
+      .eyebrow,
+      .hero-bug,
+      .hero-meta span { font-size: 0.62rem; letter-spacing: 0.13em; }
+      h1 { font-size: clamp(3.05rem, 19vw, 5.35rem); }
       .tabs { gap: 6px; }
       .tab { padding: 10px 12px; font-size: 0.75rem; }
       .section-heading { align-items: flex-start; flex-direction: column; }
@@ -1823,10 +1996,27 @@
 </head>
 <body>
   <div class="shell">
-    <header>
-      <p class="eyebrow">UPCL League Hub</p>
-      <h1>UPCL League</h1>
-      <p class="lede">The main UPCL League hub is taking shape with Bota FC fixtures, conference tables, and a playoff bracket preview.</p>
+    <header class="league-hero" aria-label="UPCL League broadcast hero">
+      <div class="hero-content">
+        <div class="hero-kicker-row">
+          <p class="eyebrow">UPCL League Broadcast</p>
+          <span class="hero-bug">Official League Hub</span>
+        </div>
+        <div class="hero-copy">
+          <h1>UPCL <span class="hero-title-accent">League</span></h1>
+          <p class="lede">Premium red-zone coverage for the UPCL season: club series, conference tables, player leaders, and the road to the League Playoffs.</p>
+        </div>
+        <div class="hero-meta" aria-label="UPCL league features">
+          <span>Club Series</span>
+          <span>Conference Tables</span>
+          <span>Playoff Race</span>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="hero-crest-card">
+          <img src="/assets/logos/UPCL.png" alt="" loading="eager">
+        </div>
+      </div>
     </header>
 
     <nav class="tabs" aria-label="Primary">
