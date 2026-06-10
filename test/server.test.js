@@ -420,6 +420,62 @@ test('calculateStandings canonicalizes team aliases before counting league match
   assert.equal(bota.pl, 0);
 });
 
+
+test('GET /api/teams/:clubId/members returns normalized live roster data for a UPCL club', async () => {
+  const db = require('../db');
+  const membersStub = mock.method(eaApi, 'fetchMembersStats', async clubId => {
+    assert.equal(clubId, '1171188');
+    return {
+      members: [{ name: 'Captain', gamesPlayed: 10, goals: 6, assists: 4, favoritePosition: 'CAM', proOverall: 90, proOverallStr: '90' }],
+      positionCount: { CAM: 1 },
+    };
+  });
+  const standingsStub = mock.method(db, 'getApprovedLeagueMatches', async () => [
+    {
+      source_club_id: '1171188',
+      club_name: 'True Egoistas',
+      opponent_name: 'Bota FC',
+      club_score: 3,
+      opponent_score: 2,
+      match_date: '2026-01-01T00:00:00.000Z',
+      status: 'approved',
+      competition: 'league',
+    },
+  ]);
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/teams/1171188/members`);
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.team.name, 'True Egoistas');
+    assert.equal(body.team.conference, 'Eastern Conference');
+    assert.equal(body.team.record, '1-0-0');
+    assert.equal(body.members[0].name, 'Captain');
+    assert.deepEqual(body.positionCount, { CAM: 1 });
+  });
+
+  assert.equal(membersStub.mock.callCount(), 1);
+  assert.equal(standingsStub.mock.callCount(), 1);
+  membersStub.mock.restore();
+  standingsStub.mock.restore();
+});
+
+test('GET /api/teams/:clubId/members rejects clubs outside UPCL', async () => {
+  const membersStub = mock.method(eaApi, 'fetchMembersStats', async () => {
+    throw new Error('should not fetch non-UPCL clubs');
+  });
+
+  await withServer(async port => {
+    const response = await fetch(`http://localhost:${port}/api/teams/999999/members`);
+    const body = await response.json();
+    assert.equal(response.status, 404);
+    assert.deepEqual(body, { error: 'UPCL club not found', members: [] });
+  });
+
+  assert.equal(membersStub.mock.callCount(), 0);
+  membersStub.mock.restore();
+});
+
 test('GET /api/standings returns calculated standings from saved Postgres matches', async () => {
   const db = require('../db');
   const getStub = mock.method(db, 'getApprovedLeagueMatches', async () => [

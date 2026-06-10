@@ -126,12 +126,79 @@ async function fetchClubMatches(clubId, matchType = 'friendlyMatch') {
   return matches;
 }
 
+
+function readMembersPayload(body) {
+  if (!body || typeof body !== 'object') {
+    return { members: [], positionCount: {} };
+  }
+
+  const members = Array.isArray(body.members) ? body.members : [];
+  const positionCount = body.positionCount && typeof body.positionCount === 'object' ? body.positionCount : {};
+  return { members, positionCount };
+}
+
+function toNumber(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function normalizeMember(member = {}, index = 0) {
+  const name = String(member.name || member.playerName || member.proName || `Player ${index + 1}`).trim();
+  return {
+    id: String(member.id || member.userId || member.personaId || `${name}-${index}`),
+    name,
+    gamesPlayed: toNumber(member.gamesPlayed),
+    winRate: toNumber(member.winRate),
+    goals: toNumber(member.goals),
+    assists: toNumber(member.assists),
+    passesMade: toNumber(member.passesMade),
+    passSuccessRate: toNumber(member.passSuccessRate),
+    ratingAve: toNumber(member.ratingAve),
+    tacklesMade: toNumber(member.tacklesMade),
+    tackleSuccessRate: toNumber(member.tackleSuccessRate),
+    manOfTheMatch: toNumber(member.manOfTheMatch),
+    redCards: toNumber(member.redCards),
+    favoritePosition: String(member.favoritePosition || 'N/A'),
+    proName: String(member.proName || name),
+    proOverall: toNumber(member.proOverall),
+    proOverallStr: String(member.proOverallStr || member.proOverall || '—'),
+  };
+}
+
+function normalizeMembersStats(body) {
+  const { members, positionCount } = readMembersPayload(body);
+  return {
+    members: members.map(normalizeMember),
+    positionCount,
+  };
+}
+
+async function fetchMembersStats(clubId) {
+  const id = normalizeClubId(clubId);
+  const key = `members:${id}`;
+  const cached = cache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
+  const params = new URLSearchParams({
+    platform: 'common-gen5',
+    clubId: id,
+  });
+  const body = await eaFetchJson(`${EA_BASE_URL}/members/stats?${params}`);
+  const data = normalizeMembersStats(body);
+  cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  return data;
+}
+
 function fetchFriendlyMatches(clubId) {
   return fetchClubMatches(clubId, 'friendlyMatch');
 }
 
 module.exports = {
   fetchClubMatches,
+  fetchMembersStats,
+  normalizeMember,
+  normalizeMembersStats,
+  readMembersPayload,
   fetchFriendlyMatches,
   normalizeClubId,
   readMatchesPayload,

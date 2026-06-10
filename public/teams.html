@@ -1262,6 +1262,433 @@
     @keyframes lineTravel { from { background-position: 0 0, -170px 0; } to { background-position: 0 0, 170px 0; } }
     @keyframes playoffParticles { from { transform: translate3d(0, 8%, 0); } to { transform: translate3d(0, -12%, 0); } }
 
+
+
+    .teams-hub {
+      display: grid;
+      gap: 16px;
+    }
+
+    .teams-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 16px;
+    }
+
+    .upcl-team-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 190px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 20px;
+      padding: 18px;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      background:
+        linear-gradient(128deg, rgba(192, 0, 0, 0.24), transparent 44%),
+        linear-gradient(180deg, #1b1b1b, #090909);
+      box-shadow: inset 4px 0 0 rgba(192, 0, 0, 0.72), 0 20px 40px rgba(0, 0, 0, 0.28);
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .upcl-team-card:hover,
+    .upcl-team-card:focus-visible {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.34);
+      box-shadow: inset 4px 0 0 #ff2b2b, 0 24px 52px rgba(0, 0, 0, 0.38), 0 0 28px rgba(192, 0, 0, 0.2);
+      outline: none;
+    }
+
+    .upcl-team-card::after {
+      content: "UPCL";
+      position: absolute;
+      right: -8px;
+      bottom: -18px;
+      color: rgba(255, 255, 255, 0.05);
+      font-size: 4.6rem;
+      font-weight: 1000;
+      letter-spacing: -0.08em;
+    }
+
+    .upcl-team-card-header {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .upcl-team-card h3 {
+      margin: 0;
+      font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+    }
+
+    .upcl-team-logo {
+      width: 58px;
+      height: 58px;
+      object-fit: contain;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.42);
+    }
+
+    .upcl-team-meta {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 8px;
+      margin-top: 24px;
+      color: #d7d7d7;
+      font-size: 0.78rem;
+      font-weight: 850;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .upcl-team-open {
+      position: relative;
+      z-index: 1;
+      display: inline-flex;
+      width: max-content;
+      margin-top: 18px;
+      border-bottom: 2px solid var(--upcl-red);
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .team-detail-view[hidden] { display: none; }
+
+    .team-detail-view {
+      display: grid;
+      gap: 16px;
+    }
+
+    .team-back-button,
+    .roster-arrow,
+    .accolades-button {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      color: #ffffff;
+      cursor: pointer;
+      font-weight: 950;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      background: linear-gradient(180deg, var(--upcl-red), var(--upcl-red-dark));
+      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.26);
+    }
+
+    .team-back-button,
+    .accolades-button {
+      padding: 11px 15px;
+      font-size: 0.72rem;
+    }
+
+    .team-detail-hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 24px;
+      padding: clamp(20px, 4vw, 34px);
+      background:
+        linear-gradient(112deg, rgba(4, 4, 6, 0.98), rgba(80, 0, 0, 0.68) 54%, rgba(192, 0, 0, 0.72)),
+        repeating-linear-gradient(116deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 18px);
+      box-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
+    }
+
+    .team-detail-hero::after {
+      content: "ROSTER";
+      position: absolute;
+      right: -14px;
+      bottom: -20px;
+      color: rgba(255, 255, 255, 0.06);
+      font-size: clamp(4rem, 12vw, 9rem);
+      font-weight: 1000;
+      letter-spacing: -0.08em;
+    }
+
+    .team-detail-kicker {
+      margin: 0 0 8px;
+      color: #ffb7b7;
+      font-size: 0.72rem;
+      font-weight: 950;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .team-detail-title {
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      font-size: clamp(2.2rem, 8vw, 5.3rem);
+      line-height: 0.86;
+      letter-spacing: -0.08em;
+      text-transform: uppercase;
+    }
+
+    .team-detail-meta {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .team-detail-meta span {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      padding: 8px 11px;
+      background: rgba(0, 0, 0, 0.32);
+      color: #f5f5f5;
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .roster-stage {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 24px;
+      padding: 16px;
+      background: linear-gradient(180deg, #141414, #070707);
+    }
+
+    .roster-carousel-shell {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .roster-arrow {
+      width: 44px;
+      height: 44px;
+      font-size: 1.2rem;
+    }
+
+    .roster-carousel {
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
+      min-height: 210px;
+      overflow-x: auto;
+      padding: 8px 4px 16px;
+      scroll-snap-type: x mandatory;
+    }
+
+    .roster-player-card {
+      flex: 0 0 min(210px, 70vw);
+      position: relative;
+      display: grid;
+      align-content: space-between;
+      gap: 12px;
+      min-height: 184px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 18px;
+      padding: 14px;
+      cursor: pointer;
+      color: #ffffff;
+      background: linear-gradient(150deg, rgba(35, 35, 35, 0.96), rgba(7, 7, 7, 0.96));
+      opacity: 0.58;
+      transform: translateY(18px) scale(0.94);
+      scroll-snap-align: center;
+      transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .roster-player-card.active {
+      z-index: 2;
+      opacity: 1;
+      transform: translateY(0) scale(1.03);
+      border-color: rgba(255, 255, 255, 0.36);
+      background:
+        linear-gradient(130deg, rgba(192, 0, 0, 0.34), transparent 44%),
+        linear-gradient(150deg, #242424, #090909);
+      box-shadow: 0 24px 44px rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    .roster-card-name {
+      display: grid;
+      gap: 5px;
+    }
+
+    .roster-card-name strong {
+      font-size: 1.15rem;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      text-transform: uppercase;
+    }
+
+    .roster-card-name span,
+    .roster-card-meta,
+    .roster-card-preview {
+      color: #cfcfcf;
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .roster-overall {
+      justify-self: start;
+      border-left: 4px solid var(--upcl-red);
+      padding-left: 9px;
+      font-size: 2rem;
+      font-weight: 1000;
+      line-height: 1;
+    }
+
+    .roster-card-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .active-player-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .active-player-panel,
+    .player-bars-panel,
+    .accolades-panel {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      background: linear-gradient(180deg, #141414, #080808);
+    }
+
+    .active-player-panel,
+    .player-bars-panel {
+      padding: 18px;
+    }
+
+    .active-player-name {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 4rem);
+      line-height: 0.9;
+      letter-spacing: -0.07em;
+      text-transform: uppercase;
+    }
+
+    .active-player-subline {
+      margin: 10px 0 0;
+      color: #ffb7b7;
+      font-weight: 950;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .active-player-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .active-player-stat {
+      border-left: 3px solid var(--upcl-red);
+      padding: 9px 10px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .active-player-stat span {
+      display: block;
+      color: #bdbdbd;
+      font-size: 0.66rem;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .active-player-stat strong {
+      display: block;
+      margin-top: 3px;
+      font-size: 1.4rem;
+      font-weight: 1000;
+    }
+
+    .bar-stat-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-stat-row {
+      display: grid;
+      gap: 6px;
+    }
+
+    .bar-stat-label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #eeeeee;
+      font-size: 0.76rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .bar-track {
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: var(--bar-width, 0%);
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--upcl-red-dark), #ff2d2d 72%, #ffffff);
+      box-shadow: 0 0 16px rgba(192, 0, 0, 0.32);
+    }
+
+    .accolades-wrap {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .accolades-panel {
+      padding: 14px;
+    }
+
+    .accolades-panel[hidden] { display: none; }
+
+    .accolades-panel ul {
+      margin: 0;
+      padding-left: 18px;
+      color: #eeeeee;
+      font-weight: 850;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 920px) {
+      .teams-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .active-player-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .teams-grid { grid-template-columns: 1fr; padding: 12px; }
+      .roster-carousel-shell { grid-template-columns: 1fr; }
+      .roster-arrow { width: 100%; }
+      .active-player-stats { grid-template-columns: 1fr; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       .particle-field::before,
       .particle-field::after,
@@ -2535,6 +2962,7 @@
       <button class="tab" data-tab="schedule" type="button">Schedule</button>
       <button class="tab" data-tab="tables" type="button">Tables</button>
       <button class="tab" data-tab="player-stats" type="button">Player Stats</button>
+      <button class="tab" data-tab="teams" type="button">Teams</button>
       <button class="tab" data-tab="playoffs" type="button">League Playoffs</button>
       <button class="tab" data-tab="admin" type="button">Admin</button>
     </nav>
@@ -2719,6 +3147,28 @@
         </div>
       </section>
 
+
+
+      <section class="tab-panel" id="teams-panel" aria-label="UPCL teams">
+        <div class="teams-hub" id="teamsHub">
+          <section class="standings-card" aria-labelledby="teamsHubTitle">
+            <div class="section-heading">
+              <div>
+                <h2 id="teamsHubTitle">UPCL Teams</h2>
+                <div class="status">Select a club to load live EA roster data and player detail.</div>
+              </div>
+              <span class="conference-chip">Live rosters</span>
+            </div>
+            <div class="teams-grid" id="teamsGrid"></div>
+          </section>
+        </div>
+
+        <div class="team-detail-view" id="teamDetailView" hidden>
+          <button class="team-back-button" id="teamBackButton" type="button">← All Teams</button>
+          <section id="teamDetailContent" aria-live="polite"></section>
+        </div>
+      </section>
+
       <section class="tab-panel" id="admin-panel" aria-label="Admin pending matches">
         <section class="standings-card" id="adminLogin" aria-label="Admin login">
           <div class="section-heading">
@@ -2800,11 +3250,20 @@
     const playerStatsTableEl = document.getElementById('playerStatsTable');
     const playoffBracketEl = document.getElementById('playoffBracket');
     const newsFeedEl = document.getElementById('newsFeed');
+    const teamsHubEl = document.getElementById('teamsHub');
+    const teamsGridEl = document.getElementById('teamsGrid');
+    const teamDetailViewEl = document.getElementById('teamDetailView');
+    const teamDetailContentEl = document.getElementById('teamDetailContent');
+    const teamBackButton = document.getElementById('teamBackButton');
 
     let standingsData = { east: [], west: [] };
     let playerStatsData = [];
     let activePlayerStat = 'goals';
     let activeScheduleFilter = 'all';
+    let activeTeam = null;
+    let activeRoster = [];
+    let activeRosterIndex = 0;
+    let accoladesOpen = false;
 
     const playerStatOptions = [
       { key: 'goals', label: 'Goals', metric: 'goals', valueLabel: 'Goals', format: value => String(value) },
@@ -2813,6 +3272,16 @@
       { key: 'tackle_percentage', label: 'Tackle %', metric: 'tackle_percentage', valueLabel: 'Tackle %', format: value => formatPercentage(value) },
       { key: 'motm_count', label: 'MOTM', metric: 'motm_count', valueLabel: 'MOTM', format: value => String(value) },
       { key: 'league_matches', label: 'League Matches', metric: 'league_matches', fallbackMetric: 'matches_played', valueLabel: 'Matches', format: value => String(value) }
+    ];
+
+
+    const upclTeams = [
+      { id: '57985', name: 'Bota FC', conference: 'Eastern Conference' },
+      { id: '6297844', name: 'Inferign United', shortName: 'Inferign Utd', conference: 'Eastern Conference' },
+      { id: '1171188', name: 'True Egoistas', shortName: 'Egoistas', conference: 'Eastern Conference' },
+      { id: '4671025', name: 'Versus One', conference: 'Western Conference' },
+      { id: '654142', name: 'FC Wisconsin', conference: 'Western Conference' },
+      { id: '129307', name: 'FC Sutton St', shortName: 'FC Sutton', conference: 'Western Conference' }
     ];
 
 
@@ -3481,6 +3950,193 @@
       return response;
     }
 
+
+
+    function formatNumber(value, digits = 0) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return '0';
+      return number.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits });
+    }
+
+    function getTeamRecord(teamId) {
+      const row = [...standingsData.east, ...standingsData.west].find(item => String(item.id) === String(teamId));
+      return row ? `${row.w}-${row.l}-${row.d}` : '0-0-0';
+    }
+
+    function renderTeamsGrid() {
+      if (!teamsGridEl) return;
+      teamsGridEl.innerHTML = upclTeams.map(team => `
+        <button class="upcl-team-card" type="button" data-club-id="${escapeHtml(team.id)}" aria-label="Open ${escapeHtml(team.name)} roster">
+          <div class="upcl-team-card-header">
+            <h3>${escapeHtml(team.name)}</h3>
+            <img class="upcl-team-logo" src="${escapeHtml(getTeamLogoPath(team.name))}" alt="" loading="lazy">
+          </div>
+          <div class="upcl-team-meta">
+            <span>${escapeHtml(team.conference)}</span>
+            <span>Record ${escapeHtml(getTeamRecord(team.id))}</span>
+            <span>Club ID ${escapeHtml(team.id)}</span>
+          </div>
+          <span class="upcl-team-open">View roster</span>
+        </button>
+      `).join('');
+    }
+
+    function showTeamsHub() {
+      activeTeam = null;
+      activeRoster = [];
+      activeRosterIndex = 0;
+      accoladesOpen = false;
+      teamsHubEl.hidden = false;
+      teamDetailViewEl.hidden = true;
+      renderTeamsGrid();
+    }
+
+    function rosterValue(player, key, fallback = 0) {
+      const value = Number(player?.[key]);
+      return Number.isFinite(value) ? value : fallback;
+    }
+
+    function getActiveRosterPlayer() {
+      return activeRoster[activeRosterIndex] || null;
+    }
+
+    function formatRosterPercent(value) {
+      return `${formatNumber(value, 1)}%`;
+    }
+
+    function getBarWidth(label, value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return 0;
+      if (label.includes('%')) return Math.max(0, Math.min(100, number));
+      if (label === 'Rating') return Math.max(0, Math.min(100, number * 10));
+      if (label === 'Tackles Made') return Math.max(0, Math.min(100, number * 4));
+      return Math.max(0, Math.min(100, number * 8));
+    }
+
+    function renderRosterCards() {
+      if (!activeRoster.length) {
+        return '<div class="empty">No EA members were returned for this club yet.</div>';
+      }
+      return activeRoster.map((player, index) => `
+        <article class="roster-player-card ${index === activeRosterIndex ? 'active' : ''}" data-player-index="${index}" tabindex="0">
+          <div class="roster-card-name">
+            <strong>${escapeHtml(player.name)}</strong>
+            <span>${escapeHtml(player.proName || player.name)}</span>
+          </div>
+          <div class="roster-overall">${escapeHtml(player.proOverallStr || player.proOverall || '—')}</div>
+          <div class="roster-card-meta">${escapeHtml(player.favoritePosition || 'N/A')} · OVR</div>
+          <div class="roster-card-preview">
+            <span>${formatNumber(player.goals)} G</span>
+            <span>${formatNumber(player.assists)} A</span>
+            <span>${formatNumber(player.ratingAve, 1)} RTG</span>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    function renderActivePlayerDetail() {
+      const player = getActiveRosterPlayer();
+      if (!player) return '';
+      const bars = [
+        ['Goals', player.goals, formatNumber(player.goals)],
+        ['Assists', player.assists, formatNumber(player.assists)],
+        ['Pass Success %', player.passSuccessRate, formatRosterPercent(player.passSuccessRate)],
+        ['Tackles Made', player.tacklesMade, formatNumber(player.tacklesMade)],
+        ['Tackle Success %', player.tackleSuccessRate, formatRosterPercent(player.tackleSuccessRate)],
+        ['MOTM', player.manOfTheMatch, formatNumber(player.manOfTheMatch)],
+        ['Rating', player.ratingAve, formatNumber(player.ratingAve, 1)]
+      ];
+      return `
+        <div class="active-player-grid">
+          <section class="active-player-panel" aria-label="Active player detail">
+            <h3 class="active-player-name">${escapeHtml(player.name)}</h3>
+            <p class="active-player-subline">${escapeHtml(player.favoritePosition || 'N/A')} · ${escapeHtml(player.proOverallStr || player.proOverall || '—')} Overall</p>
+            <div class="active-player-stats">
+              <div class="active-player-stat"><span>Games Played</span><strong>${formatNumber(player.gamesPlayed)}</strong></div>
+              <div class="active-player-stat"><span>Win Rate</span><strong>${formatRosterPercent(player.winRate)}</strong></div>
+              <div class="active-player-stat"><span>Rating Average</span><strong>${formatNumber(player.ratingAve, 1)}</strong></div>
+              <div class="active-player-stat"><span>Goals</span><strong>${formatNumber(player.goals)}</strong></div>
+              <div class="active-player-stat"><span>Assists</span><strong>${formatNumber(player.assists)}</strong></div>
+              <div class="active-player-stat"><span>MOTM</span><strong>${formatNumber(player.manOfTheMatch)}</strong></div>
+            </div>
+            <div class="accolades-wrap">
+              <button class="accolades-button" id="accoladesButton" type="button" aria-expanded="${accoladesOpen ? 'true' : 'false'}">Accolades</button>
+              <aside class="accolades-panel" ${accoladesOpen ? '' : 'hidden'} aria-label="Mock accolades">
+                <ul>
+                  <li>Season MVP Candidate</li>
+                  <li>Top Scorer Watch</li>
+                  <li>Team Leader</li>
+                </ul>
+              </aside>
+            </div>
+          </section>
+          <section class="player-bars-panel" aria-label="Active player stat graph">
+            <div class="bar-stat-list">
+              ${bars.map(([label, raw, formatted]) => `
+                <div class="bar-stat-row">
+                  <div class="bar-stat-label"><span>${escapeHtml(label)}</span><strong>${escapeHtml(formatted)}</strong></div>
+                  <div class="bar-track"><div class="bar-fill" style="--bar-width: ${getBarWidth(label, raw).toFixed(1)}%;"></div></div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        </div>
+      `;
+    }
+
+    function renderTeamDetail() {
+      if (!activeTeam) return;
+      teamDetailContentEl.innerHTML = `
+        <section class="team-detail-hero" aria-labelledby="teamDetailTitle">
+          <p class="team-detail-kicker">${escapeHtml(activeTeam.conference)}</p>
+          <h2 class="team-detail-title" id="teamDetailTitle">${escapeHtml(activeTeam.name)}</h2>
+          <div class="team-detail-meta">
+            <span>Record ${escapeHtml(activeTeam.record || getTeamRecord(activeTeam.id))}</span>
+            <span>Club ID ${escapeHtml(activeTeam.id)}</span>
+            <span>${activeRoster.length} ${activeRoster.length === 1 ? 'Player' : 'Players'}</span>
+          </div>
+        </section>
+        <section class="roster-stage" aria-label="${escapeHtml(activeTeam.name)} roster carousel">
+          <div class="roster-carousel-shell">
+            <button class="roster-arrow" type="button" data-roster-step="-1" aria-label="Previous player">‹</button>
+            <div class="roster-carousel" id="rosterCarousel">${renderRosterCards()}</div>
+            <button class="roster-arrow" type="button" data-roster-step="1" aria-label="Next player">›</button>
+          </div>
+          ${renderActivePlayerDetail()}
+        </section>
+      `;
+      const activeCard = teamDetailContentEl.querySelector('.roster-player-card.active');
+      activeCard?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
+
+    function setActiveRosterIndex(index) {
+      if (!activeRoster.length) return;
+      activeRosterIndex = (index + activeRoster.length) % activeRoster.length;
+      accoladesOpen = false;
+      renderTeamDetail();
+    }
+
+    async function openTeamDetail(clubId) {
+      const fallbackTeam = upclTeams.find(team => team.id === String(clubId));
+      teamsHubEl.hidden = true;
+      teamDetailViewEl.hidden = false;
+      teamDetailContentEl.innerHTML = '<div class="empty">Loading EA roster data…</div>';
+      try {
+        const response = await fetch(`/api/teams/${encodeURIComponent(clubId)}/members`);
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || 'Team members unavailable');
+        activeTeam = { ...(fallbackTeam || {}), ...(payload.team || {}) };
+        activeRoster = Array.isArray(payload.members) ? payload.members : [];
+        activeRosterIndex = 0;
+        accoladesOpen = false;
+        renderTeamDetail();
+      } catch (error) {
+        activeTeam = fallbackTeam || { id: clubId, name: `Club ${clubId}`, conference: 'UPCL' };
+        activeRoster = [];
+        teamDetailContentEl.innerHTML = `<div class="error">Roster could not be loaded: ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
     function activateTab(tabName) {
       tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === tabName));
       tabPanels.forEach(panel => panel.classList.toggle('active', panel.id === `${tabName}-panel`));
@@ -3492,6 +4148,10 @@
 
       if (tabName === 'player-stats' && !playerStatsData.length) {
         loadPlayerStats();
+      }
+
+      if (tabName === 'teams') {
+        renderTeamsGrid();
       }
     }
 
@@ -3507,6 +4167,7 @@
           west: Array.isArray(payload.west) ? payload.west : []
         };
         renderLeagueLayers();
+        renderTeamsGrid();
       } catch (error) {
         standingsEl.innerHTML = `<div class="error">Standings could not be loaded from saved database matches: ${escapeHtml(error.message)}</div>`;
         playoffBracketEl.innerHTML = renderPlayoffBracket();
@@ -3690,6 +4351,52 @@
       if (!button) return;
       activePlayerStat = button.dataset.playerStat;
       renderPlayerStatsTable(playerStatsData);
+    });
+
+
+    teamsGridEl.addEventListener('click', event => {
+      const card = event.target.closest('[data-club-id]');
+      if (!card) return;
+      openTeamDetail(card.dataset.clubId);
+    });
+
+    teamBackButton.addEventListener('click', showTeamsHub);
+
+    teamDetailContentEl.addEventListener('click', event => {
+      const arrow = event.target.closest('[data-roster-step]');
+      if (arrow) {
+        setActiveRosterIndex(activeRosterIndex + Number(arrow.dataset.rosterStep));
+        return;
+      }
+
+      const card = event.target.closest('[data-player-index]');
+      if (card) {
+        setActiveRosterIndex(Number(card.dataset.playerIndex));
+        return;
+      }
+
+      if (event.target.closest('#accoladesButton')) {
+        accoladesOpen = !accoladesOpen;
+        renderTeamDetail();
+      }
+    });
+
+    teamDetailContentEl.addEventListener('mouseover', event => {
+      const card = event.target.closest('[data-player-index]');
+      if (!card) return;
+      const index = Number(card.dataset.playerIndex);
+      if (Number.isInteger(index) && index !== activeRosterIndex) {
+        activeRosterIndex = index;
+        accoladesOpen = false;
+        renderTeamDetail();
+      }
+    });
+
+    teamDetailContentEl.addEventListener('keydown', event => {
+      const card = event.target.closest('[data-player-index]');
+      if (!card || !['Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      setActiveRosterIndex(Number(card.dataset.playerIndex));
     });
 
     refreshButton.addEventListener('click', loadMatches);

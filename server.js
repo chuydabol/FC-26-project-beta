@@ -520,6 +520,61 @@ app.post('/api/matches/:matchId/friendly', adminOnly(async (req, res) => {
 
 
 
+
+function getClubRecordFromStandings(standings, club) {
+  const rows = [...(standings.east || []), ...(standings.west || [])];
+  const row = rows.find(item => item.id === club.id || item.team === club.name || club.aliases?.includes(item.team));
+  if (!row) return '0-0-0';
+  return `${row.w}-${row.l}-${row.d}`;
+}
+
+app.get('/api/teams/:clubId/members', async (req, res) => {
+  const clubId = String(req.params.clubId || '').trim();
+  const club = LEAGUE_CLUBS.find(item => item.id === clubId);
+
+  if (!club) {
+    res.status(404).json({ error: 'UPCL club not found', members: [] });
+    return;
+  }
+
+  try {
+    const [memberStats, savedMatches] = await Promise.all([
+      eaApi.fetchMembersStats(club.id),
+      db.getApprovedLeagueMatches().catch(error => {
+        logger.warn({ err: error, clubId: club.id }, 'Unable to load standings record for team members route');
+        return [];
+      }),
+    ]);
+    const standings = calculateStandings(savedMatches);
+
+    res.json({
+      team: {
+        id: club.id,
+        name: club.name,
+        conference: club.conference === 'east' ? 'Eastern Conference' : 'Western Conference',
+        record: getClubRecordFromStandings(standings, club),
+      },
+      members: memberStats.members,
+      positionCount: memberStats.positionCount,
+      source: 'EA members stats',
+    });
+  } catch (error) {
+    logger.error({ err: error, clubId: club.id }, 'Failed to fetch EA member stats');
+    res.status(502).json({
+      error: 'Failed to fetch team member stats',
+      details: error.message || 'EA API request failed',
+      team: {
+        id: club.id,
+        name: club.name,
+        conference: club.conference === 'east' ? 'Eastern Conference' : 'Western Conference',
+        record: '0-0-0',
+      },
+      members: [],
+      positionCount: {},
+    });
+  }
+});
+
 app.get('/api/player-stats', async (_req, res) => {
   try {
     const players = await db.getPlayerStats();
