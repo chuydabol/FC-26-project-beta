@@ -1264,6 +1264,9 @@
 
 
 
+    .teams-hub[hidden],
+    .teams-grid[hidden] { display: none; }
+
     .teams-hub {
       display: grid;
       gap: 16px;
@@ -3306,6 +3309,7 @@
     let activeRoster = [];
     let activeRosterIndex = 0;
     let accoladesOpen = false;
+    const rosterCache = new Map();
 
     const playerStatOptions = [
       { key: 'goals', label: 'Goals', metric: 'goals', valueLabel: 'Goals', format: value => String(value) },
@@ -4007,6 +4011,7 @@
 
     function renderTeamsGrid() {
       if (!teamsGridEl) return;
+      teamsGridEl.hidden = false;
       teamsGridEl.innerHTML = upclTeams.map(team => `
         <button class="upcl-team-card" type="button" data-club-id="${escapeHtml(team.id)}" aria-label="Open ${escapeHtml(team.name)} roster">
           <div class="upcl-team-card-header">
@@ -4023,14 +4028,31 @@
       `).join('');
     }
 
+    function hideTeamsGrid() {
+      if (!teamsGridEl) return;
+      teamsGridEl.hidden = true;
+      teamsGridEl.innerHTML = '';
+    }
+
+    function renderTeamsView() {
+      const showingDetail = Boolean(activeTeam);
+      teamsHubEl.hidden = showingDetail;
+      teamDetailViewEl.hidden = !showingDetail;
+
+      if (showingDetail) {
+        hideTeamsGrid();
+        return;
+      }
+
+      teamDetailContentEl.innerHTML = '';
+      renderTeamsGrid();
+    }
+
     function showTeamsHub() {
       activeTeam = null;
-      activeRoster = [];
       activeRosterIndex = 0;
       accoladesOpen = false;
-      teamsHubEl.hidden = false;
-      teamDetailViewEl.hidden = true;
-      renderTeamsGrid();
+      renderTeamsView();
     }
 
     function rosterValue(player, key, fallback = 0) {
@@ -4128,8 +4150,38 @@
       `;
     }
 
+    function renderTeamDetailLoading(message = 'Loading EA roster data…') {
+      if (!activeTeam) return;
+      teamDetailContentEl.innerHTML = `
+        <section class="team-detail-hero" aria-labelledby="teamDetailTitle">
+          <div class="team-detail-hero-inner">
+            <img class="team-detail-logo" src="${escapeHtml(getTeamLogoPath(activeTeam.name))}" alt="" loading="lazy">
+            <div class="team-detail-heading">
+              <p class="team-detail-kicker">${escapeHtml(activeTeam.conference || 'UPCL')} Conference</p>
+              <h2 class="team-detail-title" id="teamDetailTitle">${escapeHtml(activeTeam.name)}</h2>
+              <div class="team-detail-meta">
+                <span>${escapeHtml(activeTeam.conference || 'UPCL')}</span>
+                <span>Club ID ${escapeHtml(activeTeam.id)}</span>
+                <span>Record ${escapeHtml(activeTeam.record || getTeamRecord(activeTeam.id))}</span>
+              </div>
+            </div>
+            <button class="team-back-button" type="button" data-team-back>← Back to Teams</button>
+          </div>
+        </section>
+        <div class="empty">${escapeHtml(message)}</div>
+      `;
+    }
+
+    function renderTeamDetailError(message) {
+      if (!activeTeam) return;
+      renderTeamDetailLoading(`Roster could not be loaded: ${message}`);
+      const stateEl = teamDetailContentEl.querySelector('.empty');
+      if (stateEl) stateEl.className = 'error';
+    }
+
     function renderTeamDetail() {
       if (!activeTeam) return;
+      renderTeamsView();
       teamDetailContentEl.innerHTML = `
         <section class="team-detail-hero" aria-labelledby="teamDetailTitle">
           <div class="team-detail-hero-inner">
@@ -4168,23 +4220,33 @@
     }
 
     async function openTeamDetail(clubId) {
-      const fallbackTeam = upclTeams.find(team => team.id === String(clubId));
-      teamsHubEl.hidden = true;
-      teamDetailViewEl.hidden = false;
-      teamDetailContentEl.innerHTML = '<div class="empty">Loading EA roster data…</div>';
+      const teamKey = String(clubId);
+      const fallbackTeam = upclTeams.find(team => team.id === teamKey);
+      const cachedRoster = rosterCache.get(teamKey);
+      activeTeam = fallbackTeam || { id: teamKey, name: `Club ${teamKey}`, conference: 'UPCL' };
+      activeRoster = cachedRoster || [];
+      activeRosterIndex = 0;
+      accoladesOpen = false;
+      renderTeamsView();
+      renderTeamDetailLoading();
+
       try {
-        const response = await fetch(`/api/teams/${encodeURIComponent(clubId)}/members`);
+        const response = await fetch(`/api/teams/${encodeURIComponent(teamKey)}/members`);
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error || 'Team members unavailable');
         activeTeam = { ...(fallbackTeam || {}), ...(payload.team || {}) };
         activeRoster = Array.isArray(payload.members) ? payload.members : [];
+        rosterCache.set(teamKey, activeRoster);
         activeRosterIndex = 0;
         accoladesOpen = false;
         renderTeamDetail();
       } catch (error) {
-        activeTeam = fallbackTeam || { id: clubId, name: `Club ${clubId}`, conference: 'UPCL' };
+        if (cachedRoster) {
+          renderTeamDetail();
+          return;
+        }
         activeRoster = [];
-        teamDetailContentEl.innerHTML = `<div class="error">Roster could not be loaded: ${escapeHtml(error.message)}</div>`;
+        renderTeamDetailError(error.message);
       }
     }
 
@@ -4202,7 +4264,7 @@
       }
 
       if (tabName === 'teams') {
-        renderTeamsGrid();
+        renderTeamsView();
       }
     }
 
@@ -4218,7 +4280,7 @@
           west: Array.isArray(payload.west) ? payload.west : []
         };
         renderLeagueLayers();
-        renderTeamsGrid();
+        renderTeamsView();
       } catch (error) {
         standingsEl.innerHTML = `<div class="error">Standings could not be loaded from saved database matches: ${escapeHtml(error.message)}</div>`;
         playoffBracketEl.innerHTML = renderPlayoffBracket();
