@@ -1593,7 +1593,10 @@
 
     .roster-card-render {
       position: relative;
+      display: grid;
+      place-items: end center;
       min-height: 0;
+      overflow: hidden;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 48%),
@@ -1603,11 +1606,25 @@
     .roster-card-render::after {
       content: "";
       position: absolute;
+      z-index: 0;
       pointer-events: none;
       inset: auto 20px 16px;
       height: 42px;
       background: radial-gradient(ellipse at center, rgba(192, 0, 0, 0.28), transparent 68%);
       filter: blur(2px);
+    }
+
+    .roster-card-silhouette {
+      position: relative;
+      z-index: 1;
+      width: min(88%, 240px);
+      max-height: 108%;
+      align-self: end;
+      object-fit: contain;
+      object-position: center bottom;
+      filter: drop-shadow(0 18px 26px rgba(0, 0, 0, 0.62));
+      transform: translateY(10px);
+      user-select: none;
     }
 
     .roster-card-info {
@@ -4179,7 +4196,9 @@
       }
       return activeRoster.map((player, index) => `
         <article class="roster-player-card ${getRosterCardClass(index)}" data-player-index="${index}" tabindex="0">
-          <div class="roster-card-render" aria-hidden="true"></div>
+          <div class="roster-card-render" aria-hidden="true">
+            <img class="roster-card-silhouette" src="/assets/SIL1.png" alt="" loading="lazy">
+          </div>
           <div class="roster-card-info">
             <div class="roster-card-name">
               <strong>${escapeHtml(player.name)}</strong>
