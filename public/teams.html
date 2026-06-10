@@ -1371,6 +1371,7 @@
     .team-detail-view {
       display: grid;
       gap: 16px;
+      min-height: 70vh;
     }
 
     .team-back-button,
@@ -1404,6 +1405,35 @@
         linear-gradient(112deg, rgba(4, 4, 6, 0.98), rgba(80, 0, 0, 0.68) 54%, rgba(192, 0, 0, 0.72)),
         repeating-linear-gradient(116deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 18px);
       box-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
+    }
+
+    .team-detail-hero-inner {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: clamp(16px, 3vw, 28px);
+    }
+
+    .team-detail-logo {
+      width: clamp(88px, 16vw, 148px);
+      height: clamp(88px, 16vw, 148px);
+      object-fit: contain;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 26px;
+      padding: clamp(10px, 2vw, 18px);
+      background: rgba(0, 0, 0, 0.38);
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    }
+
+    .team-detail-heading {
+      min-width: 0;
+    }
+
+    .team-detail-hero .team-back-button {
+      align-self: start;
+      white-space: nowrap;
     }
 
     .team-detail-hero::after {
@@ -1462,8 +1492,11 @@
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.11);
       border-radius: 24px;
-      padding: 16px;
-      background: linear-gradient(180deg, #141414, #070707);
+      padding: clamp(16px, 3vw, 26px);
+      background:
+        radial-gradient(circle at 50% 0%, rgba(192, 0, 0, 0.18), transparent 36%),
+        linear-gradient(180deg, #141414, #070707);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
     }
 
     .roster-carousel-shell {
@@ -1481,42 +1514,48 @@
 
     .roster-carousel {
       display: flex;
-      align-items: stretch;
-      gap: 12px;
-      min-height: 210px;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0;
+      min-height: 250px;
       overflow-x: auto;
-      padding: 8px 4px 16px;
+      overflow-y: hidden;
+      padding: 18px max(22px, 6vw) 24px;
       scroll-snap-type: x mandatory;
+      perspective: 900px;
     }
 
     .roster-player-card {
-      flex: 0 0 min(210px, 70vw);
+      flex: 0 0 min(218px, 70vw);
       position: relative;
       display: grid;
       align-content: space-between;
       gap: 12px;
-      min-height: 184px;
+      min-height: 194px;
       border: 1px solid rgba(255, 255, 255, 0.11);
       border-radius: 18px;
       padding: 14px;
       cursor: pointer;
       color: #ffffff;
       background: linear-gradient(150deg, rgba(35, 35, 35, 0.96), rgba(7, 7, 7, 0.96));
-      opacity: 0.58;
-      transform: translateY(18px) scale(0.94);
+      margin-inline: -12px;
+      opacity: 0.5;
+      transform: translateY(24px) rotateY(8deg) scale(0.9);
       scroll-snap-align: center;
-      transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease, filter 180ms ease;
+      filter: saturate(0.72) brightness(0.78);
     }
 
     .roster-player-card.active {
       z-index: 2;
       opacity: 1;
-      transform: translateY(0) scale(1.03);
+      transform: translateY(0) rotateY(0) scale(1.13);
       border-color: rgba(255, 255, 255, 0.36);
       background:
         linear-gradient(130deg, rgba(192, 0, 0, 0.34), transparent 44%),
         linear-gradient(150deg, #242424, #090909);
-      box-shadow: 0 24px 44px rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      box-shadow: 0 28px 56px rgba(0, 0, 0, 0.48), 0 0 32px rgba(192, 0, 0, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      filter: saturate(1.15) brightness(1);
     }
 
     .roster-card-name {
@@ -1679,11 +1718,15 @@
 
     @media (max-width: 920px) {
       .teams-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .team-detail-hero-inner { grid-template-columns: auto minmax(0, 1fr); }
+      .team-detail-hero .team-back-button { grid-column: 1 / -1; justify-self: start; }
       .active-player-grid { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 720px) {
       .teams-grid { grid-template-columns: 1fr; padding: 12px; }
+      .team-detail-hero-inner { grid-template-columns: 1fr; }
+      .team-detail-logo { width: 96px; height: 96px; }
       .roster-carousel-shell { grid-template-columns: 1fr; }
       .roster-arrow { width: 100%; }
       .active-player-stats { grid-template-columns: 1fr; }
@@ -3164,7 +3207,6 @@
         </div>
 
         <div class="team-detail-view" id="teamDetailView" hidden>
-          <button class="team-back-button" id="teamBackButton" type="button">← All Teams</button>
           <section id="teamDetailContent" aria-live="polite"></section>
         </div>
       </section>
@@ -4050,11 +4092,13 @@
         <div class="active-player-grid">
           <section class="active-player-panel" aria-label="Active player detail">
             <h3 class="active-player-name">${escapeHtml(player.name)}</h3>
-            <p class="active-player-subline">${escapeHtml(player.favoritePosition || 'N/A')} · ${escapeHtml(player.proOverallStr || player.proOverall || '—')} Overall</p>
+            <p class="active-player-subline">Pro name: ${escapeHtml(player.proName || player.name)} · ${escapeHtml(player.favoritePosition || 'N/A')}</p>
             <div class="active-player-stats">
+              <div class="active-player-stat"><span>Position</span><strong>${escapeHtml(player.favoritePosition || 'N/A')}</strong></div>
+              <div class="active-player-stat"><span>Overall</span><strong>${escapeHtml(player.proOverallStr || player.proOverall || '—')}</strong></div>
               <div class="active-player-stat"><span>Games Played</span><strong>${formatNumber(player.gamesPlayed)}</strong></div>
               <div class="active-player-stat"><span>Win Rate</span><strong>${formatRosterPercent(player.winRate)}</strong></div>
-              <div class="active-player-stat"><span>Rating Average</span><strong>${formatNumber(player.ratingAve, 1)}</strong></div>
+              <div class="active-player-stat"><span>Rating</span><strong>${formatNumber(player.ratingAve, 1)}</strong></div>
               <div class="active-player-stat"><span>Goals</span><strong>${formatNumber(player.goals)}</strong></div>
               <div class="active-player-stat"><span>Assists</span><strong>${formatNumber(player.assists)}</strong></div>
               <div class="active-player-stat"><span>MOTM</span><strong>${formatNumber(player.manOfTheMatch)}</strong></div>
@@ -4088,12 +4132,19 @@
       if (!activeTeam) return;
       teamDetailContentEl.innerHTML = `
         <section class="team-detail-hero" aria-labelledby="teamDetailTitle">
-          <p class="team-detail-kicker">${escapeHtml(activeTeam.conference)}</p>
-          <h2 class="team-detail-title" id="teamDetailTitle">${escapeHtml(activeTeam.name)}</h2>
-          <div class="team-detail-meta">
-            <span>Record ${escapeHtml(activeTeam.record || getTeamRecord(activeTeam.id))}</span>
-            <span>Club ID ${escapeHtml(activeTeam.id)}</span>
-            <span>${activeRoster.length} ${activeRoster.length === 1 ? 'Player' : 'Players'}</span>
+          <div class="team-detail-hero-inner">
+            <img class="team-detail-logo" src="${escapeHtml(getTeamLogoPath(activeTeam.name))}" alt="" loading="lazy">
+            <div class="team-detail-heading">
+              <p class="team-detail-kicker">${escapeHtml(activeTeam.conference || 'UPCL')} Conference</p>
+              <h2 class="team-detail-title" id="teamDetailTitle">${escapeHtml(activeTeam.name)}</h2>
+              <div class="team-detail-meta">
+                <span>${escapeHtml(activeTeam.conference || 'UPCL')}</span>
+                <span>Club ID ${escapeHtml(activeTeam.id)}</span>
+                <span>Record ${escapeHtml(activeTeam.record || getTeamRecord(activeTeam.id))}</span>
+                <span>${activeRoster.length} ${activeRoster.length === 1 ? 'Player' : 'Players'}</span>
+              </div>
+            </div>
+            <button class="team-back-button" type="button" data-team-back>← Back to Teams</button>
           </div>
         </section>
         <section class="roster-stage" aria-label="${escapeHtml(activeTeam.name)} roster carousel">
@@ -4360,9 +4411,14 @@
       openTeamDetail(card.dataset.clubId);
     });
 
-    teamBackButton.addEventListener('click', showTeamsHub);
+    teamBackButton?.addEventListener('click', showTeamsHub);
 
     teamDetailContentEl.addEventListener('click', event => {
+      if (event.target.closest('[data-team-back]')) {
+        showTeamsHub();
+        return;
+      }
+
       const arrow = event.target.closest('[data-roster-step]');
       if (arrow) {
         setActiveRosterIndex(activeRosterIndex + Number(arrow.dataset.rosterStep));
