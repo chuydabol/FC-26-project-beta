@@ -1491,111 +1491,192 @@
     }
 
     .roster-stage {
+      --roster-card-width: 300px;
+      --roster-card-height: 420px;
       position: relative;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.11);
-      border-radius: 24px;
-      padding: clamp(16px, 3vw, 26px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 28px;
+      padding: clamp(22px, 4vw, 42px) 0 clamp(24px, 4vw, 44px);
       background:
-        radial-gradient(circle at 50% 0%, rgba(192, 0, 0, 0.18), transparent 36%),
-        linear-gradient(180deg, #141414, #070707);
-      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+        radial-gradient(circle at 50% 4%, rgba(255, 255, 255, 0.1), transparent 18%),
+        radial-gradient(circle at 50% 0%, rgba(192, 0, 0, 0.32), transparent 42%),
+        linear-gradient(112deg, rgba(44, 0, 4, 0.88), rgba(7, 7, 7, 0.98) 45%, rgba(26, 0, 2, 0.94));
+      box-shadow: 0 34px 90px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .roster-stage::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.72)),
+        repeating-linear-gradient(112deg, transparent 0 34px, rgba(255, 255, 255, 0.035) 34px 36px, transparent 36px 68px);
+      mix-blend-mode: screen;
+      opacity: 0.72;
     }
 
     .roster-carousel-shell {
+      position: relative;
+      z-index: 1;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      gap: 10px;
+      gap: clamp(6px, 1.4vw, 16px);
     }
 
     .roster-arrow {
-      width: 44px;
-      height: 44px;
-      font-size: 1.2rem;
+      z-index: 3;
+      width: 52px;
+      height: 104px;
+      border-radius: 999px;
+      font-size: 1.7rem;
+      box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
     }
 
     .roster-carousel {
       display: flex;
       align-items: center;
       justify-content: flex-start;
-      gap: 0;
-      min-height: 250px;
+      gap: 18px;
+      min-height: calc(var(--roster-card-height) + 74px);
       overflow-x: auto;
       overflow-y: hidden;
-      padding: 18px max(22px, 6vw) 24px;
+      padding: 36px max(28px, calc(50% - (var(--roster-card-width) / 2))) 38px;
       scroll-snap-type: x mandatory;
-      perspective: 900px;
+      scroll-padding-inline: max(28px, calc(50% - (var(--roster-card-width) / 2)));
+      perspective: 1200px;
     }
 
     .roster-player-card {
-      flex: 0 0 min(218px, 70vw);
+      flex: 0 0 var(--roster-card-width);
       position: relative;
       display: grid;
-      align-content: space-between;
-      gap: 12px;
-      min-height: 194px;
-      border: 1px solid rgba(255, 255, 255, 0.11);
-      border-radius: 18px;
-      padding: 14px;
+      grid-template-rows: 75% 25%;
+      height: var(--roster-card-height);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 24px;
       cursor: pointer;
       color: #ffffff;
-      background: linear-gradient(150deg, rgba(35, 35, 35, 0.96), rgba(7, 7, 7, 0.96));
-      margin-inline: -12px;
-      opacity: 0.5;
-      transform: translateY(24px) rotateY(8deg) scale(0.9);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 36%),
+        linear-gradient(155deg, rgba(28, 28, 28, 0.96), rgba(4, 4, 4, 0.98));
+      opacity: 0.38;
+      transform: translateY(34px) rotateY(10deg) scale(0.75);
+      transform-origin: center bottom;
       scroll-snap-align: center;
-      transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease, filter 180ms ease;
-      filter: saturate(0.72) brightness(0.78);
+      transition: opacity 220ms ease, transform 220ms ease, border-color 220ms ease, background 220ms ease, filter 220ms ease, box-shadow 220ms ease;
+      filter: saturate(0.58) brightness(0.68);
+    }
+
+    .roster-player-card.is-neighbor {
+      z-index: 1;
+      opacity: 0.64;
+      transform: translateY(22px) rotateY(6deg) scale(0.85);
+      filter: saturate(0.78) brightness(0.82);
     }
 
     .roster-player-card.active {
       z-index: 2;
       opacity: 1;
-      transform: translateY(0) rotateY(0) scale(1.13);
-      border-color: rgba(255, 255, 255, 0.36);
+      transform: translateY(0) rotateY(0) scale(1);
+      border-color: rgba(255, 255, 255, 0.42);
       background:
+        radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.12), transparent 34%),
         linear-gradient(130deg, rgba(192, 0, 0, 0.34), transparent 44%),
         linear-gradient(150deg, #242424, #090909);
-      box-shadow: 0 28px 56px rgba(0, 0, 0, 0.48), 0 0 32px rgba(192, 0, 0, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-      filter: saturate(1.15) brightness(1);
+      box-shadow: 0 36px 76px rgba(0, 0, 0, 0.58), 0 0 48px rgba(192, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      filter: saturate(1.16) brightness(1.04);
+    }
+
+    .roster-card-render {
+      position: relative;
+      min-height: 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 48%),
+        linear-gradient(120deg, rgba(255, 255, 255, 0.04), transparent 38%);
+    }
+
+    .roster-card-render::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      inset: auto 20px 16px;
+      height: 42px;
+      background: radial-gradient(ellipse at center, rgba(192, 0, 0, 0.28), transparent 68%);
+      filter: blur(2px);
+    }
+
+    .roster-card-info {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        "name overall"
+        "meta overall"
+        "stats stats";
+      align-items: end;
+      gap: 5px 12px;
+      min-height: 0;
+      padding: 13px 15px 14px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.88));
     }
 
     .roster-card-name {
+      grid-area: name;
       display: grid;
-      gap: 5px;
+      min-width: 0;
+      gap: 3px;
     }
 
     .roster-card-name strong {
-      font-size: 1.15rem;
+      overflow: hidden;
+      font-size: 1.18rem;
       line-height: 1;
-      letter-spacing: -0.04em;
+      letter-spacing: -0.045em;
+      text-overflow: ellipsis;
       text-transform: uppercase;
+      white-space: nowrap;
     }
 
     .roster-card-name span,
     .roster-card-meta,
     .roster-card-preview {
       color: #cfcfcf;
-      font-size: 0.72rem;
+      font-size: 0.64rem;
       font-weight: 850;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
+    .roster-card-name span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .roster-overall {
-      justify-self: start;
+      grid-area: overall;
+      justify-self: end;
+      align-self: center;
       border-left: 4px solid var(--upcl-red);
       padding-left: 9px;
-      font-size: 2rem;
+      font-size: 2.38rem;
       font-weight: 1000;
-      line-height: 1;
+      line-height: 0.9;
+    }
+
+    .roster-card-meta {
+      grid-area: meta;
     }
 
     .roster-card-preview {
+      grid-area: stats;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px 9px;
     }
 
     .active-player-grid {
@@ -1723,6 +1804,10 @@
       .teams-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .team-detail-hero-inner { grid-template-columns: auto minmax(0, 1fr); }
       .team-detail-hero .team-back-button { grid-column: 1 / -1; justify-self: start; }
+      .roster-stage {
+        --roster-card-width: 280px;
+        --roster-card-height: 392px;
+      }
       .active-player-grid { grid-template-columns: 1fr; }
     }
 
@@ -1730,8 +1815,12 @@
       .teams-grid { grid-template-columns: 1fr; padding: 12px; }
       .team-detail-hero-inner { grid-template-columns: 1fr; }
       .team-detail-logo { width: 96px; height: 96px; }
+      .roster-stage {
+        --roster-card-width: min(300px, 72vw);
+        --roster-card-height: min(420px, 101vw);
+      }
       .roster-carousel-shell { grid-template-columns: 1fr; }
-      .roster-arrow { width: 100%; }
+      .roster-arrow { width: 100%; height: 48px; }
       .active-player-stats { grid-template-columns: 1fr; }
     }
 
@@ -4077,22 +4166,32 @@
       return Math.max(0, Math.min(100, number * 8));
     }
 
+    function getRosterCardClass(index) {
+      const distance = Math.abs(index - activeRosterIndex);
+      if (distance === 0) return 'active';
+      if (distance === 1) return 'is-neighbor';
+      return 'is-farther';
+    }
+
     function renderRosterCards() {
       if (!activeRoster.length) {
         return '<div class="empty">No EA members were returned for this club yet.</div>';
       }
       return activeRoster.map((player, index) => `
-        <article class="roster-player-card ${index === activeRosterIndex ? 'active' : ''}" data-player-index="${index}" tabindex="0">
-          <div class="roster-card-name">
-            <strong>${escapeHtml(player.name)}</strong>
-            <span>${escapeHtml(player.proName || player.name)}</span>
-          </div>
-          <div class="roster-overall">${escapeHtml(player.proOverallStr || player.proOverall || '—')}</div>
-          <div class="roster-card-meta">${escapeHtml(player.favoritePosition || 'N/A')} · OVR</div>
-          <div class="roster-card-preview">
-            <span>${formatNumber(player.goals)} G</span>
-            <span>${formatNumber(player.assists)} A</span>
-            <span>${formatNumber(player.ratingAve, 1)} RTG</span>
+        <article class="roster-player-card ${getRosterCardClass(index)}" data-player-index="${index}" tabindex="0">
+          <div class="roster-card-render" aria-hidden="true"></div>
+          <div class="roster-card-info">
+            <div class="roster-card-name">
+              <strong>${escapeHtml(player.name)}</strong>
+              <span>${escapeHtml(player.proName || player.name)}</span>
+            </div>
+            <div class="roster-overall">${escapeHtml(player.proOverallStr || player.proOverall || '—')}</div>
+            <div class="roster-card-meta">${escapeHtml(player.favoritePosition || 'N/A')} · OVR</div>
+            <div class="roster-card-preview">
+              <span>${formatNumber(player.goals)} G</span>
+              <span>${formatNumber(player.assists)} A</span>
+              <span>${formatNumber(player.ratingAve, 1)} RTG</span>
+            </div>
           </div>
         </article>
       `).join('');
