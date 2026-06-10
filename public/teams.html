@@ -50,6 +50,38 @@
       padding: 32px 0 56px;
     }
 
+    body.roster-stage-mode {
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 50% 7%, rgba(255, 35, 35, 0.18), transparent 34%),
+        radial-gradient(circle at 16% 82%, rgba(192, 0, 0, 0.2), transparent 30%),
+        repeating-linear-gradient(116deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 18px),
+        #030303;
+    }
+
+    body.roster-stage-mode .league-hero,
+    body.roster-stage-mode .tabs {
+      display: none;
+    }
+
+    body.roster-stage-mode .shell {
+      width: 100%;
+      padding: 0;
+    }
+
+    body.roster-stage-mode main {
+      margin-top: 0;
+      gap: 0;
+    }
+
+    body.roster-stage-mode .tab-panel:not(#teams-panel) {
+      display: none !important;
+    }
+
+    body.roster-stage-mode #teams-panel.active {
+      display: block;
+    }
+
     .league-hero {
       position: relative;
       isolation: isolate;
@@ -1372,9 +1404,51 @@
     .team-detail-view[hidden] { display: none; }
 
     .team-detail-view {
+      position: relative;
       display: grid;
-      gap: 16px;
+      gap: 18px;
       min-height: 70vh;
+    }
+
+    body.roster-stage-mode .team-detail-view {
+      width: 100vw;
+      min-height: 100vh;
+      margin-left: calc(50% - 50vw);
+      padding: clamp(14px, 2.4vw, 34px);
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 10%, rgba(255, 28, 28, 0.24), transparent 34%),
+        radial-gradient(circle at 18% 28%, rgba(192, 0, 0, 0.15), transparent 28%),
+        linear-gradient(180deg, rgba(17, 0, 0, 0.9), rgba(3, 3, 3, 0.98) 54%, #050505),
+        repeating-linear-gradient(116deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 22px);
+    }
+
+    body.roster-stage-mode .team-detail-view::before,
+    body.roster-stage-mode .team-detail-view::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    body.roster-stage-mode .team-detail-view::before {
+      background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.84), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.84)),
+        repeating-linear-gradient(62deg, transparent 0 32px, rgba(255, 255, 255, 0.035) 32px 34px, transparent 34px 66px);
+      opacity: 0.78;
+      mix-blend-mode: screen;
+    }
+
+    body.roster-stage-mode .team-detail-view::after {
+      background: radial-gradient(ellipse at 50% 48%, transparent 0 45%, rgba(0, 0, 0, 0.64) 76%);
+    }
+
+    body.roster-stage-mode #teamDetailContent {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: clamp(14px, 2vw, 22px);
+      min-height: calc(100vh - clamp(28px, 4.8vw, 68px));
     }
 
     .team-back-button,
@@ -1408,6 +1482,16 @@
         linear-gradient(112deg, rgba(4, 4, 6, 0.98), rgba(80, 0, 0, 0.68) 54%, rgba(192, 0, 0, 0.72)),
         repeating-linear-gradient(116deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 18px);
       box-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
+    }
+
+    body.roster-stage-mode .team-detail-hero {
+      border-color: rgba(255, 255, 255, 0.1);
+      border-radius: 26px;
+      padding: clamp(14px, 2.2vw, 24px);
+      background:
+        linear-gradient(100deg, rgba(8, 8, 8, 0.9), rgba(60, 0, 0, 0.48), rgba(4, 4, 4, 0.9)),
+        repeating-linear-gradient(112deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 19px);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42), inset 0 0 44px rgba(192, 0, 0, 0.14);
     }
 
     .team-detail-hero-inner {
@@ -1494,13 +1578,17 @@
       --roster-card-width: 300px;
       --roster-card-height: 420px;
       position: relative;
+      isolation: isolate;
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.14);
       border-radius: 28px;
-      padding: clamp(22px, 4vw, 42px) 0 clamp(24px, 4vw, 44px);
+      min-height: clamp(620px, 76vh, 850px);
+      padding: clamp(26px, 4vw, 54px) 0 clamp(24px, 4vw, 44px);
+      perspective: 1200px;
+      transform-style: preserve-3d;
       background:
-        radial-gradient(circle at 50% 4%, rgba(255, 255, 255, 0.1), transparent 18%),
-        radial-gradient(circle at 50% 0%, rgba(192, 0, 0, 0.32), transparent 42%),
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.08), transparent 17%),
+        radial-gradient(circle at 50% 36%, rgba(255, 0, 0, 0.24), transparent 25%),
         linear-gradient(112deg, rgba(44, 0, 4, 0.88), rgba(7, 7, 7, 0.98) 45%, rgba(26, 0, 2, 0.94));
       box-shadow: 0 34px 90px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
@@ -1509,17 +1597,95 @@
       content: "";
       position: absolute;
       inset: 0;
+      z-index: 0;
       pointer-events: none;
       background:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.72), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.72)),
-        repeating-linear-gradient(112deg, transparent 0 34px, rgba(255, 255, 255, 0.035) 34px 36px, transparent 36px 68px);
+        linear-gradient(90deg, rgba(0, 0, 0, 0.74), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.74)),
+        repeating-linear-gradient(112deg, transparent 0 34px, rgba(255, 255, 255, 0.038) 34px 36px, transparent 36px 68px),
+        repeating-linear-gradient(0deg, transparent 0 54px, rgba(255, 0, 0, 0.055) 54px 55px, transparent 55px 108px);
       mix-blend-mode: screen;
       opacity: 0.72;
     }
 
+    .roster-stage::after {
+      content: "";
+      position: absolute;
+      left: 18%;
+      right: 18%;
+      top: 19%;
+      height: 48%;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, rgba(255, 0, 0, 0.36), rgba(192, 0, 0, 0.12) 34%, transparent 68%);
+      filter: blur(24px);
+      opacity: 0.9;
+    }
+
+    .stage-backdrop,
+    .stage-floor,
+    .stage-wall {
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .stage-backdrop {
+      inset: 5% 14% 22%;
+      z-index: 0;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 26px;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(255, 36, 36, 0.3), transparent 34%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.72)),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 58px),
+        repeating-linear-gradient(0deg, rgba(255, 0, 0, 0.07) 0 1px, transparent 1px 48px);
+      box-shadow: inset 0 0 70px rgba(192, 0, 0, 0.16), 0 0 70px rgba(192, 0, 0, 0.12);
+      transform: translateZ(-90px);
+    }
+
+    .stage-wall {
+      top: 4%;
+      bottom: 18%;
+      z-index: 0;
+      width: min(25vw, 310px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background:
+        linear-gradient(90deg, rgba(0, 0, 0, 0.78), rgba(192, 0, 0, 0.14), rgba(0, 0, 0, 0.86)),
+        repeating-linear-gradient(62deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 20px),
+        repeating-linear-gradient(0deg, rgba(255, 0, 0, 0.075) 0 1px, transparent 1px 42px);
+      box-shadow: inset 0 0 54px rgba(0, 0, 0, 0.72), 0 0 38px rgba(192, 0, 0, 0.14);
+    }
+
+    .stage-wall--left {
+      left: max(-84px, -5vw);
+      transform-origin: right center;
+      transform: rotateY(58deg) translateZ(-36px);
+    }
+
+    .stage-wall--right {
+      right: max(-84px, -5vw);
+      transform-origin: left center;
+      transform: rotateY(-58deg) translateZ(-36px);
+    }
+
+    .stage-floor {
+      left: 8%;
+      right: 8%;
+      bottom: -2%;
+      height: 31%;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse at 50% 16%, rgba(255, 34, 34, 0.3), transparent 46%),
+        linear-gradient(180deg, rgba(192, 0, 0, 0.18), rgba(0, 0, 0, 0.82) 68%, #020202),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 54px);
+      clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%);
+      transform: rotateX(64deg) translateY(44px);
+      transform-origin: center bottom;
+      filter: drop-shadow(0 -18px 34px rgba(192, 0, 0, 0.12));
+    }
+
     .roster-carousel-shell {
       position: relative;
-      z-index: 1;
+      z-index: 2;
       display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
@@ -1579,7 +1745,7 @@
     }
 
     .roster-player-card.active {
-      z-index: 2;
+      z-index: 3;
       opacity: 1;
       transform: translateY(0) rotateY(0) scale(1);
       border-color: rgba(255, 255, 255, 0.42);
@@ -1587,7 +1753,7 @@
         radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.12), transparent 34%),
         linear-gradient(130deg, rgba(192, 0, 0, 0.34), transparent 44%),
         linear-gradient(150deg, #242424, #090909);
-      box-shadow: 0 36px 76px rgba(0, 0, 0, 0.58), 0 0 48px rgba(192, 0, 0, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      box-shadow: 0 36px 76px rgba(0, 0, 0, 0.58), 0 0 78px rgba(255, 0, 0, 0.42), 0 0 130px rgba(192, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
       filter: saturate(1.16) brightness(1.04);
     }
 
@@ -1697,6 +1863,8 @@
     }
 
     .active-player-grid {
+      position: relative;
+      z-index: 2;
       display: grid;
       grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
       gap: 16px;
@@ -1832,9 +2000,21 @@
       .teams-grid { grid-template-columns: 1fr; padding: 12px; }
       .team-detail-hero-inner { grid-template-columns: 1fr; }
       .team-detail-logo { width: 96px; height: 96px; }
+      body.roster-stage-mode .team-detail-view { padding: 12px; overflow: visible; }
       .roster-stage {
         --roster-card-width: min(300px, 72vw);
         --roster-card-height: min(420px, 101vw);
+        min-height: auto;
+      }
+      .stage-wall { display: none; }
+      .stage-backdrop { inset: 12px; }
+      .stage-floor {
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 180px;
+        clip-path: none;
+        transform: none;
       }
       .roster-carousel-shell { grid-template-columns: 1fr; }
       .roster-arrow { width: 100%; height: 48px; }
@@ -4140,12 +4320,19 @@
       teamsGridEl.innerHTML = '';
     }
 
+    function syncRosterStageMode(showingDetail) {
+      document.body.classList.toggle('roster-stage-mode', showingDetail);
+    }
+
     function renderTeamsView() {
       const showingDetail = Boolean(activeTeam);
+      syncRosterStageMode(showingDetail);
       teamsHubEl.hidden = showingDetail;
       teamDetailViewEl.hidden = !showingDetail;
 
       if (showingDetail) {
+        tabButtons.forEach(button => button.classList.toggle('active', button.dataset.tab === 'teams'));
+        tabPanels.forEach(panel => panel.classList.toggle('active', panel.id === 'teams-panel'));
         hideTeamsGrid();
         return;
       }
@@ -4318,6 +4505,10 @@
           </div>
         </section>
         <section class="roster-stage" aria-label="${escapeHtml(activeTeam.name)} roster carousel">
+          <div class="stage-backdrop" aria-hidden="true"></div>
+          <div class="stage-wall stage-wall--left" aria-hidden="true"></div>
+          <div class="stage-wall stage-wall--right" aria-hidden="true"></div>
+          <div class="stage-floor" aria-hidden="true"></div>
           <div class="roster-carousel-shell">
             <button class="roster-arrow" type="button" data-roster-step="-1" aria-label="Previous player">‹</button>
             <div class="roster-carousel" id="rosterCarousel">${renderRosterCards()}</div>
