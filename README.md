@@ -3,6 +3,10 @@
 UPCL League Hub for viewing EAFC friendly fixtures, saved database matches,
 conference tables, playoff previews, and protected admin match approval tools.
 
+For a complete from-scratch reconstruction blueprint—including EA endpoint URLs,
+local storage, schema, league teams, API contracts, and every current UI—see
+[`REBUILD_GUIDE.md`](REBUILD_GUIDE.md).
+
 ## Current Team
 
 - Club name: `Bota FC`
